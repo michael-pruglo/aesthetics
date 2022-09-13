@@ -1,9 +1,9 @@
-from elo_rater_types import EloChange, Outcome, ProfileInfo
-
 import tkinter as tk
-import tkinter.ttk as ttk
+from tkinter import ttk
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
+
+from elo_rater_types import EloChange, Outcome, ProfileInfo
 
 
 BTFL_DARK_BG = "#222"
@@ -45,10 +45,10 @@ class MediaFrame(ttk.Frame):
       self.vid_frame.configure(background=BTFL_DARK_BG)
     self.vid_frame.load(fname)
     self.vid_frame.pack(expand=True, fill="both")
-    def loop_if_not_changed(event):
+    def loop_if_not_changed(_):
       # if not self.vid_frame.is_paused():
       self.vid_frame.play()
-    self.vid_frame.bind("<<Ended>>", loop_if_not_changed) 
+    self.vid_frame.bind("<<Ended>>", loop_if_not_changed)
     self.vid_frame.play()
 
   def show_err(self, error_str):
@@ -74,7 +74,12 @@ class ProfileCard(ttk.Frame):
     is_right  = idx%2
 
     PREV_H = 0.15
-    self.place(relx=0.5*is_right, rely=PREV_H*is_bottom, relwidth=0.5, relheight=1-PREV_H if is_bottom else PREV_H)
+    self.place(
+      relx = 0.5*is_right,
+      rely = PREV_H*is_bottom,
+      relwidth = 0.5,
+      relheight = 1-PREV_H if is_bottom else PREV_H
+    )
 
     self.tags   = ttk.Label (self, anchor="center", text="tags")
     self.media  = MediaFrame(self, borderwidth=1, relief="ridge")
@@ -85,8 +90,8 @@ class ProfileCard(ttk.Frame):
     PH = 0.95 if is_bottom else 0.7
     self.tags.place  (relx=is_right*(1-TW),   relwidth=TW,   relheight=PH)
     self.media.place (relx=TW*(not is_right), relwidth=1-TW, relheight=PH)
-    self.name.place  (rely=PH,              relwidth=1,    relheight=(1-PH)/2)
-    self.rating.place(rely=(PH+1)/2,        relwidth=1,    relheight=(1-PH)/2)
+    self.name.place  (rely=PH,                relwidth=1,    relheight=(1-PH)/2)
+    self.rating.place(rely=(PH+1)/2,          relwidth=1,    relheight=(1-PH)/2)
 
   def show_profile(self, profile:ProfileInfo) -> None:
     self.name.configure(text=profile.short_name())
@@ -107,7 +112,8 @@ class ProfileCard(ttk.Frame):
 
   def _show_tags(self, tags):
     tags = sorted(tags.split(' '))
-    indent_hierarchical = lambda t: "  "*t.count('|') + t.split('|')[-1]
+    def indent_hierarchical(t):
+      return "  "*t.count('|') + t.split('|')[-1]
     taglist = "\n".join(map(indent_hierarchical, tags))
     self.tags.configure(text=taglist or "-")
 
@@ -130,6 +136,8 @@ class EloGui:
     self.cards = [ProfileCard(i, self.root, borderwidth=1, relief="ridge") for i in range(4)]
     self.curr_profile1 = None
     self.curr_profile2 = None
+
+    self.report_outcome = None
 
     for key in '<Left>', '<Right>', '<Up>':
       self.root.bind(key, self._on_arrow_press)
@@ -164,7 +172,7 @@ class EloGui:
       "Up": Outcome.DRAW,
       "Right": Outcome.WIN_RIGHT,
     }[event.keysym]
-      
+
     self.cards[2].set_style(-outcome.value)
     self.cards[3].set_style( outcome.value)
     self.report_outcome(outcome)

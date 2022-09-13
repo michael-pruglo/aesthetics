@@ -1,8 +1,8 @@
+import os
+
 from elo_rater_types import Outcome
 from elo_rater_view import EloGui
 from elo_rater_model import EloCompetition
-
-import os
 
 
 def main():

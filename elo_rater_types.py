@@ -1,8 +1,8 @@
-from helpers import truncate
-
 from dataclasses import dataclass
 from enum import Enum
 from numpy import interp
+
+from helpers import truncate
 
 
 @dataclass
@@ -48,9 +48,9 @@ class EloChange:
       FG_GREEN    = "\033[38;5;46m"
       COLOR_RESET = "\033[0;0m"
       def color(delta):
-        if   delta<0: return FG_RED
-        elif delta>0: return FG_GREEN
-        else:         return FG_GRAY
+        if delta<0: return FG_RED
+        if delta>0: return FG_GREEN
+        return FG_GRAY
       return ''.join([
         BG_GRAY,
         FG_WHITE, f"{self.new_elo_1:>4}",

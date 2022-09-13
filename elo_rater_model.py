@@ -1,8 +1,8 @@
-from elo_rater_types import EloChange, Outcome, ProfileInfo
-from metadata import MetadataManager
-
 import os
 import numpy as np
+
+from elo_rater_types import EloChange, Outcome, ProfileInfo
+from metadata import MetadataManager
 
 
 class ELOMath:
@@ -27,7 +27,7 @@ class ELOMath:
 class EloCompetition:
   def __init__(self, img_dir, refresh):
     self.db = DBAccess(img_dir, refresh)
-    self.curr_match:tuple[ProfileInfo, ProfileInfo] = ()
+    self.curr_match = None
 
   def get_next_match(self) -> tuple[ProfileInfo, ProfileInfo]:
     a = self.db.retreive_rand_profile()
@@ -41,7 +41,7 @@ class EloCompetition:
   def consume_result(self, outcome:Outcome) -> EloChange:
     assert self.curr_match
     l, r = self.curr_match
-    self.curr_match = ()
+    self.curr_match = None
 
     elo_change = ELOMath.calc_change(l, r, outcome)
     print(f"{l} vs {r}:  {elo_change}")
@@ -54,7 +54,7 @@ class DBAccess:
   def __init__(self, img_dir:str, refresh:bool) -> None:
     self.img_dir = img_dir
     self.meta_mgr = MetadataManager(img_dir, refresh, ELOMath.rat_to_elo)
-  
+
   def update_elo(self, l:ProfileInfo, r:ProfileInfo, elo_change:EloChange) -> None:
     self.meta_mgr.update_elo(l.short_name(), elo_change.new_elo_1, ELOMath.elo_to_rat(elo_change.new_elo_1))
     self.meta_mgr.update_elo(r.short_name(), elo_change.new_elo_2, ELOMath.elo_to_rat(elo_change.new_elo_2))
@@ -66,22 +66,22 @@ class DBAccess:
     except KeyError as e:
       print(e)
       return ProfileInfo("-", "err", -1, -1, -1)
-  
+
   def retreive_rand_profile(self) -> ProfileInfo:
     info = self.meta_mgr.get_rand_file_info()
     return self._validate_and_convert_info(info)
 
   def _validate_and_convert_info(self, info) -> ProfileInfo:
     assert all(info.index[:4] == ['tags', 'rating', 'elo', 'elo_matches'])
-    assert type(info['tags']) == str
-    assert type(info['rating']) == np.int64
-    assert type(info['elo']) == np.int64
-    assert type(info['elo_matches']) == np.int64
+    assert isinstance(info['tags'], str)
+    assert isinstance(info['rating'], np.int64)
+    assert isinstance(info['elo'], np.int64)
+    assert isinstance(info['elo_matches'], np.int64)
     short_name = info.name
     return ProfileInfo(
       tags = info['tags'],
       fullname = os.path.join(self.img_dir, short_name),
-      rating = info['rating'],
-      elo = info['elo'],
-      elo_matches = info['elo_matches'],
+      rating = int(info['rating']),
+      elo = int(info['elo']),
+      elo_matches = int(info['elo_matches']),
     )

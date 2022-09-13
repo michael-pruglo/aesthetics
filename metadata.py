@@ -18,16 +18,16 @@ def get_metadata(fname:str) -> tuple[list, int]:
         print(f"ERROR: No tags in metadata of {fname.split('/')[-1]}")
         return []
     n = xmp.count_array_items(*propname)
-    if n==0: 
+    if n==0:
       print(f"ZERO tags in {fname.split('/')[-1]}")
     return [xmp.get_array_item(*propname, i+1) for i in range(n)]
 
   def get_rating():
     propname = (consts.XMP_NS_XMP, "Rating")
-    if xmp.does_property_exist(*propname):
-      return xmp.get_property_int(*propname)
-    else:
+    if not xmp.does_property_exist(*propname):
       return 0
+
+    return xmp.get_property_int(*propname)
 
   return get_tags(), get_rating()
 
@@ -74,9 +74,9 @@ def get_metadata2(fname):
       tags = []
       if (hier:='hierarchicalSubject') in desc.keys():
         tags = desc[hier]['Bag']['li']
-      elif (format:='format') in desc.keys():
+      elif (fmt:='format') in desc.keys():
         print(f"WARNING: not hierarchical tags in {fname}")
-        tags = desc[format]['Bag']['li']
+        tags = desc[fmt]['Bag']['li']
       else:
         raise RuntimeError(f'No XMP tags in {fname}')
 
@@ -87,7 +87,7 @@ def get_metadata2(fname):
         rating = 0
 
       return tags, rating
-  except Exception as error: 
+  except Exception as error:
     print(f"could not open {fname}: {error}")
     return [], -2
 
@@ -132,7 +132,8 @@ class MetadataManager():
 
     if refresh or not os.path.exists(self.db_fname):
       print("refreshing db...")
-      is_media = lambda fname: fname.find('.')>0 and not fname.endswith('.csv')
+      def is_media(fname):
+        return fname.find('.')>0 and not fname.endswith('.csv')
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
@@ -145,7 +146,8 @@ class MetadataManager():
       freq_tags = self._get_frequent_tags(min_tag_freq)
       print(f"frequency of tags (threshold {min_tag_freq}):\n", freq_tags)
       dfc = self.df.copy()
-      remove_infrequent = lambda s: ' '.join([tag for tag in s.split(' ') if tag in freq_tags])
+      def remove_infrequent(s):
+        return ' '.join([tag for tag in s.split(' ') if tag in freq_tags])
       dfc['tags'] = dfc['tags'].apply(remove_infrequent)
       return dfc
 
