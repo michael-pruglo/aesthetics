@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from helpers import truncate
 
 
@@ -21,7 +22,7 @@ class ProfileInfo:
   elo_matches : int
 
   def short_name(self):
-      return self.fullname.split('/')[-1]
+    return self.fullname.split('/')[-1]
 
   def __str__(self):
     BG_GRAY     = "\033[48;5;236m"
@@ -49,13 +50,24 @@ class EloChange:
       BG_GRAY     = "\033[48;5;238m"
       FG_WHITE    = "\033[38;5;231m"
       FG_RED      = "\033[38;5;196m"
+      FG_GRAY     = "\033[38;5;248m"
       FG_GREEN    = "\033[38;5;46m"
       COLOR_RESET = "\033[0;0m"
+      def color(delta):
+        if   delta<0: return FG_RED
+        elif delta>0: return FG_GREEN
+        else:         return FG_GRAY
       return ''.join([
         BG_GRAY,
         FG_WHITE, f"{self.new_elo_1:>4}",
-        FG_RED if self.delta_elo_1<0 else FG_GREEN, f"{f'[{self.delta_elo_1:+}]':>5} ",
+        color(self.delta_elo_1), f"{f'[{self.delta_elo_1:+}]':>5} ",
         FG_WHITE, f"{self.new_elo_2:>4}",
-        FG_RED if self.delta_elo_2<0 else FG_GREEN, f"{f'[{self.delta_elo_2:+}]':>5}",
+        color(self.delta_elo_2), f"{f'[{self.delta_elo_2:+}]':>5}",
         COLOR_RESET
       ])
+
+
+class Outcome(Enum):
+  WIN_LEFT = -1
+  DRAW = 0
+  WIN_RIGHT = 1

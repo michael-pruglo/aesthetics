@@ -1,4 +1,4 @@
-from elo_rater_types import EloChange, ProfileInfo
+from elo_rater_types import EloChange, Outcome, ProfileInfo
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -8,6 +8,7 @@ from tkVideoPlayer import TkinterVideo
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_PINE = "#234F1E"
+BTFL_DARK_GRANOLA = "#D6B85A"
 BTFL_LIGHT_MINT = "#99EDC3"
 
 class MediaFrame(ttk.Frame):
@@ -93,9 +94,13 @@ class ProfileCard(ttk.Frame):
     self._show_rating(profile.rating, profile.elo, profile.elo_matches)
     self.media.show_media(profile.fullname)
 
-  def set_style(self, winner:bool) -> None:
+  def set_style(self, outcome:int=None) -> None:
+    if outcome is None:
+      color = BTFL_DARK_BG
+    else:
+      color = [BTFL_DARK_BG, BTFL_DARK_GRANOLA, BTFL_DARK_PINE][outcome+1]
     for item in self.name, self.rating, self.tags:
-      item.configure(background=BTFL_DARK_PINE if winner else BTFL_DARK_BG)
+      item.configure(background=color)
 
   def show_results(self, new_elo:int, delta_elo:int) -> None:
     self.rating.configure(text=f"NEW: {new_elo}  ({delta_elo:+})")
@@ -126,8 +131,8 @@ class EloGui:
     self.curr_profile1 = None
     self.curr_profile2 = None
 
-    self.root.bind('<Left>', self._on_arrow_press)
-    self.root.bind('<Right>', self._on_arrow_press)
+    for key in '<Left>', '<Right>', '<Up>':
+      self.root.bind(key, self._on_arrow_press)
 
   def display_match(self, profile1:ProfileInfo, profile2:ProfileInfo, callback) -> None:
     if self.curr_profile1 and self.curr_profile2:
@@ -135,11 +140,11 @@ class EloGui:
       self.cards[1].show_profile(self.curr_profile2)
     self.cards[2].show_profile(profile1)
     self.cards[3].show_profile(profile2)
-    self.cards[2].set_style(False)
-    self.cards[3].set_style(False)
+    self.cards[2].set_style(None)
+    self.cards[3].set_style(None)
     self.curr_profile1 = profile1
     self.curr_profile2 = profile2
-    self.winner_is_right_cback = callback
+    self.report_outcome = callback
 
   def conclude_match(self, res:EloChange, callback) -> None:
     self.cards[2].show_results(res.new_elo_1, res.delta_elo_1)
@@ -154,10 +159,12 @@ class EloGui:
     self.root.mainloop()
 
   def _on_arrow_press(self, event):
-    if event.keysym == "Left":
-      winner,loser = 2,3
-    elif event.keysym == "Right":
-      winner,loser = 3,2
-    self.cards[winner].set_style(winner=True)
-    self.cards[loser].set_style(winner=False)
-    self.winner_is_right_cback(winner==3)
+    outcome = {
+      "Left": Outcome.WIN_LEFT,
+      "Up": Outcome.DRAW,
+      "Right": Outcome.WIN_RIGHT,
+    }[event.keysym]
+      
+    self.cards[2].set_style(-outcome.value)
+    self.cards[3].set_style( outcome.value)
+    self.report_outcome(outcome)

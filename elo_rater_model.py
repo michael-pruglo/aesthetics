@@ -1,12 +1,12 @@
-from elo_rater_types import EloChange, ProfileInfo
+from elo_rater_types import EloChange, Outcome, ProfileInfo
 from metadata import MetadataManager
 
 import os
 from numpy import int64
 
-def calc_elo_change(l:ProfileInfo, r:ProfileInfo, right_wins:bool) -> EloChange:
-  delta = 250
-  dright = delta if right_wins else -delta
+def calc_elo_change(l:ProfileInfo, r:ProfileInfo, outcome:Outcome) -> EloChange:
+  delta = 15
+  dright = delta * outcome.value
   return EloChange(
     new_elo_1 = l.elo-dright, delta_elo_1 = -dright,
     new_elo_2 = r.elo+dright, delta_elo_2 =  dright,
@@ -26,11 +26,11 @@ class EloCompetition:
     self.curr_match = (a,b)
     return self.curr_match
 
-  def consume_result(self, right_wins:bool) -> EloChange:
+  def consume_result(self, outcome:Outcome) -> EloChange:
     l, r = self.curr_match
     self.curr_match = ()
 
-    elo_change = calc_elo_change(l, r, right_wins)
+    elo_change = calc_elo_change(l, r, outcome)
     print(f"{l} vs {r}:  {elo_change}")
     self.db.update_elo(l, r, elo_change)
 
