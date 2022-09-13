@@ -1,6 +1,8 @@
+from helpers import truncate
+
 from dataclasses import dataclass
 from enum import Enum
-from helpers import truncate
+import numpy as np
 
 
 def elo_class(elo:int) -> int:
@@ -29,12 +31,14 @@ class ProfileInfo:
     FG_WHITE    = "\033[38;5;231m"
     FG_YELLOW   = "\033[38;5;214m"
     FG_ELO      = "\033[38;5;{}m".format([0,26,2,228,208,9][elo_class(self.elo)])
+    FG_MATCHES  = "\033[38;5;{}m".format(int(np.interp(self.elo_matches, [0,100], [232,255])))
     COLOR_RESET = "\033[0;0m"
     return ''.join([
       BG_GRAY,
       FG_WHITE,   f"{truncate(self.short_name(), 15):<15} ",
       FG_YELLOW,  f"{'★' * self.rating:>5} ",
-      FG_ELO,     f"{self.elo:>4} ({self.elo_matches})",
+      FG_ELO,     f"{self.elo:>4} ",
+      FG_MATCHES, f"{f'({self.elo_matches})':<5}",
       COLOR_RESET
     ])
 
