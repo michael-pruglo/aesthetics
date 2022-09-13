@@ -2,17 +2,7 @@ from helpers import truncate
 
 from dataclasses import dataclass
 from enum import Enum
-import numpy as np
-
-
-def elo_class(elo:int) -> int:
-  """divide into 6 classes (0-5 stars) based on elo"""
-  if   elo >= 2000: return 5
-  elif elo >= 1800: return 4
-  elif elo >= 1600: return 3
-  elif elo >= 1400: return 2
-  elif elo >= 1200: return 1
-  else:           return 0
+from numpy import interp
 
 
 @dataclass
@@ -30,8 +20,8 @@ class ProfileInfo:
     BG_GRAY     = "\033[48;5;236m"
     FG_WHITE    = "\033[38;5;231m"
     FG_YELLOW   = "\033[38;5;214m"
-    FG_ELO      = "\033[38;5;{}m".format([0,26,2,228,208,9][elo_class(self.elo)])
-    FG_MATCHES  = "\033[38;5;{}m".format(int(np.interp(self.elo_matches, [0,100], [232,255])))
+    FG_ELO      = "\033[38;5;{}m".format([0,26,2,228,208,9][self.rating])
+    FG_MATCHES  = "\033[38;5;{}m".format(int(interp(self.elo_matches, [0,100], [232,255])))
     COLOR_RESET = "\033[0;0m"
     return ''.join([
       BG_GRAY,

@@ -1,3 +1,4 @@
+from typing import Callable
 from libxmp import XMPFiles, consts
 
 
@@ -104,15 +105,15 @@ def _db_row(fname):
   }
 
 #TODO: move this to MODEL
-def _default_elo(row):
+def _default_elo(row, default_elo:Callable[[int], int]):
   is_nan = row.isna()
   assert 0 <= row['rating'] <= 5
-  if is_nan['elo']: row['elo'] = 1000 + row['rating']*200
+  if is_nan['elo']: row['elo'] = default_elo(row['rating'])
   if is_nan['elo_matches']: row['elo_matches'] = 0
   return row
 
 class MetadataManager():
-  def __init__(self, img_dir, refresh=False, default_elo=None):
+  def __init__(self, img_dir:str, refresh:bool=False, default_elo:Callable[[int], int]=None):
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
     metadata_dtypes = {
       'name': str,
@@ -135,7 +136,7 @@ class MetadataManager():
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
-      self.df = self.df.apply(_default_elo, axis=1)
+      self.df = self.df.apply(_default_elo, args=(default_elo), axis=1)
       self.df.sort_values('rating', ascending=False, inplace=True)
       self._commit()
 
@@ -158,11 +159,13 @@ class MetadataManager():
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update_elo(self, short_name:str, new_elo:int) -> None:
+  def update_elo(self, short_name:str, new_elo:int, new_rating:int) -> None:
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
     self.df.loc[short_name, 'elo'] = new_elo
     self.df.loc[short_name, 'elo_matches'] += 1
+    assert 0 <= new_rating <= 5
+    self.df.loc[short_name, 'rating'] = new_rating
     #print(f"update_elo({short_name}, {new_elo}): committing")
     #print(self.df.loc[short_name])
     self._commit()
