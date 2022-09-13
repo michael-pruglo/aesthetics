@@ -110,8 +110,8 @@ def _default_elo(row):
     return row
 
 class MetadataManager():
-    def __init__(self, img_dir = '/home/michael-p/Documents/storage/ero_aesthetic/', refresh=False):
-        db_fname = os.path.join(img_dir, 'metadata_db.csv')
+    def __init__(self, img_dir, refresh=False, default_elo=None):
+        self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
         metadata_dtypes = {
             'name': str,
             'tags': str,
@@ -119,15 +119,15 @@ class MetadataManager():
             'elo': int,
             'elo_matches': int,
         }
-        if os.path.exists(db_fname):
+        if os.path.exists(self.db_fname):
             print("csv exists, read")
-            self.df = pd.read_csv(db_fname, keep_default_na=False, dtype=metadata_dtypes)
+            self.df = pd.read_csv(self.db_fname, keep_default_na=False, dtype=metadata_dtypes)
         else:
             print("csv does not exist, create")
             self.df = pd.DataFrame(columns=metadata_dtypes.keys())
         self.df.set_index('name', inplace=True)
 
-        if refresh or not os.path.exists(db_fname):
+        if refresh or not os.path.exists(self.db_fname):
             print("refreshing db...")
             is_media = lambda fname: fname.find('.')>0 and not fname.endswith('.csv')
             fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
@@ -135,10 +135,9 @@ class MetadataManager():
             self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
             self.df = self.df.apply(_default_elo, axis=1)
             self.df.sort_values('rating', ascending=False, inplace=True)
+            self._commit()
 
-        self.df.to_csv(db_fname)
-
-    def get_db(self, min_tag_freq=0):
+    def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
         if min_tag_freq:
             freq_tags = self._get_frequent_tags(min_tag_freq)
             print(f"frequency of tags (threshold {min_tag_freq}):\n", freq_tags)
@@ -149,12 +148,27 @@ class MetadataManager():
 
         return self.df
 
-    def get_file_info(self, fname):
-        if fname not in self.df.index:
-            raise KeyError(f"{fname} not in database")
-        return self.df.loc[fname]
+    def get_file_info(self, short_name:str) -> pd.Series:
+        if short_name not in self.df.index:
+            raise KeyError(f"{short_name} not in database")
+        return self.df.loc[short_name]
+    
+    def get_rand_file_info(self) -> pd.Series:
+        return self.df.sample().iloc[0]
+
+    def update_elo(self, short_name:str, new_elo:int) -> None:
+        if short_name not in self.df.index:
+            raise KeyError(f"{short_name} not in database")
+        self.df.loc[short_name, 'elo'] = new_elo
+        self.df.loc[short_name, 'elo_matches'] += 1
+        #print(f"update_elo({short_name}, {new_elo}): committing")
+        #print(self.df.loc[short_name])
+        self._commit()
 
     def _get_frequent_tags(self, min_tag_freq):
         lists = self.df['tags'].str.split(' ')
         tag_freq = pd.concat([pd.Series(l) for l in lists], ignore_index=True).value_counts()
         return tag_freq[tag_freq>=min_tag_freq]
+    
+    def _commit(self):
+        self.df.to_csv(self.db_fname)
