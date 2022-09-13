@@ -1,0 +1,2 @@
+tkinter tkVideoPlayer libxmp PIL pandas numpy
+
