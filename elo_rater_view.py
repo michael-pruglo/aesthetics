@@ -139,9 +139,6 @@ class EloGui:
 
     self.report_outcome = None
 
-    for key in '<Left>', '<Right>', '<Up>':
-      self.root.bind(key, self._on_arrow_press)
-
   def display_match(self, profile1:ProfileInfo, profile2:ProfileInfo, callback) -> None:
     if self.curr_profile1 and self.curr_profile2:
       self.cards[0].show_profile(self.curr_profile1)
@@ -150,6 +147,7 @@ class EloGui:
     self.cards[3].show_profile(profile2)
     self.cards[2].set_style(None)
     self.cards[3].set_style(None)
+    self._enable_arrows(True)
     self.curr_profile1 = profile1
     self.curr_profile2 = profile2
     self.report_outcome = callback
@@ -166,13 +164,21 @@ class EloGui:
   def mainloop(self):
     self.root.mainloop()
 
+  def _enable_arrows(self, enable:bool):
+    for key in '<Left>', '<Right>', '<Up>':
+      if enable:
+        self.root.bind(key, self._on_arrow_press)
+      else:
+        self.root.unbind(key)
+
   def _on_arrow_press(self, event):
+    self._enable_arrows(False)
+ 
     outcome = {
       "Left": Outcome.WIN_LEFT,
       "Up": Outcome.DRAW,
       "Right": Outcome.WIN_RIGHT,
     }[event.keysym]
-
     self.cards[2].set_style(-outcome.value)
     self.cards[3].set_style( outcome.value)
     self.report_outcome(outcome)
