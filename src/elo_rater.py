@@ -1,4 +1,5 @@
 import os, sys
+import logging
 
 from elo_rater_types import Outcome
 from elo_rater_view import EloGui
@@ -21,6 +22,17 @@ def run_rater(media_dir):
 
 
 if __name__ == "__main__":
+  logging.basicConfig(
+    handlers=[
+      logging.StreamHandler(),
+      logging.FileHandler("matches.log", encoding="utf-8")
+    ],
+    format="%(asctime)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M",
+    level=logging.INFO
+  )
+  logging.info("Starting new session...")
+
   media_dir = sys.argv[1] if len(sys.argv)>1 else "./test_imgs/"
   media_dir = os.path.abspath(media_dir)
   assert os.path.exists(media_dir), f"path {media_dir} doesn't exist"

@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import logging
 
 from elo_rater_types import EloChange, Outcome, ProfileInfo
 from metadata import MetadataManager
@@ -44,7 +45,7 @@ class EloCompetition:
     self.curr_match = None
 
     elo_change = ELOMath.calc_change(l, r, outcome)
-    print(f"{l} vs {r}:  {elo_change}")
+    logging.info(f"{l} vs {r}:  {elo_change}")
     self.db.update_elo(l, r, elo_change)
 
     return elo_change

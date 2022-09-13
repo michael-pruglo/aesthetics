@@ -1,5 +1,6 @@
 from typing import Callable
 from libxmp import XMPFiles, consts
+import logging
 
 
 def get_metadata(fname:str) -> tuple[list, int]:
@@ -12,14 +13,14 @@ def get_metadata(fname:str) -> tuple[list, int]:
   def get_tags():
     propname = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
     if not xmp.does_property_exist(*propname):
-      print(f"WARNING: no hierarchical tags in {fname.split('/')[-1]}")
+      logging.warning(f"no hierarchical tags in {fname.split('/')[-1]}")
       propname = (consts.XMP_NS_DC, "subject")
       if not xmp.does_property_exist(*propname):
-        print(f"ERROR: No tags in metadata of {fname.split('/')[-1]}")
+        logging.error(f"No tags in metadata of {fname.split('/')[-1]}")
         return []
     n = xmp.count_array_items(*propname)
     if n==0:
-      print(f"ZERO tags in {fname.split('/')[-1]}")
+      logging.warning(f"ZERO tags in {fname.split('/')[-1]}")
     return [xmp.get_array_item(*propname, i+1) for i in range(n)]
 
   def get_rating():
@@ -41,12 +42,12 @@ def write_metadata(fname:str, tags:list=None, rating:int=None) -> None:
     for tag in tags:
       hier_prop = (consts.XMP_NS_Lightroom, "hierarchicalSubject", tag)
       if xmp.does_array_item_exist(*hier_prop):
-        print(f"{fname.split('/')[-1]}: hier already exists '{tag}'")
+        logging.warning(f"{fname.split('/')[-1]}: hier already exists '{tag}'")
       else:
         xmp.append_array_item(*hier_prop, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
       subj_prop = (consts.XMP_NS_DC, "subject", tag.split('|')[-1])
       if xmp.does_array_item_exist(*subj_prop):
-        print(f"{fname.split('/')[-1]}: subj already exists '{tag.split('|')[-1]}'")
+        logging.warning(f"{fname.split('/')[-1]}: subj already exists '{tag.split('|')[-1]}'")
       else:
         xmp.append_array_item(*subj_prop, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
 
@@ -75,7 +76,7 @@ def get_metadata2(fname):
       if (hier:='hierarchicalSubject') in desc.keys():
         tags = desc[hier]['Bag']['li']
       elif (fmt:='format') in desc.keys():
-        print(f"WARNING: not hierarchical tags in {fname}")
+        logging.warning(f"no hierarchical tags in {fname}")
         tags = desc[fmt]['Bag']['li']
       else:
         raise RuntimeError(f'No XMP tags in {fname}')
@@ -88,7 +89,7 @@ def get_metadata2(fname):
 
       return tags, rating
   except Exception as error:
-    print(f"could not open {fname}: {error}")
+    logging.error(f"could not open {fname}: {error}")
     return [], -2
 
 
@@ -123,15 +124,15 @@ class MetadataManager():
       'elo_matches': int,
     }
     if os.path.exists(self.db_fname):
-      print("csv exists, read")
+      logging.info("csv exists, read")
       self.df = pd.read_csv(self.db_fname, keep_default_na=False, dtype=metadata_dtypes)
     else:
-      print("csv does not exist, create")
+      logging.info("csv does not exist, create")
       self.df = pd.DataFrame(columns=metadata_dtypes.keys())
     self.df.set_index('name', inplace=True)
 
     if refresh or not os.path.exists(self.db_fname):
-      print("refreshing db...")
+      logging.info("refreshing db...")
       def is_media(fname):
         return fname.find('.')>0 and not fname.endswith('.csv')
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
@@ -144,7 +145,7 @@ class MetadataManager():
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
     if min_tag_freq:
       freq_tags = self._get_frequent_tags(min_tag_freq)
-      print(f"frequency of tags (threshold {min_tag_freq}):\n", freq_tags)
+      logging.info(f"frequency of tags (threshold {min_tag_freq}):\n", freq_tags)
       dfc = self.df.copy()
       def remove_infrequent(s):
         return ' '.join([tag for tag in s.split(' ') if tag in freq_tags])
@@ -168,8 +169,8 @@ class MetadataManager():
     self.df.loc[short_name, 'elo_matches'] += 1
     assert 0 <= new_rating <= 5
     self.df.loc[short_name, 'rating'] = new_rating
-    #print(f"update_elo({short_name}, {new_elo}): committing")
-    #print(self.df.loc[short_name])
+    logging.debug(f"update_elo({short_name}, {new_elo}): committing")
+    logging.debug(self.df.loc[short_name])
     self._commit()
 
   def _get_frequent_tags(self, min_tag_freq):
