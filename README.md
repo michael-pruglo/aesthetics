@@ -2,7 +2,10 @@
 
 Exploration of personal style. Provided a media library with metadata, explore, rate, tag, use DL.
 
-Main script in `elo_rater.py`
+Run with:
+```py
+python src/elo_rater.py [path/to/media]
+```
 
 ```
 |--------------|    |----------|

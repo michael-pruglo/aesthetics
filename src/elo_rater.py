@@ -1,13 +1,13 @@
-import os
+import os, sys
 
 from elo_rater_types import Outcome
 from elo_rater_view import EloGui
 from elo_rater_model import EloCompetition
 
 
-def main():
+def run_rater(media_dir):
   gui = EloGui()
-  model = EloCompetition(os.path.abspath('./test_imgs/'), refresh=False)
+  model = EloCompetition(media_dir, refresh=False)
 
   def consume_result(outcome:Outcome):
     elo_change = model.consume_result(outcome)
@@ -21,4 +21,8 @@ def main():
 
 
 if __name__ == "__main__":
-  main()
+  media_dir = sys.argv[1] if len(sys.argv)>1 else "./test_imgs/"
+  media_dir = os.path.abspath(media_dir)
+  assert os.path.exists(media_dir), f"path {media_dir} doesn't exist"
+
+  run_rater(media_dir)

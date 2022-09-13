@@ -1,6 +1,6 @@
 __pycache__/
 .ipynb_checkpoints/
-models/
+models/tmp*
 *.ipynb
 .vscode/
 
