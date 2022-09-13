@@ -102,6 +102,7 @@ def _db_row(fname):
         'rating': int(rating),
     }
 
+#TODO: move this to MODEL
 def _default_elo(row):
     is_nan = row.isna()
     assert 0 <= row['rating'] <= 5

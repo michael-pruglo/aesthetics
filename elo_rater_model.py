@@ -18,7 +18,11 @@ class EloCompetition:
         self.curr_match:tuple[ProfileInfo, ProfileInfo] = ()
 
     def get_next_match(self) -> tuple[ProfileInfo, ProfileInfo]:
-        self.curr_match = (self.db.retreive_rand_profile(), self.db.retreive_rand_profile())
+        a = self.db.retreive_rand_profile()
+        while True:
+            b = self.db.retreive_rand_profile()
+            if b.fullname != a.fullname:
+                break
         return self.curr_match
 
     def consume_result(self, right_wins:bool) -> EloChange:
