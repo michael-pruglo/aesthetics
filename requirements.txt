@@ -1,2 +1,5 @@
-tkinter tkVideoPlayer libxmp PIL pandas numpy
-
+tkVideoPlayer
+python-xmp-toolkit
+pandas
+numpy
+pillow
