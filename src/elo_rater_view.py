@@ -61,6 +61,7 @@ class MediaFrame(ttk.Frame):
       if elem:
         elem.pack_forget()
     if self.vid_frame:
+      self.vid_frame.unbind("<<Ended>>")
       self.vid_frame = None #slower, but stop+reuse the existing causes bugs
     self.update()
 
