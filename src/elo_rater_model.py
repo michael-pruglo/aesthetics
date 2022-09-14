@@ -45,7 +45,7 @@ class EloCompetition:
     self.curr_match = None
 
     elo_change = ELOMath.calc_change(l, r, outcome)
-    logging.info(f"{l} vs {r}:  {elo_change}")
+    logging.info("%s vs %s:  %s", l, r, elo_change)
     self.db.update_elo(l, r, elo_change)
 
     return elo_change
