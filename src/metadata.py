@@ -138,7 +138,7 @@ class MetadataManager():
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
-      self.df = self.df.apply(_default_elo, args=(default_elo), axis=1)
+      self.df = self.df.apply(_default_elo, axis=1, args=(default_elo,))
       self.df.sort_values('rating', ascending=False, inplace=True)
       self._commit()
 
