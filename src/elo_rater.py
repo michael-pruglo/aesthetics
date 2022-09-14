@@ -42,5 +42,5 @@ if __name__ == "__main__":
   given_dir = os.path.abspath(given_dir)
   assert os.path.exists(given_dir), f"path {given_dir} doesn't exist"
 
-  setup_logger(log_filename=f"matches_{short_fname(given_dir)}.log")
+  setup_logger(log_filename=f"./logs/matches_{short_fname(given_dir)}.log")
   run_rater(given_dir)

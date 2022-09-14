@@ -3,6 +3,6 @@ __pycache__/
 models/tmp*
 *.ipynb
 .vscode/
-*.log
+logs/
 test_imgs/*.csv
 
