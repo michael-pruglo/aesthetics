@@ -8,23 +8,38 @@ from helpers import short_fname
 
 
 class ELOMath:
+  INITIAL_ELO = 1200
+  STD = 200
+
   @staticmethod
   def rat_to_elo(rat:int) -> int:
-    return 1000 + 200*rat
+    return ELOMath.INITIAL_ELO + ELOMath.STD*rat
 
   @staticmethod
   def elo_to_rat(elo:int) -> int:
-    return np.clip((elo-1000)//200, 0, 5)
+    return np.clip((elo-ELOMath.INITIAL_ELO)//ELOMath.STD, 0, 5)
 
   @staticmethod
   def calc_change(l:ProfileInfo, r:ProfileInfo, outcome:Outcome) -> EloChange:
-    delta = 15
-    dright = delta * outcome.value
+    ql = 10**(l.elo/400)
+    qr = 10**(r.elo/400)
+    er = qr/(ql+qr)
+    sr = np.interp(outcome.value, [-1,1], [0,1])
+    delta = sr-er
+    dl = round(ELOMath.get_k(l) * -delta)
+    dr = round(ELOMath.get_k(r) *  delta)
     return EloChange(
-      new_elo_1 = l.elo-dright, delta_elo_1 = -dright,
-      new_elo_2 = r.elo+dright, delta_elo_2 =  dright,
+      new_elo_1 = l.elo+dl, delta_elo_1 = dl,
+      new_elo_2 = r.elo+dr, delta_elo_2 = dr,
     )
 
+  @staticmethod
+  def get_k(p:ProfileInfo) -> float:
+    if p.elo_matches<30 and p.elo<2300:
+      return 40
+    if p.elo_matches>30 and p.elo>2400:
+      return 10
+    return 20
 
 class EloCompetition:
   def __init__(self, img_dir, refresh):
