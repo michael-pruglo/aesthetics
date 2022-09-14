@@ -45,10 +45,7 @@ class MediaFrame(ttk.Frame):
       self.vid_frame.configure(background=BTFL_DARK_BG)
     self.vid_frame.load(fname)
     self.vid_frame.pack(expand=True, fill="both")
-    def loop_if_not_changed(_):
-      # if not self.vid_frame.is_paused():
-      self.vid_frame.play()
-    self.vid_frame.bind("<<Ended>>", loop_if_not_changed)
+    self.vid_frame.bind("<<Ended>>", lambda _: self.vid_frame.play())
     self.vid_frame.play()
 
   def show_err(self, error_str):
@@ -63,7 +60,7 @@ class MediaFrame(ttk.Frame):
       if elem:
         elem.pack_forget()
     if self.vid_frame:
-      self.vid_frame.stop()
+      self.vid_frame = None #slower, but stop+reuse the existing causes bugs
     self.update()
 
 
