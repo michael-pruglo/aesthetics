@@ -1,6 +1,7 @@
 import logging
 from typing import Callable
 from libxmp import XMPFiles, consts
+from helpers import short_fname
 
 
 def get_metadata(fname:str) -> tuple[list, int]:
@@ -13,14 +14,14 @@ def get_metadata(fname:str) -> tuple[list, int]:
   def get_tags():
     propname = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
     if not xmp.does_property_exist(*propname):
-      logging.warning("no hierarchical tags in %s", fname.split('/')[-1])
+      logging.warning("no hierarchical tags in %s", short_fname(fname))
       propname = (consts.XMP_NS_DC, "subject")
       if not xmp.does_property_exist(*propname):
-        logging.error("No tags in metadata of %s", fname.split('/')[-1])
+        logging.error("No tags in metadata of %s", short_fname(fname))
         return []
     n = xmp.count_array_items(*propname)
     if n==0:
-      logging.warning("ZERO tags in %s", fname.split('/')[-1])
+      logging.warning("ZERO tags in %s", short_fname(fname))
     return [xmp.get_array_item(*propname, i+1) for i in range(n)]
 
   def get_rating():
@@ -42,12 +43,12 @@ def write_metadata(fname:str, tags:list=None, rating:int=None) -> None:
     for tag in tags:
       hier_prop = (consts.XMP_NS_Lightroom, "hierarchicalSubject", tag)
       if xmp.does_array_item_exist(*hier_prop):
-        logging.warning("%s: hier already exists '%s'", fname.split('/')[-1], tag)
+        logging.warning("%s: hier already exists '%s'", short_fname(fname), tag)
       else:
         xmp.append_array_item(*hier_prop, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
       subj_prop = (consts.XMP_NS_DC, "subject", tag.split('|')[-1])
       if xmp.does_array_item_exist(*subj_prop):
-        logging.warning("%s: subj already exists '%s'", fname.split('/')[-1], tag.split('|')[-1])
+        logging.warning("%s: subj already exists '%s'", short_fname(fname), tag.split('|')[-1])
       else:
         xmp.append_array_item(*subj_prop, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
 
@@ -100,7 +101,7 @@ import pandas as pd
 def _db_row(fname):
   tags, rating = get_metadata(fname)
   return {
-    'name': fname.split('/')[-1],
+    'name': short_fname(fname),
     'tags': ' '.join(sorted(tags)).lower(),
     'rating': int(rating),
   }

@@ -3,6 +3,7 @@ from tkinter import ttk
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
+from helpers import short_fname
 from elo_rater_types import EloChange, Outcome, ProfileInfo
 
 
@@ -91,7 +92,7 @@ class ProfileCard(ttk.Frame):
     self.rating.place(rely=(PH+1)/2,          relwidth=1,    relheight=(1-PH)/2)
 
   def show_profile(self, profile:ProfileInfo) -> None:
-    self.name.configure(text=profile.short_name())
+    self.name.configure(text=short_fname(profile.fullname))
     self._show_tags(profile.tags)
     self._show_rating(profile.rating, profile.elo, profile.elo_matches)
     self.media.show_media(profile.fullname)

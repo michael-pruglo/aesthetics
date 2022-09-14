@@ -1,9 +1,10 @@
+import logging
 import os
 import numpy as np
-import logging
 
 from elo_rater_types import EloChange, Outcome, ProfileInfo
 from metadata import MetadataManager
+from helpers import short_fname
 
 
 class ELOMath:
@@ -57,8 +58,8 @@ class DBAccess:
     self.meta_mgr = MetadataManager(img_dir, refresh, ELOMath.rat_to_elo)
 
   def update_elo(self, l:ProfileInfo, r:ProfileInfo, elo_change:EloChange) -> None:
-    self.meta_mgr.update_elo(l.short_name(), elo_change.new_elo_1, ELOMath.elo_to_rat(elo_change.new_elo_1))
-    self.meta_mgr.update_elo(r.short_name(), elo_change.new_elo_2, ELOMath.elo_to_rat(elo_change.new_elo_2))
+    self.meta_mgr.update_elo(short_fname(l.fullname), elo_change.new_elo_1, ELOMath.elo_to_rat(elo_change.new_elo_1))
+    self.meta_mgr.update_elo(short_fname(r.fullname), elo_change.new_elo_2, ELOMath.elo_to_rat(elo_change.new_elo_2))
 
   def retreive_profile(self, short_name) -> ProfileInfo:
     try:

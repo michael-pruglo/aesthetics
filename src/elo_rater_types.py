@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from numpy import interp
 
-from helpers import truncate
+from helpers import truncate, short_fname
 
 
 @dataclass
@@ -13,9 +13,6 @@ class ProfileInfo:
   elo : int
   elo_matches : int
 
-  def short_name(self):
-    return self.fullname.split('/')[-1]
-
   def __str__(self):
     BG_GRAY     = "\033[48;5;236m"
     FG_WHITE    = "\033[38;5;231m"
@@ -25,7 +22,7 @@ class ProfileInfo:
     COLOR_RESET = "\033[0;0m"
     return ''.join([
       BG_GRAY,
-      FG_WHITE,   f"{truncate(self.short_name(), 15):<15} ",
+      FG_WHITE,   f"{truncate(short_fname(self.fullname), 15):<15} ",
       FG_YELLOW,  f"{'★' * self.rating:>5} ",
       FG_ELO,     f"{self.elo:>4} ",
       FG_MATCHES, f"{f'({self.elo_matches})':<5}",
