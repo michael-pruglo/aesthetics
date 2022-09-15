@@ -29,5 +29,4 @@ python src/elo_rater.py [path/to/media]
 ## TODO:
 - add middle column listing all participants sorted: top...first...second...
 - add glicko math
-- save entire match history into csv  name1,name2,{-1|0|1}
 

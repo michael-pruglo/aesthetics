@@ -1,9 +1,10 @@
 import logging
 import os
+import time
 import numpy as np
 
 from elo_rater_types import EloChange, Outcome, ProfileInfo
-from metadata import MetadataManager
+from db_managers import MetadataManager, HistoryManager
 from helpers import short_fname
 
 
@@ -61,7 +62,8 @@ class EloCompetition:
     self.curr_match = None
 
     elo_change = ELOMath.calc_change(l, r, outcome)
-    logging.info("%s vs %s:  %s", l, r, elo_change)
+    logging.info("%s vs %s: %2d %s", l, r, outcome.value, elo_change)
+    self.db.save_match(l, r, outcome)
     self.db.update_elo(l, r, elo_change)
 
     return elo_change
@@ -71,6 +73,15 @@ class DBAccess:
   def __init__(self, img_dir:str, refresh:bool) -> None:
     self.img_dir = img_dir
     self.meta_mgr = MetadataManager(img_dir, refresh, ELOMath.rat_to_elo)
+    self.history_mgr = HistoryManager(img_dir)
+
+  def save_match(self, l:ProfileInfo, r:ProfileInfo, outcome:Outcome) -> None:
+    self.history_mgr.save_match(
+      int(time.time()),
+      short_fname(l.fullname),
+      short_fname(r.fullname),
+      outcome.value
+    )
 
   def update_elo(self, l:ProfileInfo, r:ProfileInfo, elo_change:EloChange) -> None:
     self.meta_mgr.update_elo(short_fname(l.fullname), elo_change.new_elo_1, ELOMath.elo_to_rat(elo_change.new_elo_1))
