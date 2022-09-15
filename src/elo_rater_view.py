@@ -73,7 +73,7 @@ class ProfileCard(ttk.Frame):
     is_right  = idx%2
 
     self.tags   = ttk.Label (self, anchor="center", text="tags")
-    self.media  = MediaFrame(self, borderwidth=1, relief="ridge")
+    self.media  = MediaFrame(self)
     self.name   = ttk.Label (self, anchor="center", text="filename")
     self.rating = ttk.Label (self, anchor="center", text="rating", foreground="yellow")
 
@@ -95,7 +95,7 @@ class ProfileCard(ttk.Frame):
       color = BTFL_DARK_BG
     else:
       color = [BTFL_DARK_BG, BTFL_DARK_GRANOLA, BTFL_DARK_PINE][outcome+1]
-    for item in self.name, self.rating, self.tags:
+    for item in self.tags, self.name, self.rating:
       item.configure(background=color)
 
   def show_results(self, res:EloChange) -> None:
@@ -119,7 +119,6 @@ class EloGui:
     self.root.title("aesthetics")
     self.root.update()
 
-    self.root.configure(background=BTFL_DARK_BG)
     style = ttk.Style(self.root)
     style.configure('.', background=BTFL_DARK_BG)
     style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
@@ -128,8 +127,10 @@ class EloGui:
     self.cards        :list[ProfileCard] = [None, None]
     MID_W = 0.17
     for i in range(2):
-      self.cards[i] = ProfileCard(i, self.root, borderwidth=6, relief="ridge")
+      self.cards[i] = ProfileCard(i, self.root, padding=(25,))
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
+    self.mid_panel = ttk.Label(self.root, text="table", relief="ridge", borderwidth=5, anchor="n", justify="center", padding=(5,10), wraplength=290)
+    self.mid_panel.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
 
     self.report_outcome_cb = None
 
