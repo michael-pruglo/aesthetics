@@ -40,9 +40,12 @@ class ELOMath:
     return 20
 
 class EloCompetition:
-  def __init__(self, img_dir, refresh):
+  def __init__(self, img_dir:str, refresh:bool):
     self.db = DBAccess(img_dir, refresh)
-    self.curr_match = []
+    self.curr_match:list[ProfileInfo] = []
+
+  def get_curr_match(self) -> list[ProfileInfo]:
+    return self.curr_match
 
   def get_next_match(self) -> list[ProfileInfo]:
     a = self.db.retreive_rand_profile()
@@ -52,6 +55,9 @@ class EloCompetition:
         break
     self.curr_match = [a,b]
     return self.curr_match
+
+  def get_leaderboard(self) -> list[ProfileInfo]:
+    return self.db.get_leaderboard()
 
   def consume_result(self, outcome:Outcome) -> list[EloChange]:
     assert len(self.curr_match) == 2
@@ -87,7 +93,12 @@ class DBAccess:
         ELOMath.elo_to_rat(change.new_elo)
       )
 
-  def retreive_profile(self, short_name) -> ProfileInfo:
+  def get_leaderboard(self) -> list[ProfileInfo]:
+    db = self.meta_mgr.get_db()
+    db.sort_values('elo', ascending=False, inplace=True)
+    return [self._validate_and_convert_info(db.iloc[i]) for i in range(len(db))]
+
+  def retreive_profile(self, short_name:str) -> ProfileInfo:
     try:
       info = self.meta_mgr.get_file_info(short_name)
       return self._validate_and_convert_info(info)
@@ -100,11 +111,12 @@ class DBAccess:
     return self._validate_and_convert_info(info)
 
   def _validate_and_convert_info(self, info) -> ProfileInfo:
-    assert all(info.index[:4] == ['tags', 'rating', 'elo', 'elo_matches'])
-    assert isinstance(info['tags'], str)
-    assert isinstance(info['rating'], np.int64)
-    assert isinstance(info['elo'], np.int64)
-    assert isinstance(info['elo_matches'], np.int64)
+    assert all(info.index[:4] == ['tags', 'rating', 'elo', 'elo_matches']), str(info)
+    assert isinstance(info['tags'], str), type(info['tags'])
+    assert isinstance(info['rating'], np.int64), type(info['rating'])
+    assert isinstance(info['elo'], np.int64), type(info['elo'])
+    assert isinstance(info['elo_matches'], np.int64), type(info['elo_matches'])
+    assert 0 <= info['rating'] <= 5
     short_name = info.name
     return ProfileInfo(
       tags = info['tags'],

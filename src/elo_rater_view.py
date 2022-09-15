@@ -129,7 +129,7 @@ class EloGui:
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root, padding=(25,))
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
-    self.mid_panel = ttk.Label(self.root, text="table", relief="ridge", borderwidth=5, anchor="n", justify="center", padding=(5,10), wraplength=290)
+    self.mid_panel = ttk.Label(self.root, relief="ridge", borderwidth=5, anchor="n", justify="center", padding=(5,10), wraplength=270)
     self.mid_panel.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
 
     self.report_outcome_cb = None
@@ -150,6 +150,10 @@ class EloGui:
       profile.elo = res.new_elo
       profile.elo_matches += 1
     self.root.after(1000, callback)
+
+  def display_leaderboard(self, leaderboard:list[ProfileInfo], feature:list=None, context:int=2) -> None:
+    """ display top and everyone from `feature` and `context` lines around them """
+    self.mid_panel.configure(text='\n'.join(map(lambda p:f"{p.fullname[-15:]} {p.elo}", leaderboard[:5])))
 
   def mainloop(self):
     self.root.mainloop()

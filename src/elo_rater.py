@@ -26,11 +26,15 @@ def run_rater(media_dir):
   model = EloCompetition(media_dir, refresh=False)
 
   def consume_result(outcome:Outcome):
+    participants = model.get_curr_match() #needs to be before model.consume_result()
     elo_changes = model.consume_result(outcome)
+    gui.display_leaderboard(model.get_leaderboard(), participants)
     gui.conclude_match(elo_changes, start_next_match)
 
   def start_next_match():
-    gui.display_match(model.get_next_match(), consume_result)
+    participants = model.get_next_match()
+    gui.display_leaderboard(model.get_leaderboard(), participants)
+    gui.display_match(participants, consume_result)
 
   start_next_match()
   gui.mainloop()
