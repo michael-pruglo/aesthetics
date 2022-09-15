@@ -1,10 +1,12 @@
+from numpy import interp
 import tkinter as tk
 from tkinter import ttk
+import tkinter.font
 from typing import Callable
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
-from helpers import short_fname
+from helpers import short_fname, truncate
 from elo_rater_types import EloChange, Outcome, ProfileInfo
 
 
@@ -12,8 +14,9 @@ BTFL_DARK_BG = "#222"
 BTFL_DARK_PINE = "#234F1E"
 BTFL_DARK_GRANOLA = "#D6B85A"
 BTFL_LIGHT_MINT = "#99EDC3"
+BTFL_LIGHT_GRAY = "#ccc"
 
-class MediaFrame(ttk.Frame):
+class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .configure(background=)
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.img = None
@@ -95,7 +98,7 @@ class ProfileCard(ttk.Frame):
       color = BTFL_DARK_BG
     else:
       color = [BTFL_DARK_BG, BTFL_DARK_GRANOLA, BTFL_DARK_PINE][outcome+1]
-    for item in self.tags, self.name, self.rating:
+    for item in self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
   def show_results(self, res:EloChange) -> None:
@@ -127,11 +130,11 @@ class EloGui:
     self.cards        :list[ProfileCard] = [None, None]
     MID_W = 0.17
     for i in range(2):
-      self.cards[i] = ProfileCard(i, self.root, padding=(25,))
+      self.cards[i] = ProfileCard(i, self.root)
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
-    self.mid_panel = ttk.Label(self.root, relief="ridge", borderwidth=5, anchor="n", justify="center", padding=(5,10), wraplength=270)
+    self.mid_panel = tk.Text(self.root, padx=10, pady=20, bd=0, font=tk.font.Font(family='courier 10 pitch', size=9), background=BTFL_DARK_BG, cursor="arrow", spacing2=15)
+    self.mid_panel.configure(highlightthickness=0)
     self.mid_panel.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
-
     self.report_outcome_cb = None
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
@@ -153,7 +156,37 @@ class EloGui:
 
   def display_leaderboard(self, leaderboard:list[ProfileInfo], feature:list=None, context:int=2) -> None:
     """ display top and everyone from `feature` and `context` lines around them """
-    self.mid_panel.configure(text='\n'.join(map(lambda p:f"{p.fullname[-15:]} {p.elo}", leaderboard[:5])))
+    def write_profile(prof:ProfileInfo):
+      elo_m_shade = int(interp(prof.elo_matches, [0,100], [0x70,255]))
+      display_options = {
+        'tag_name': (
+          "#ddd", 
+          f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "
+        ),
+        'tag_rating': (
+          BTFL_DARK_GRANOLA,
+          f"{'*' * prof.rating:>5} ",
+        ),
+        f'tag_elo{prof.fullname}': (
+          ["#777", "#5E95C2", "#4E9552", "#FBF07A", "#DA750D", "#F56552"][prof.rating],
+          f"{prof.elo:>4} ",
+        ),
+        f'tag_elo_matches{prof.fullname}': (
+          "#" + f"{elo_m_shade:02x}"*3,
+          f"{f'({prof.elo_matches})':<5}",
+        ),
+      }
+      self.mid_panel.insert(tk.END, '    ') #dumb hack, but justify='center' trashes bg color
+      for tag,(fg,txt) in display_options.items():
+        self.mid_panel.tag_configure(tag, background="#303030", foreground=fg)
+        self.mid_panel.insert(tk.END, txt, tag)
+      self.mid_panel.insert(tk.END, '\n')
+
+    self.mid_panel.configure(state=tk.NORMAL)
+    self.mid_panel.delete("1.0", tk.END)
+    for prof in leaderboard:
+      write_profile(prof)
+    self.mid_panel.configure(state=tk.DISABLED)
 
   def mainloop(self):
     self.root.mainloop()

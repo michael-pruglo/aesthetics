@@ -5,4 +5,5 @@ models/tmp*
 .vscode/
 logs/
 test_imgs/*.csv
+src/tmp.py
 

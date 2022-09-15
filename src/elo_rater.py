@@ -24,7 +24,7 @@ def setup_logger(log_filename):
 class App:
   def __init__(self, media_dir:str):
     self.gui = EloGui()
-    self.model = EloCompetition(media_dir, refresh=True)
+    self.model = EloCompetition(media_dir, refresh=False)
 
   def consume_result(self, outcome:Outcome) -> None:
     participants = self.model.get_curr_match() #needs to be before model.consume_result()

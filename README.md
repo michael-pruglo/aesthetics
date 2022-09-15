@@ -27,6 +27,6 @@ python src/elo_rater.py [path/to/media]
 ```
 
 ## TODO:
-- add middle column listing all participants sorted: top...first...second...
+- add SUPER button for extraordinary items
 - add glicko math
 
