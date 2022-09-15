@@ -30,7 +30,7 @@ def run_rater(media_dir):
     gui.conclude_match(elo_change, start_next_match)
 
   def start_next_match():
-    gui.display_match(*model.get_next_match(), consume_result)
+    gui.display_match(model.get_next_match(), consume_result)
 
   start_next_match()
   gui.mainloop()

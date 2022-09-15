@@ -45,21 +45,21 @@ class ELOMath:
 class EloCompetition:
   def __init__(self, img_dir, refresh):
     self.db = DBAccess(img_dir, refresh)
-    self.curr_match = None
+    self.curr_match = []
 
-  def get_next_match(self) -> tuple[ProfileInfo, ProfileInfo]:
+  def get_next_match(self) -> list[ProfileInfo]:
     a = self.db.retreive_rand_profile()
     while True:
       b = self.db.retreive_rand_profile()
       if b.fullname != a.fullname:
         break
-    self.curr_match = (a,b)
+    self.curr_match = [a,b]
     return self.curr_match
 
   def consume_result(self, outcome:Outcome) -> EloChange:
     assert self.curr_match
     l, r = self.curr_match
-    self.curr_match = None
+    self.curr_match = []
 
     elo_change = ELOMath.calc_change(l, r, outcome)
     logging.info("%s vs %s: %2d %s", l, r, outcome.value, elo_change)

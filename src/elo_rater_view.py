@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from typing import Callable
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
@@ -69,24 +70,15 @@ class MediaFrame(ttk.Frame):
 class ProfileCard(ttk.Frame):
   def __init__(self, idx:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    is_bottom = idx>1
     is_right  = idx%2
-
-    PREV_H = 0.15
-    self.place(
-      relx = 0.5*is_right,
-      rely = PREV_H*is_bottom,
-      relwidth = 0.5,
-      relheight = 1-PREV_H if is_bottom else PREV_H
-    )
 
     self.tags   = ttk.Label (self, anchor="center", text="tags")
     self.media  = MediaFrame(self, borderwidth=1, relief="ridge")
     self.name   = ttk.Label (self, anchor="center", text="filename")
     self.rating = ttk.Label (self, anchor="center", text="rating", foreground="yellow")
 
-    TW = 0.25 if is_bottom else 0
-    PH = 0.95 if is_bottom else 0.7
+    TW = 0.25
+    PH = 0.95
     self.tags.place  (relx=is_right*(1-TW),   relwidth=TW,   relheight=PH)
     self.media.place (relx=TW*(not is_right), relwidth=1-TW, relheight=PH)
     self.name.place  (rely=PH,                relwidth=1,    relheight=(1-PH)/2)
@@ -132,32 +124,31 @@ class EloGui:
     style.configure('.', background=BTFL_DARK_BG)
     style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
 
-    self.cards = [ProfileCard(i, self.root, borderwidth=1, relief="ridge") for i in range(4)]
-    self.curr_profile1 = None
-    self.curr_profile2 = None
+    self.curr_profiles = [None, None]
+    self.cards = [None, None]
+    MID_W = 0.17
+    for i in range(2):
+      self.cards[i] = ProfileCard(i, self.root, borderwidth=6, relief="ridge")
+      self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
 
-    self.report_outcome = None
+    self.report_outcome_cb = None
 
-  def display_match(self, profile1:ProfileInfo, profile2:ProfileInfo, callback) -> None:
-    if self.curr_profile1 and self.curr_profile2:
-      self.cards[0].show_profile(self.curr_profile1)
-      self.cards[1].show_profile(self.curr_profile2)
-    self.cards[2].show_profile(profile1)
-    self.cards[3].show_profile(profile2)
-    self.cards[2].set_style(None)
-    self.cards[3].set_style(None)
+  def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
+    assert len(profiles) == 2
+    for card,profile in zip(self.cards, profiles):
+      card.show_profile(profile)
+      card.set_style(None)
+    self.curr_profiles = profiles
+    self.report_outcome_cb = callback
     self._enable_arrows(True)
-    self.curr_profile1 = profile1
-    self.curr_profile2 = profile2
-    self.report_outcome = callback
 
   def conclude_match(self, res:EloChange, callback) -> None:
-    self.cards[2].show_results(res.new_elo_1, res.delta_elo_1)
-    self.cards[3].show_results(res.new_elo_2, res.delta_elo_2)
-    self.curr_profile1.elo_matches += 1
-    self.curr_profile1.elo = res.new_elo_1
-    self.curr_profile2.elo_matches += 1
-    self.curr_profile2.elo = res.new_elo_2
+    self.cards[0].show_results(res.new_elo_1, res.delta_elo_1)
+    self.cards[1].show_results(res.new_elo_2, res.delta_elo_2)
+    for profile in self.curr_profiles:
+      profile.elo_matches += 1
+    self.curr_profiles[0].elo = res.new_elo_1
+    self.curr_profiles[1].elo = res.new_elo_2
     self.root.after(1000, callback)
 
   def mainloop(self):
@@ -178,6 +169,6 @@ class EloGui:
       "Up": Outcome.DRAW,
       "Right": Outcome.WIN_RIGHT,
     }[event.keysym]
-    self.cards[2].set_style(-outcome.value)
-    self.cards[3].set_style( outcome.value)
-    self.report_outcome(outcome)
+    self.cards[0].set_style(-outcome.value)
+    self.cards[1].set_style( outcome.value)
+    self.report_outcome_cb(outcome)
