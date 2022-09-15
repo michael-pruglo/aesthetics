@@ -16,8 +16,7 @@ def setup_logger(log_filename):
       logging.StreamHandler(),
       logging.FileHandler(log_filename, encoding="utf-8")
     ],
-    format = "%(asctime)s %(message)s",
-    datefmt = "%Y-%m-%d %H:%M",
+    format = "%(created)d %(message)s",
     level = logging.INFO
   )
   logging.info("Starting new session...")
