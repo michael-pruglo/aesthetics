@@ -98,8 +98,8 @@ class ProfileCard(ttk.Frame):
     for item in self.name, self.rating, self.tags:
       item.configure(background=color)
 
-  def show_results(self, new_elo:int, delta_elo:int) -> None:
-    self.rating.configure(text=f"NEW: {new_elo}  ({delta_elo:+})")
+  def show_results(self, res:EloChange) -> None:
+    self.rating.configure(text=f"NEW: {res.new_elo}  ({res.delta_elo:+})")
 
   def _show_tags(self, tags):
     tags = sorted(tags.split(' '))
@@ -124,8 +124,8 @@ class EloGui:
     style.configure('.', background=BTFL_DARK_BG)
     style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
 
-    self.curr_profiles = [None, None]
-    self.cards = [None, None]
+    self.curr_profiles:list[ProfileInfo] = [None, None]
+    self.cards        :list[ProfileCard] = [None, None]
     MID_W = 0.17
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root, borderwidth=6, relief="ridge")
@@ -142,13 +142,12 @@ class EloGui:
     self.report_outcome_cb = callback
     self._enable_arrows(True)
 
-  def conclude_match(self, res:EloChange, callback) -> None:
-    self.cards[0].show_results(res.new_elo_1, res.delta_elo_1)
-    self.cards[1].show_results(res.new_elo_2, res.delta_elo_2)
-    for profile in self.curr_profiles:
+  def conclude_match(self, results:list[EloChange], callback) -> None:
+    for card,res in zip(self.cards, results):
+      card.show_results(res)
+    for profile,res in zip(self.curr_profiles, results):
+      profile.elo = res.new_elo
       profile.elo_matches += 1
-    self.curr_profiles[0].elo = res.new_elo_1
-    self.curr_profiles[1].elo = res.new_elo_2
     self.root.after(1000, callback)
 
   def mainloop(self):

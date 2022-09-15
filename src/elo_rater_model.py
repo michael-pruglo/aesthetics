@@ -21,7 +21,7 @@ class ELOMath:
     return np.clip((elo-ELOMath.INITIAL_ELO)//ELOMath.STD, 0, 5)
 
   @staticmethod
-  def calc_change(l:ProfileInfo, r:ProfileInfo, outcome:Outcome) -> EloChange:
+  def calc_changes(l:ProfileInfo, r:ProfileInfo, outcome:Outcome) -> list[EloChange]:
     ql = 10**(l.elo/400)
     qr = 10**(r.elo/400)
     er = qr/(ql+qr)
@@ -29,10 +29,7 @@ class ELOMath:
     delta = sr-er
     dl = round(ELOMath.get_k(l) * -delta)
     dr = round(ELOMath.get_k(r) *  delta)
-    return EloChange(
-      new_elo_1 = l.elo+dl, delta_elo_1 = dl,
-      new_elo_2 = r.elo+dr, delta_elo_2 = dr,
-    )
+    return [EloChange(l.elo+dl, dl),EloChange(r.elo+dr, dr)]
 
   @staticmethod
   def get_k(p:ProfileInfo) -> float:
@@ -56,17 +53,16 @@ class EloCompetition:
     self.curr_match = [a,b]
     return self.curr_match
 
-  def consume_result(self, outcome:Outcome) -> EloChange:
-    assert self.curr_match
-    l, r = self.curr_match
+  def consume_result(self, outcome:Outcome) -> list[EloChange]:
+    assert len(self.curr_match) == 2
+    elo_changes = ELOMath.calc_changes(*self.curr_match, outcome)
+
+    logging.info("%s vs %s: %2d %s%s", *self.curr_match, outcome.value, *elo_changes)
+    self.db.save_match(self.curr_match, outcome)
+    self.db.update_elo(self.curr_match, elo_changes)
+
     self.curr_match = []
-
-    elo_change = ELOMath.calc_change(l, r, outcome)
-    logging.info("%s vs %s: %2d %s", l, r, outcome.value, elo_change)
-    self.db.save_match(l, r, outcome)
-    self.db.update_elo(l, r, elo_change)
-
-    return elo_change
+    return elo_changes
 
 
 class DBAccess:
@@ -75,17 +71,21 @@ class DBAccess:
     self.meta_mgr = MetadataManager(img_dir, refresh, ELOMath.rat_to_elo)
     self.history_mgr = HistoryManager(img_dir)
 
-  def save_match(self, l:ProfileInfo, r:ProfileInfo, outcome:Outcome) -> None:
+  def save_match(self, profiles:list[ProfileInfo], outcome:Outcome) -> None:
     self.history_mgr.save_match(
       int(time.time()),
-      short_fname(l.fullname),
-      short_fname(r.fullname),
+      short_fname(profiles[0].fullname),
+      short_fname(profiles[1].fullname),
       outcome.value
     )
 
-  def update_elo(self, l:ProfileInfo, r:ProfileInfo, elo_change:EloChange) -> None:
-    self.meta_mgr.update_elo(short_fname(l.fullname), elo_change.new_elo_1, ELOMath.elo_to_rat(elo_change.new_elo_1))
-    self.meta_mgr.update_elo(short_fname(r.fullname), elo_change.new_elo_2, ELOMath.elo_to_rat(elo_change.new_elo_2))
+  def update_elo(self, profiles:list[ProfileInfo], elo_changes:list[EloChange]) -> None:
+    for profile,change in zip(profiles, elo_changes):
+      self.meta_mgr.update_elo(
+        short_fname(profile.fullname),
+        change.new_elo,
+        ELOMath.elo_to_rat(change.new_elo)
+      )
 
   def retreive_profile(self, short_name) -> ProfileInfo:
     try:

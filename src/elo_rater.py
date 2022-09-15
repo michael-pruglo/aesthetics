@@ -26,8 +26,8 @@ def run_rater(media_dir):
   model = EloCompetition(media_dir, refresh=False)
 
   def consume_result(outcome:Outcome):
-    elo_change = model.consume_result(outcome)
-    gui.conclude_match(elo_change, start_next_match)
+    elo_changes = model.consume_result(outcome)
+    gui.conclude_match(elo_changes, start_next_match)
 
   def start_next_match():
     gui.display_match(model.get_next_match(), consume_result)
