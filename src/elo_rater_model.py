@@ -47,7 +47,7 @@ class EloCompetition:
   def get_curr_match(self) -> list[ProfileInfo]:
     return self.curr_match
 
-  def get_next_match(self) -> list[ProfileInfo]:
+  def generate_match(self) -> list[ProfileInfo]:
     a = self.db.retreive_rand_profile()
     while True:
       b = self.db.retreive_rand_profile()

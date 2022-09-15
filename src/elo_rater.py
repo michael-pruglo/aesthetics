@@ -21,23 +21,25 @@ def setup_logger(log_filename):
   )
   logging.info("Starting new session...")
 
-def run_rater(media_dir):
-  gui = EloGui()
-  model = EloCompetition(media_dir, refresh=False)
+class App:
+  def __init__(self, media_dir:str):
+    self.gui = EloGui()
+    self.model = EloCompetition(media_dir, refresh=True)
 
-  def consume_result(outcome:Outcome):
-    participants = model.get_curr_match() #needs to be before model.consume_result()
-    elo_changes = model.consume_result(outcome)
-    gui.display_leaderboard(model.get_leaderboard(), participants)
-    gui.conclude_match(elo_changes, start_next_match)
+  def consume_result(self, outcome:Outcome) -> None:
+    participants = self.model.get_curr_match() #needs to be before model.consume_result()
+    elo_changes = self.model.consume_result(outcome)
+    self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
+    self.gui.conclude_match(elo_changes, self.start_next_match)
 
-  def start_next_match():
-    participants = model.get_next_match()
-    gui.display_leaderboard(model.get_leaderboard(), participants)
-    gui.display_match(participants, consume_result)
+  def start_next_match(self) -> None:
+    participants = self.model.generate_match()
+    self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
+    self.gui.display_match(participants, self.consume_result)
 
-  start_next_match()
-  gui.mainloop()
+  def run(self) -> None:
+    self.start_next_match()
+    self.gui.mainloop()
 
 
 if __name__ == "__main__":
@@ -46,4 +48,4 @@ if __name__ == "__main__":
   assert os.path.exists(given_dir), f"path {given_dir} doesn't exist"
 
   setup_logger(log_filename=f"./logs/matches_{short_fname(given_dir)}.log")
-  run_rater(given_dir)
+  App(given_dir).run()
