@@ -168,7 +168,7 @@ class EloGui:
           f"{'*' * prof.rating:>5} ",
         ),
         f'tag_elo{prof.fullname}': (
-          ["#777", "#5E95C2", "#4E9552", "#FBF07A", "#DA750D", "#F56552"][prof.rating],
+          ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.rating],
           f"{prof.elo:>4} ",
         ),
         f'tag_elo_matches{prof.fullname}': (
