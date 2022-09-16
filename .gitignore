@@ -6,4 +6,5 @@ models/tmp*
 logs/
 test_imgs/*.csv
 src/tmp.py
+test_imgs/
 

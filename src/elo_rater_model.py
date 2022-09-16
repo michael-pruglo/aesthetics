@@ -111,13 +111,13 @@ class DBAccess:
     return self._validate_and_convert_info(info)
 
   def _validate_and_convert_info(self, info) -> ProfileInfo:
-    assert all(info.index[:4] == ['tags', 'rating', 'elo', 'elo_matches']), str(info)
-    assert isinstance(info['tags'], str), type(info['tags'])
-    assert isinstance(info['rating'], np.int64), type(info['rating'])
-    assert isinstance(info['elo'], np.int64), type(info['elo'])
-    assert isinstance(info['elo_matches'], np.int64), type(info['elo_matches'])
-    assert 0 <= info['rating'] <= 5
     short_name = info.name
+    assert all(info.index[:4] == ['tags', 'rating', 'elo', 'elo_matches']), str(info)
+    assert isinstance(info['tags'],        str),      f"{type(info['tags'])       }  {short_name}"
+    assert isinstance(info['rating'],      np.int64), f"{type(info['rating'])     }  {short_name}"
+    assert isinstance(info['elo'],         np.int64), f"{type(info['elo'])        }  {short_name}"
+    assert isinstance(info['elo_matches'], np.int64), f"{type(info['elo_matches'])}  {short_name}"
+    assert 0 <= info['rating'] <= 5
     return ProfileInfo(
       tags = info['tags'],
       fullname = os.path.join(self.img_dir, short_name),

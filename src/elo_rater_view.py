@@ -1,4 +1,6 @@
 from numpy import interp
+from enum import Enum, auto
+from collections import OrderedDict
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
@@ -69,7 +71,6 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
       self.vid_frame = None #slower, but stop+reuse the existing causes bugs
     self.update()
 
-
 class ProfileCard(ttk.Frame):
   def __init__(self, idx:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -114,6 +115,70 @@ class ProfileCard(ttk.Frame):
   def _show_rating(self, rating, elo, elo_matches):
     self.rating.configure(text=f"{'★'*rating}  {elo} (matches: {elo_matches})")
 
+class Leaderboard(tk.Text):
+  class FeatureType(Enum):
+    NONE = auto()
+    LEFT = auto()
+    RIGHT = auto()
+
+  def __init__(self, master) -> None:
+    super().__init__(master, padx=21, pady=10, bd=0, cursor="arrow",
+            font=tk.font.Font(family='courier 10 pitch', size=9), background=BTFL_DARK_BG)
+    super().configure(highlightthickness=0)
+    self.HEAD_LEN = 5
+
+  def display(self, leaderboard, feature, context:int=2):
+    """ display top and everyone from `feature` and `context` lines around them """
+    self.configure(state=tk.NORMAL)
+    self.delete("1.0", tk.END)
+
+    displayed_rows = OrderedDict()
+    head = range(min(self.HEAD_LEN, len(leaderboard)))
+    displayed_rows.update({i:self.FeatureType.NONE for i in head})
+    for featured,feature_type in zip(feature, [self.FeatureType.LEFT, self.FeatureType.RIGHT]):
+      rank = next(i for i,p in enumerate(leaderboard) if p.fullname==featured.fullname)
+      for i in range(max(0,rank-context), min(len(leaderboard),rank+context+1)):
+        displayed_rows.setdefault(i, self.FeatureType.NONE)
+      displayed_rows[rank] = feature_type
+
+    prev = -1
+    for i,feature_type in displayed_rows.items():
+      if i-prev != 1:
+        self.insert(tk.END, '\n\n')
+      self._write_profile(i, leaderboard[i], feature_type)
+      prev = i
+
+    self.configure(state=tk.DISABLED)
+
+  def _write_profile(self, idx:int, prof:ProfileInfo, feat:FeatureType=FeatureType.NONE):
+    blueprint = self._get_display_blueprint(idx, prof)
+    if feat == self.FeatureType.LEFT:
+      blueprint.insert(0, ('tag_featureleft', "red", "<<"))
+    if feat == self.FeatureType.RIGHT:
+      blueprint.append(('tag_featureright', "purple", ">>"))
+    for tag,fg,txt in blueprint:
+      self.tag_configure(tag, background="#303030", foreground=fg)
+      self.insert(tk.END, txt, tag)
+    self.insert(tk.END, '\n')
+
+  def _get_display_blueprint(self, idx, prof) -> list[tuple]:
+    elo_m_shade = int(interp(prof.elo_matches, [0,100], [0x70,255]))
+    return [
+      ('tag_idx', "#aaa", f"{idx+1:>3} "),
+      ('tag_name', "#ddd", f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "),
+      ('tag_rating', BTFL_DARK_GRANOLA, f"{'*' * prof.rating:>5} "),
+      (
+        f'tag_elo{prof.fullname}',
+        ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.rating],
+        f"{prof.elo:>4} ",
+      ),
+      (
+        f'tag_elo_matches{prof.fullname}',
+        "#" + f"{elo_m_shade:02x}"*3,
+        f"{f'({prof.elo_matches})'}",
+      ),
+    ]
+
 
 class EloGui:
   def __init__(self):
@@ -132,10 +197,8 @@ class EloGui:
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root)
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
-    self.mid_panel = tk.Text(self.root, padx=21, pady=10, bd=0, cursor="arrow",
-        font=tk.font.Font(family='courier 10 pitch', size=9), background=BTFL_DARK_BG)
-    self.mid_panel.configure(highlightthickness=0)
-    self.mid_panel.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
+    self.leaderboard = Leaderboard(self.root)
+    self.leaderboard.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
     self.report_outcome_cb = None
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
@@ -147,41 +210,16 @@ class EloGui:
     self.report_outcome_cb = callback
     self._enable_arrows(True)
 
-  def conclude_match(self, results:list[EloChange], callback) -> None:
+  def conclude_match(self, results:list[EloChange], callback:Callable) -> None:
     for card,res in zip(self.cards, results):
       card.show_results(res)
     for profile,res in zip(self.curr_profiles, results):
       profile.elo = res.new_elo
       profile.elo_matches += 1
-    self.root.after(1000, callback)
+    self.root.after(3000, callback)
 
-  def display_leaderboard(self, leaderboard:list[ProfileInfo], feature:list=None, context:int=3) -> None:
-    """ display top and everyone from `feature` and `context` lines around them """
-    def write_profile(idx:int, prof:ProfileInfo):
-      elo_m_shade = int(interp(prof.elo_matches, [0,100], [0x70,255]))
-      display_options = {
-        'tag_idx': ("#aaa", f"{idx+1:>3} "),
-        'tag_name': ("#ddd", f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "),
-        'tag_rating': (BTFL_DARK_GRANOLA, f"{'*' * prof.rating:>5} "),
-        f'tag_elo{prof.fullname}': (
-          ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.rating],
-          f"{prof.elo:>4} ",
-        ),
-        f'tag_elo_matches{prof.fullname}': (
-          "#" + f"{elo_m_shade:02x}"*3,
-          f"{f'({prof.elo_matches})'}",
-        ),
-      }
-      for tag,(fg,txt) in display_options.items():
-        self.mid_panel.tag_configure(tag, background="#303030", foreground=fg)
-        self.mid_panel.insert(tk.END, txt, tag)
-      self.mid_panel.insert(tk.END, '\n')
-
-    self.mid_panel.configure(state=tk.NORMAL)
-    self.mid_panel.delete("1.0", tk.END)
-    for i,prof in enumerate(leaderboard):
-      write_profile(i,prof)
-    self.mid_panel.configure(state=tk.DISABLED)
+  def display_leaderboard(self, leaderboard:list[ProfileInfo], feature:list[ProfileInfo]=None) -> None:
+    self.leaderboard.display(leaderboard, feature)
 
   def mainloop(self):
     self.root.mainloop()
