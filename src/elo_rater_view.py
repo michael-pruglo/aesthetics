@@ -132,7 +132,8 @@ class EloGui:
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root)
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
-    self.mid_panel = tk.Text(self.root, padx=10, pady=20, bd=0, font=tk.font.Font(family='courier 10 pitch', size=9), background=BTFL_DARK_BG, cursor="arrow", spacing2=15)
+    self.mid_panel = tk.Text(self.root, padx=21, pady=10, bd=0, cursor="arrow",
+        font=tk.font.Font(family='courier 10 pitch', size=9), background=BTFL_DARK_BG)
     self.mid_panel.configure(highlightthickness=0)
     self.mid_panel.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
     self.report_outcome_cb = None
@@ -154,29 +155,23 @@ class EloGui:
       profile.elo_matches += 1
     self.root.after(1000, callback)
 
-  def display_leaderboard(self, leaderboard:list[ProfileInfo], feature:list=None, context:int=2) -> None:
+  def display_leaderboard(self, leaderboard:list[ProfileInfo], feature:list=None, context:int=3) -> None:
     """ display top and everyone from `feature` and `context` lines around them """
-    def write_profile(prof:ProfileInfo):
+    def write_profile(idx:int, prof:ProfileInfo):
       elo_m_shade = int(interp(prof.elo_matches, [0,100], [0x70,255]))
       display_options = {
-        'tag_name': (
-          "#ddd", 
-          f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "
-        ),
-        'tag_rating': (
-          BTFL_DARK_GRANOLA,
-          f"{'*' * prof.rating:>5} ",
-        ),
+        'tag_idx': ("#aaa", f"{idx+1:>3} "),
+        'tag_name': ("#ddd", f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "),
+        'tag_rating': (BTFL_DARK_GRANOLA, f"{'*' * prof.rating:>5} "),
         f'tag_elo{prof.fullname}': (
           ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.rating],
           f"{prof.elo:>4} ",
         ),
         f'tag_elo_matches{prof.fullname}': (
           "#" + f"{elo_m_shade:02x}"*3,
-          f"{f'({prof.elo_matches})':<5}",
+          f"{f'({prof.elo_matches})'}",
         ),
       }
-      self.mid_panel.insert(tk.END, '    ') #dumb hack, but justify='center' trashes bg color
       for tag,(fg,txt) in display_options.items():
         self.mid_panel.tag_configure(tag, background="#303030", foreground=fg)
         self.mid_panel.insert(tk.END, txt, tag)
@@ -184,8 +179,8 @@ class EloGui:
 
     self.mid_panel.configure(state=tk.NORMAL)
     self.mid_panel.delete("1.0", tk.END)
-    for prof in leaderboard:
-      write_profile(prof)
+    for i,prof in enumerate(leaderboard):
+      write_profile(i,prof)
     self.mid_panel.configure(state=tk.DISABLED)
 
   def mainloop(self):
