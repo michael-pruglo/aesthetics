@@ -1,6 +1,5 @@
 from numpy import interp
 from enum import Enum, auto
-from collections import OrderedDict
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
@@ -12,6 +11,8 @@ from helpers import short_fname, truncate
 from elo_rater_types import EloChange, Outcome, ProfileInfo
 
 
+LEFT_BG = "#353935"
+RIGHT_BG = "#353539"
 BTFL_DARK_BG = "#222"
 BTFL_DARK_PINE = "#234F1E"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -71,20 +72,22 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
       self.vid_frame = None #slower, but stop+reuse the existing causes bugs
     self.update()
 
-class ProfileCard(ttk.Frame):
+class ProfileCard(tk.Frame):
   def __init__(self, idx:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
     is_right  = idx%2
+    self.bg = RIGHT_BG if is_right else LEFT_BG
 
     self.tags   = ttk.Label (self, anchor="center", text="tags")
     self.media  = MediaFrame(self)
     self.name   = ttk.Label (self, anchor="center", text="filename")
     self.rating = ttk.Label (self, anchor="center", text="rating", foreground="yellow")
 
-    TW = 0.25
+    TW = 0.22
+    BRDR = 0.015
     PH = 0.95
     self.tags.place  (relx=is_right*(1-TW),   relwidth=TW,   relheight=PH)
-    self.media.place (relx=TW*(not is_right), relwidth=1-TW, relheight=PH)
+    self.media.place (relx=BRDR if is_right else TW, relwidth=1-TW-BRDR, relheight=PH)
     self.name.place  (rely=PH,                relwidth=1,    relheight=(1-PH)/2)
     self.rating.place(rely=(PH+1)/2,          relwidth=1,    relheight=(1-PH)/2)
 
@@ -96,10 +99,10 @@ class ProfileCard(ttk.Frame):
 
   def set_style(self, outcome:int=None) -> None:
     if outcome is None:
-      color = BTFL_DARK_BG
+      color = self.bg
     else:
-      color = [BTFL_DARK_BG, BTFL_DARK_GRANOLA, BTFL_DARK_PINE][outcome+1]
-    for item in self.tags, self.media, self.name, self.rating:
+      color = [self.bg, BTFL_DARK_GRANOLA, BTFL_DARK_PINE][outcome+1]
+    for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
   def show_results(self, res:EloChange) -> None:
@@ -122,7 +125,7 @@ class Leaderboard(tk.Text):
     RIGHT = auto()
 
   def __init__(self, master) -> None:
-    super().__init__(master, padx=21, pady=10, bd=0, cursor="arrow",
+    super().__init__(master, padx=0, pady=10, bd=0, cursor="arrow",
             font=tk.font.Font(family='courier 10 pitch', size=9), background=BTFL_DARK_BG)
     super().configure(highlightthickness=0)
     self.HEAD_LEN = 5
@@ -132,9 +135,9 @@ class Leaderboard(tk.Text):
     self.configure(state=tk.NORMAL)
     self.delete("1.0", tk.END)
 
-    displayed_rows = OrderedDict()
-    head = range(min(self.HEAD_LEN, len(leaderboard)))
-    displayed_rows.update({i:self.FeatureType.NONE for i in head})
+    displayed_rows = {}
+    for i in range(min(self.HEAD_LEN, len(leaderboard))):
+      displayed_rows.setdefault(i, self.FeatureType.NONE)
     for featured,feature_type in zip(feature, [self.FeatureType.LEFT, self.FeatureType.RIGHT]):
       rank = next(i for i,p in enumerate(leaderboard) if p.fullname==featured.fullname)
       for i in range(max(0,rank-context), min(len(leaderboard),rank+context+1)):
@@ -142,42 +145,74 @@ class Leaderboard(tk.Text):
       displayed_rows[rank] = feature_type
 
     prev = -1
-    for i,feature_type in displayed_rows.items():
+    for i in sorted(displayed_rows.keys()):
       if i-prev != 1:
-        self.insert(tk.END, '\n\n')
-      self._write_profile(i, leaderboard[i], feature_type)
+        self.tag_configure('chunk_break', foreground=BTFL_LIGHT_GRAY, justify="center", spacing1=10, spacing3=10)
+        self.insert(tk.END, "...\n", 'chunk_break')
+      self._write_profile(i, leaderboard[i], displayed_rows[i])
       prev = i
 
     self.configure(state=tk.DISABLED)
 
   def _write_profile(self, idx:int, prof:ProfileInfo, feat:FeatureType=FeatureType.NONE):
     blueprint = self._get_display_blueprint(idx, prof)
+
+    default_bg = BTFL_DARK_BG
+    lenfix = 3
+    bgs = [default_bg, "#282828", default_bg]
+    textfixs = [' '*lenfix,' '*lenfix]
+    spacing = 0
     if feat == self.FeatureType.LEFT:
-      blueprint.insert(0, ('tag_featureleft', "red", "<<"))
+      bgs = [LEFT_BG]*2 + [default_bg]
+      textfixs = ['<'*lenfix,' '*lenfix]
+      spacing = 9
     if feat == self.FeatureType.RIGHT:
-      blueprint.append(('tag_featureright', "purple", ">>"))
-    for tag,fg,txt in blueprint:
-      self.tag_configure(tag, background="#303030", foreground=fg)
+      bgs = [default_bg] + [RIGHT_BG]*2
+      textfixs = [' '*lenfix,'>'*lenfix]
+      spacing = 9
+
+    tagfix = 'tag_prefix'+str(idx)
+    self.tag_configure(tagfix, background=bgs[0], foreground=BTFL_LIGHT_GRAY, spacing1=spacing, spacing3=spacing)
+    self.insert(tk.END, textfixs[0], tagfix)
+
+    for tag,(fg,txt) in blueprint.items():
+      tag += str(idx)
+      self.tag_configure(tag, background=bgs[1], foreground=fg, spacing1=spacing, spacing3=spacing)
       self.insert(tk.END, txt, tag)
+
+    tagfix = 'tag_suffix'+str(idx)
+    self.tag_configure(tagfix, background=bgs[2], foreground=BTFL_LIGHT_GRAY, spacing1=spacing, spacing3=spacing)
+    self.insert(tk.END, textfixs[1], tagfix)
+
     self.insert(tk.END, '\n')
+  """
+      special_bg = None
+      if feat == self.FeatureType.LEFT:
+        special_bg = "#505050"
+        blueprint['tag_prefix'] = (BTFL_LIGHT_GRAY, special_bg, "<<")
+      if feat == self.FeatureType.RIGHT:
+        special_bg = "#707070"
+        blueprint['tag_suffix'] = (BTFL_LIGHT_GRAY, special_bg, ">>")
+      for tag,(fg,bg,txt) in blueprint.items():
+        tag += str(idx)
+        self.tag_configure(tag, background=special_bg or bg, foreground=fg)
+        self.insert(tk.END, txt, tag)
+      self.insert(tk.END, '\n')
+  """
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple]:
     elo_m_shade = int(interp(prof.elo_matches, [0,100], [0x70,255]))
-    return [
-      ('tag_idx', "#aaa", f"{idx+1:>3} "),
-      ('tag_name', "#ddd", f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "),
-      ('tag_rating', BTFL_DARK_GRANOLA, f"{'*' * prof.rating:>5} "),
-      (
-        f'tag_elo{prof.fullname}',
+    default_bg = "#303030"
+    return {
+      'tag_idx': ("#aaa", f"{idx+1:>3} "),
+      'tag_name': ("#ddd", f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "),
+      'tag_rating': (BTFL_DARK_GRANOLA, f"{'*' * prof.rating:>5} "),
+      'tag_elo': (
         ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.rating],
         f"{prof.elo:>4} ",
       ),
-      (
-        f'tag_elo_matches{prof.fullname}',
-        "#" + f"{elo_m_shade:02x}"*3,
-        f"{f'({prof.elo_matches})'}",
-      ),
-    ]
+      'tag_elo_matches': ("#"+f"{elo_m_shade:02x}"*3, f"{f'({prof.elo_matches})':<5}"),
+    }
 
 
 class EloGui:
@@ -193,7 +228,7 @@ class EloGui:
 
     self.curr_profiles:list[ProfileInfo] = [None, None]
     self.cards        :list[ProfileCard] = [None, None]
-    MID_W = 0.17
+    MID_W = 0.166
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root)
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
