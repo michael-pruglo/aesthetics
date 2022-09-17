@@ -246,11 +246,16 @@ class EloGui:
     self.curr_profiles:list[ProfileInfo] = [None, None]
     self.cards        :list[ProfileCard] = [None, None]
     MID_W = 0.166
+    HELP_H = 0.07
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root)
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
     self.leaderboard = Leaderboard(self.root)
-    self.leaderboard.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
+    self.leaderboard.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1-HELP_H)
+    self.help = ttk.Label(self.root, background="#333", anchor='s',
+                          justify="center", padding=(10,10),
+                          text="<-/-> to choose winner\n^ to draw\nCtrl+ <-/-> to give boost")
+    self.help.place(relx=0.5-MID_W/2, rely=1-HELP_H, relwidth=MID_W, relheight=HELP_H)
 
     self.report_outcome_cb = None
     self.give_boost_cb = give_boost_cb
