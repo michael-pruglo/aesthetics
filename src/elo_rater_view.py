@@ -12,17 +12,19 @@ from elo_rater_types import EloChange, Outcome, ProfileInfo
 
 
 BTFL_DARK_BG = "#222"
-BTFL_DARK_PINE = "#234F1E"
 BTFL_DARK_GRANOLA = "#D6B85A"
-BTFL_LIGHT_MINT = "#99EDC3"
 BTFL_LIGHT_GRAY = "#ccc"
 
-LEFT_COLORBASE = "#353935"
-RIGHT_COLORBASE = "#353539"
-spice_rgb = lambda r,g,b: tuple([int(max(x*1.2,255) if x==max(r,g,b) else x) for x in (r,g,b)])
-spice_hsl = lambda h,s,l: (h, .1, .6)
-LEFT_COLORSPICED  = helpers.spice_up_color(LEFT_COLORBASE,  spice_rgb, spice_hsl)
-RIGHT_COLORSPICED = helpers.spice_up_color(RIGHT_COLORBASE, spice_rgb, spice_hsl)
+LEFT_COLORBG = "#353935"
+RIGHT_COLORBG = "#353539"
+spice_fg_rgb  = lambda r,g,b: tuple([int(max(x*1.2,255) if x==max(r,g,b) else x) for x in (r,g,b)])
+spice_fg_hsl  = lambda h,s,l: (h, .1, .6)
+spice_win_hsl = lambda h,s,l: (h, .3, .3)
+LEFT_COLORFG   = helpers.spice_up_color(LEFT_COLORBG,   spice_fg_rgb,  spice_fg_hsl)
+RIGHT_COLORFG  = helpers.spice_up_color(RIGHT_COLORBG,  spice_fg_rgb,  spice_fg_hsl)
+LEFT_COLORWIN  = helpers.spice_up_color(LEFT_COLORBG,   None, spice_win_hsl)
+RIGHT_COLORWIN = helpers.spice_up_color(RIGHT_COLORBG,  None, spice_win_hsl)
+COLORDRAW      = helpers.spice_up_color(RIGHT_COLORWIN, None, lambda h,s,l: (60, s, l))
 
 
 class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .configure(background=)
@@ -82,8 +84,10 @@ class ProfileCard(tk.Frame):
   def __init__(self, idx:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
     is_right  = idx%2
-    self.bg = RIGHT_COLORBASE   if is_right else LEFT_COLORBASE
-    self.fg = RIGHT_COLORSPICED if is_right else LEFT_COLORSPICED
+    self.bg = RIGHT_COLORBG   if is_right else LEFT_COLORBG
+    self.fg = RIGHT_COLORFG if is_right else LEFT_COLORFG
+    self.wincolor = RIGHT_COLORWIN if is_right else LEFT_COLORWIN
+    self.drawcolor = COLORDRAW
 
     self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)
@@ -108,7 +112,7 @@ class ProfileCard(tk.Frame):
     if outcome is None:
       color = self.bg
     else:
-      color = [self.bg, BTFL_DARK_GRANOLA, BTFL_DARK_PINE][outcome+1]
+      color = [self.bg, self.drawcolor, self.wincolor][outcome+1]
     for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
@@ -137,7 +141,7 @@ class Leaderboard(tk.Text):
     super().configure(highlightthickness=0)
     self.HEAD_LEN = 5
 
-  def display(self, leaderboard, feature, context:int=2):
+  def display(self, leaderboard, feature, outcome, context:int=2):
     """ display top and everyone from `feature` and `context` lines around them """
     self.configure(state=tk.NORMAL)
     self.delete("1.0", tk.END)
@@ -156,12 +160,12 @@ class Leaderboard(tk.Text):
       if i-prev != 1:
         self.tag_configure('chunk_break', foreground=BTFL_LIGHT_GRAY, justify="center", spacing1=10, spacing3=10)
         self.insert(tk.END, "...\n", 'chunk_break')
-      self._write_profile(i, leaderboard[i], displayed_rows[i])
+      self._write_profile(i, leaderboard[i], displayed_rows[i], outcome)
       prev = i
 
     self.configure(state=tk.DISABLED)
 
-  def _write_profile(self, idx:int, prof:ProfileInfo, feat:FeatureType=FeatureType.NONE):
+  def _write_profile(self, idx:int, prof:ProfileInfo, feat:FeatureType, outcome):
     blueprint = self._get_display_blueprint(idx, prof)
 
     default_bg = BTFL_DARK_BG
@@ -172,14 +176,24 @@ class Leaderboard(tk.Text):
     is_featured = False
     fgfeatured = BTFL_LIGHT_GRAY
     if feat == self.FeatureType.LEFT:
-      bgs = [LEFT_COLORBASE]*2 + [default_bg]
+      outcome_bg = {
+        Outcome.WIN_LEFT: LEFT_COLORWIN,
+        Outcome.DRAW: COLORDRAW,
+        Outcome.WIN_RIGHT: LEFT_COLORBG,
+      }.get(outcome, LEFT_COLORBG)
+      bgs = [outcome_bg]*2 + [default_bg]
       textfixs = ['<'*lenfix,' '*lenfix]
-      fgfeatured = LEFT_COLORSPICED
+      fgfeatured = LEFT_COLORFG
       is_featured = True
     if feat == self.FeatureType.RIGHT:
-      bgs = [default_bg] + [RIGHT_COLORBASE]*2
+      outcome_bg = {
+        Outcome.WIN_LEFT: RIGHT_COLORBG,
+        Outcome.DRAW: COLORDRAW,
+        Outcome.WIN_RIGHT: RIGHT_COLORWIN,
+      }.get(outcome, RIGHT_COLORBG)
+      bgs = [default_bg] + [outcome_bg]*2
       textfixs = [' '*lenfix,'>'*lenfix]
-      fgfeatured = RIGHT_COLORSPICED
+      fgfeatured = RIGHT_COLORFG
       is_featured = True
     if is_featured:
       spacing = 10
@@ -256,8 +270,9 @@ class EloGui:
       profile.elo_matches += 1
     self.root.after(3000, callback)
 
-  def display_leaderboard(self, leaderboard:list[ProfileInfo], feature:list[ProfileInfo]=None) -> None:
-    self.leaderboard.display(leaderboard, feature)
+  def display_leaderboard(self, leaderboard:list[ProfileInfo],
+                          feature:list[ProfileInfo]=None, outcome:Outcome=None) -> None:
+    self.leaderboard.display(leaderboard, feature, outcome)
 
   def mainloop(self):
     self.root.mainloop()

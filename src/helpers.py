@@ -54,9 +54,13 @@ def rgb_to_hex(r,g,b) -> str:
 
 def spice_up_color(
   colorstr:str,
-  rgbop:Callable[[tuple],tuple],
-  hslop:Callable[[tuple],tuple],
+  rgbop:Callable[[tuple],tuple]=None,
+  hslop:Callable[[tuple],tuple]=None,
 ) -> str:
-  r,g,b = rgbop(*hex_to_rgb(colorstr))
-  h,s,l = hslop(*rgb_to_hsl(r,g,b))
-  return rgb_to_hex(*hsl_to_rgb(h,s,l))
+  rgb = hex_to_rgb(colorstr)
+  if rgbop:
+    rgb = rgbop(*rgb)
+  hsl = rgb_to_hsl(*rgb)
+  if hslop:
+    hsl = hslop(*hsl)
+  return rgb_to_hex(*hsl_to_rgb(*hsl))

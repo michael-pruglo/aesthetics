@@ -29,7 +29,7 @@ class App:
   def consume_result(self, outcome:Outcome) -> None:
     participants = self.model.get_curr_match() #needs to be before model.consume_result()
     elo_changes = self.model.consume_result(outcome)
-    self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
+    self.gui.display_leaderboard(self.model.get_leaderboard(), participants, outcome)
     self.gui.conclude_match(elo_changes, self.start_next_match)
 
   def start_next_match(self) -> None:
