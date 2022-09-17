@@ -7,17 +7,23 @@ from typing import Callable
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
-from helpers import short_fname, truncate
+import helpers
 from elo_rater_types import EloChange, Outcome, ProfileInfo
 
 
-LEFT_BG = "#353935"
-RIGHT_BG = "#353539"
 BTFL_DARK_BG = "#222"
 BTFL_DARK_PINE = "#234F1E"
 BTFL_DARK_GRANOLA = "#D6B85A"
 BTFL_LIGHT_MINT = "#99EDC3"
 BTFL_LIGHT_GRAY = "#ccc"
+
+LEFT_COLORBASE = "#353935"
+RIGHT_COLORBASE = "#353539"
+spice_rgb = lambda r,g,b: tuple([int(max(x*1.2,255) if x==max(r,g,b) else x) for x in (r,g,b)])
+spice_hsl = lambda h,s,l: (h, .1, .6)
+LEFT_COLORSPICED  = helpers.spice_up_color(LEFT_COLORBASE,  spice_rgb, spice_hsl)
+RIGHT_COLORSPICED = helpers.spice_up_color(RIGHT_COLORBASE, spice_rgb, spice_hsl)
+
 
 class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .configure(background=)
   def __init__(self, *args, **kwargs):
@@ -76,23 +82,24 @@ class ProfileCard(tk.Frame):
   def __init__(self, idx:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
     is_right  = idx%2
-    self.bg = RIGHT_BG if is_right else LEFT_BG
+    self.bg = RIGHT_COLORBASE   if is_right else LEFT_COLORBASE
+    self.fg = RIGHT_COLORSPICED if is_right else LEFT_COLORSPICED
 
-    self.tags   = ttk.Label (self, anchor="center", text="tags")
+    self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)
-    self.name   = ttk.Label (self, anchor="center", text="filename")
-    self.rating = ttk.Label (self, anchor="center", text="rating", foreground="yellow")
+    self.name   = ttk.Label (self, anchor="center", foreground=self.fg, text="filename")
+    self.rating = ttk.Label (self, anchor="center", foreground=self.fg, text="rating")
 
     TW = 0.22
     BRDR = 0.015
     PH = 0.95
-    self.tags.place  (relx=is_right*(1-TW),   relwidth=TW,   relheight=PH)
-    self.media.place (relx=BRDR if is_right else TW, relwidth=1-TW-BRDR, relheight=PH)
-    self.name.place  (rely=PH,                relwidth=1,    relheight=(1-PH)/2)
-    self.rating.place(rely=(PH+1)/2,          relwidth=1,    relheight=(1-PH)/2)
+    self.tags.place  (relwidth=TW,        relheight=PH,       relx=is_right*(1-TW))
+    self.media.place (relwidth=1-TW-BRDR, relheight=PH,       relx=BRDR if is_right else TW)
+    self.name.place  (relwidth=1,         relheight=(1-PH)/2, rely=PH)
+    self.rating.place(relwidth=1,         relheight=(1-PH)/2, rely=(PH+1)/2)
 
   def show_profile(self, profile:ProfileInfo) -> None:
-    self.name.configure(text=short_fname(profile.fullname))
+    self.name.configure(text=helpers.short_fname(profile.fullname))
     self._show_tags(profile.tags)
     self._show_rating(profile.rating, profile.elo, profile.elo_matches)
     self.media.show_media(profile.fullname)
@@ -162,50 +169,46 @@ class Leaderboard(tk.Text):
     bgs = [default_bg, "#282828", default_bg]
     textfixs = [' '*lenfix,' '*lenfix]
     spacing = 0
+    is_featured = False
+    fgfeatured = BTFL_LIGHT_GRAY
     if feat == self.FeatureType.LEFT:
-      bgs = [LEFT_BG]*2 + [default_bg]
+      bgs = [LEFT_COLORBASE]*2 + [default_bg]
       textfixs = ['<'*lenfix,' '*lenfix]
-      spacing = 9
+      fgfeatured = LEFT_COLORSPICED
+      is_featured = True
     if feat == self.FeatureType.RIGHT:
-      bgs = [default_bg] + [RIGHT_BG]*2
+      bgs = [default_bg] + [RIGHT_COLORBASE]*2
       textfixs = [' '*lenfix,'>'*lenfix]
-      spacing = 9
+      fgfeatured = RIGHT_COLORSPICED
+      is_featured = True
+    if is_featured:
+      spacing = 10
 
     tagfix = 'tag_prefix'+str(idx)
-    self.tag_configure(tagfix, background=bgs[0], foreground=BTFL_LIGHT_GRAY, spacing1=spacing, spacing3=spacing)
+    self.tag_configure(tagfix, background=bgs[0], foreground=fgfeatured, spacing1=spacing, spacing3=spacing)
     self.insert(tk.END, textfixs[0], tagfix)
 
     for tag,(fg,txt) in blueprint.items():
+      if is_featured:
+        fg = {
+          'tag_idx': fgfeatured,
+          'tag_name': fgfeatured,
+        }.get(tag, fg)
       tag += str(idx)
       self.tag_configure(tag, background=bgs[1], foreground=fg, spacing1=spacing, spacing3=spacing)
       self.insert(tk.END, txt, tag)
 
     tagfix = 'tag_suffix'+str(idx)
-    self.tag_configure(tagfix, background=bgs[2], foreground=BTFL_LIGHT_GRAY, spacing1=spacing, spacing3=spacing)
+    self.tag_configure(tagfix, background=bgs[2], foreground=fgfeatured, spacing1=spacing, spacing3=spacing)
     self.insert(tk.END, textfixs[1], tagfix)
 
     self.insert(tk.END, '\n')
-  """
-      special_bg = None
-      if feat == self.FeatureType.LEFT:
-        special_bg = "#505050"
-        blueprint['tag_prefix'] = (BTFL_LIGHT_GRAY, special_bg, "<<")
-      if feat == self.FeatureType.RIGHT:
-        special_bg = "#707070"
-        blueprint['tag_suffix'] = (BTFL_LIGHT_GRAY, special_bg, ">>")
-      for tag,(fg,bg,txt) in blueprint.items():
-        tag += str(idx)
-        self.tag_configure(tag, background=special_bg or bg, foreground=fg)
-        self.insert(tk.END, txt, tag)
-      self.insert(tk.END, '\n')
-  """
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple]:
     elo_m_shade = int(interp(prof.elo_matches, [0,100], [0x70,255]))
-    default_bg = "#303030"
     return {
       'tag_idx': ("#aaa", f"{idx+1:>3} "),
-      'tag_name': ("#ddd", f"{truncate(short_fname(prof.fullname), 15, '..'):<15} "),
+      'tag_name': ("#ddd", f"{helpers.truncate(helpers.short_fname(prof.fullname), 15, '..'):<15} "),
       'tag_rating': (BTFL_DARK_GRANOLA, f"{'*' * prof.rating:>5} "),
       'tag_elo': (
         ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.rating],
@@ -268,7 +271,7 @@ class EloGui:
 
   def _on_arrow_press(self, event):
     self._enable_arrows(False)
- 
+
     outcome = {
       "Left": Outcome.WIN_LEFT,
       "Up": Outcome.DRAW,
