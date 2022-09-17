@@ -70,6 +70,13 @@ class EloCompetition:
     self.curr_match = []
     return elo_changes
 
+  def give_boost(self, profile:ProfileInfo) -> None:
+    boost = 10
+    logging.info("boost %d to %s", boost, profile)
+    self.db.update_elo([profile], [EloChange(profile.elo+boost, boost)])
+    self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
+                       for prof in self.curr_match]
+
 
 class DBAccess:
   def __init__(self, img_dir:str, refresh:bool) -> None:

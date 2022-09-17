@@ -233,7 +233,7 @@ class Leaderboard(tk.Text):
 
 
 class EloGui:
-  def __init__(self):
+  def __init__(self, give_boost_cb:Callable[[ProfileInfo],None]):
     self.root = tk.Tk()
     self.root.geometry("1766x878+77+77")
     self.root.title("aesthetics")
@@ -251,7 +251,9 @@ class EloGui:
       self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
     self.leaderboard = Leaderboard(self.root)
     self.leaderboard.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1)
+
     self.report_outcome_cb = None
+    self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
     assert len(profiles) == 2
@@ -279,10 +281,13 @@ class EloGui:
 
   def _enable_arrows(self, enable:bool):
     for key in '<Left>', '<Right>', '<Up>':
+      boost_seq = f'<Control-{key[1:-1]}>'
       if enable:
         self.root.bind(key, self._on_arrow_press)
+        self.root.bind(boost_seq, self._on_give_boost)
       else:
         self.root.unbind(key)
+        self.root.unbind(boost_seq)
 
   def _on_arrow_press(self, event):
     self._enable_arrows(False)
@@ -295,3 +300,8 @@ class EloGui:
     self.cards[0].set_style(-outcome.value)
     self.cards[1].set_style( outcome.value)
     self.report_outcome_cb(outcome)
+
+  def _on_give_boost(self, event):
+    assert self.curr_profiles
+    is_right = event.keysym=="Right"
+    self.give_boost_cb(self.curr_profiles[is_right])

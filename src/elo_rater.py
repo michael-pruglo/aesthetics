@@ -3,7 +3,7 @@ import sys
 import logging
 
 from helpers import short_fname
-from elo_rater_types import Outcome
+from elo_rater_types import Outcome, ProfileInfo
 from elo_rater_view import EloGui
 from elo_rater_model import EloCompetition
 
@@ -23,23 +23,29 @@ def setup_logger(log_filename):
 
 class App:
   def __init__(self, media_dir:str):
-    self.gui = EloGui()
     self.model = EloCompetition(media_dir, refresh=False)
+    self.gui = EloGui(give_boost_cb=self._give_boost)
 
-  def consume_result(self, outcome:Outcome) -> None:
+  def run(self) -> None:
+    self._start_next_match()
+    self.gui.mainloop()
+
+  def _consume_result(self, outcome:Outcome) -> None:
     participants = self.model.get_curr_match() #needs to be before model.consume_result()
     elo_changes = self.model.consume_result(outcome)
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants, outcome)
-    self.gui.conclude_match(elo_changes, self.start_next_match)
+    self.gui.conclude_match(elo_changes, self._start_next_match)
 
-  def start_next_match(self) -> None:
+  def _start_next_match(self) -> None:
     participants = self.model.generate_match()
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
-    self.gui.display_match(participants, self.consume_result)
+    self.gui.display_match(participants, self._consume_result)
 
-  def run(self) -> None:
-    self.start_next_match()
-    self.gui.mainloop()
+  def _give_boost(self, profile:ProfileInfo) -> None:
+    self.model.give_boost(profile)
+    updated_prof = self.model.get_curr_match()
+    self.gui.display_leaderboard(self.model.get_leaderboard(), updated_prof)
+    self.gui.display_match(updated_prof, self._consume_result)
 
 
 if __name__ == "__main__":
