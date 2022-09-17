@@ -28,5 +28,4 @@ python src/elo_rater.py [path/to/media]
 
 ## TODO:
 - add glicko math
-- add pixel-array visualization of match matrix
 

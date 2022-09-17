@@ -73,6 +73,7 @@ class EloCompetition:
   def give_boost(self, profile:ProfileInfo) -> None:
     boost = 10
     logging.info("boost %d to %s", boost, profile)
+    self.db.save_boost(profile, boost)
     self.db.update_elo([profile], [EloChange(profile.elo+boost, boost)])
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
                        for prof in self.curr_match]
@@ -91,6 +92,9 @@ class DBAccess:
       short_fname(profiles[1].fullname),
       outcome.value
     )
+
+  def save_boost(self, profile:ProfileInfo, points:int) -> None:
+    self.history_mgr.save_boost(int(time.time()), short_fname(profile.fullname), points)
 
   def update_elo(self, profiles:list[ProfileInfo], elo_changes:list[EloChange]) -> None:
     for profile,change in zip(profiles, elo_changes):
