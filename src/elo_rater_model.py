@@ -99,7 +99,7 @@ class DBAccess:
   def update_elo(self, profiles:list[ProfileInfo], elo_changes:list[EloChange]) -> None:
     for profile,change in zip(profiles, elo_changes):
       self.meta_mgr.update_elo(
-        short_fname(profile.fullname),
+        profile.fullname,
         change.new_elo,
         ELOMath.elo_to_rat(change.new_elo)
       )

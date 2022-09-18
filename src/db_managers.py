@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from typing import Callable
 
-from metadata import get_metadata
+from metadata import get_metadata, write_metadata
 from helpers import short_fname
 
 
@@ -72,13 +72,19 @@ class MetadataManager:
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update_elo(self, short_name:str, new_elo:int, new_rating:int) -> None:
+  def update_elo(self, fullname:str, new_elo:int, new_rating:int) -> None:
+    short_name = short_fname(fullname)
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
     self.df.loc[short_name, 'elo'] = new_elo
     self.df.loc[short_name, 'elo_matches'] += 1
-    assert 0 <= new_rating <= 5
-    self.df.loc[short_name, 'rating'] = new_rating
+    prev_rating = self.df.loc[short_name, 'rating']
+    if prev_rating != new_rating:
+      assert 0 <= new_rating <= 5
+      self.df.loc[short_name, 'rating'] = new_rating
+      write_metadata(fullname, rating=new_rating)
+      logging.info("file %s updated rating on disk: %s -> %s",
+                   short_name, '★'*prev_rating, '★'*new_rating)
     logging.debug("update_elo(%s, %d): committing", short_name, new_elo)
     logging.debug("%s", self.df.loc[short_name])
     self._commit()
