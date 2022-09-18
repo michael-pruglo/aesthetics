@@ -14,15 +14,22 @@ python src/elo_rater.py [path/to/media]
 |--------------|    |----------|
       |
       V
-|-----------|
-| elo_model |
-| (model)   |
-|-----------|
+|-----------|    |-----------------|   
+| elo_model | -> | rating_backends |
+| (model)   |    | (ELO, Glicko..) |
+|-----------|    |-----------------|   
+      |          
+      V
+|-------------|
+| db_managers |
+|-------------|
       |
       V
 |-------------|
 | metadata.py |
-| (database)  |
+| (read/write |
+|  metadata   |
+|  on disk)   |
 |-------------|
 ```
 
