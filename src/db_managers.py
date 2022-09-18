@@ -8,18 +8,18 @@ from helpers import short_fname
 
 
 def _db_row(fname):
-  tags, rating = get_metadata(fname)
+  tags, stars = get_metadata(fname)
   return {
     'name': short_fname(fname),
     'tags': ' '.join(sorted(tags)).lower(),
-    'rating': int(rating),
+    'stars': int(stars),
   }
 
 def _default_elo(row, default_elo:Callable[[int], int]):
   is_nan = row.isna()
-  assert 0 <= row['rating'] <= 5
-  if is_nan['elo']: row['elo'] = default_elo(row['rating'])
-  if is_nan['elo_matches']: row['elo_matches'] = 0
+  assert 0 <= row['stars'] <= 5
+  if is_nan['elo']: row['elo'] = default_elo(row['stars'])
+  if is_nan['nmatches']: row['nmatches'] = 0
   return row
 
 
@@ -29,9 +29,9 @@ class MetadataManager:
     metadata_dtypes = {
       'name': str,
       'tags': str,
-      'rating': int,
+      'stars': int,
       'elo': int,
-      'elo_matches': int,
+      'nmatches': int,
     }
     if os.path.exists(self.db_fname):
       logging.info("metadata csv exists, read")
@@ -49,7 +49,7 @@ class MetadataManager:
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
       self.df = self.df.apply(_default_elo, axis=1, args=(default_elo,))
-      self.df.sort_values('rating', ascending=False, inplace=True)
+      self.df.sort_values('stars', ascending=False, inplace=True)
       self._commit()
 
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
@@ -72,20 +72,20 @@ class MetadataManager:
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update_elo(self, fullname:str, new_elo:int, new_rating:int) -> None:
+  def update_rating(self, fullname:str, new_rating:int, new_stars:int) -> None:
     short_name = short_fname(fullname)
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
-    self.df.loc[short_name, 'elo'] = new_elo
-    self.df.loc[short_name, 'elo_matches'] += 1
-    prev_rating = self.df.loc[short_name, 'rating']
-    if prev_rating != new_rating:
-      assert 0 <= new_rating <= 5
-      self.df.loc[short_name, 'rating'] = new_rating
-      write_metadata(fullname, rating=new_rating)
-      logging.info("file %s updated rating on disk: %s -> %s",
-                   short_name, '★'*prev_rating, '★'*new_rating)
-    logging.debug("update_elo(%s, %d): committing", short_name, new_elo)
+    self.df.loc[short_name, 'elo'] = new_rating
+    self.df.loc[short_name, 'nmatches'] += 1
+    prev_stars = self.df.loc[short_name, 'stars']
+    if prev_stars != new_stars:
+      assert 0 <= new_stars <= 5
+      self.df.loc[short_name, 'stars'] = new_stars
+      write_metadata(fullname, rating=new_stars)
+      logging.info("file %s updated stars on disk: %s -> %s",
+                   short_name, '★'*prev_stars, '★'*new_stars)
+    logging.debug("update_rating(%s, %d): committing", short_name, new_rating)
     logging.debug("%s", self.df.loc[short_name])
     self._commit()
 

@@ -8,7 +8,7 @@ from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
 import helpers
-from elo_rater_types import EloChange, Outcome, ProfileInfo
+from elo_rater_types import RatChange, Outcome, ProfileInfo
 
 
 BTFL_DARK_BG = "#222"
@@ -105,7 +105,7 @@ class ProfileCard(tk.Frame):
   def show_profile(self, profile:ProfileInfo) -> None:
     self.name.configure(text=helpers.short_fname(profile.fullname))
     self._show_tags(profile.tags)
-    self._show_rating(profile.rating, profile.elo, profile.elo_matches)
+    self._show_rating(profile.stars, profile.elo, profile.nmatches)
     self.media.show_media(profile.fullname)
 
   def set_style(self, outcome:int=None) -> None:
@@ -116,8 +116,8 @@ class ProfileCard(tk.Frame):
     for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
-  def show_results(self, res:EloChange) -> None:
-    self.rating.configure(text=f"NEW: {res.new_elo}  ({res.delta_elo:+})")
+  def show_results(self, res:RatChange) -> None:
+    self.rating.configure(text=f"NEW: {res.new_rating}  ({res.delta_rating:+})")
 
   def _show_tags(self, tags):
     tags = sorted(tags.split(' '))
@@ -126,8 +126,8 @@ class ProfileCard(tk.Frame):
     taglist = "\n".join(map(indent_hierarchical, tags))
     self.tags.configure(text=taglist or "-")
 
-  def _show_rating(self, rating, elo, elo_matches):
-    self.rating.configure(text=f"{'★'*rating}  {elo} (matches: {elo_matches})")
+  def _show_rating(self, rating, elo, nmatches):
+    self.rating.configure(text=f"{'★'*rating}  {elo} (matches: {nmatches})")
 
 class Leaderboard(tk.Text):
   class FeatureType(Enum):
@@ -219,16 +219,16 @@ class Leaderboard(tk.Text):
     self.insert(tk.END, '\n')
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple]:
-    elo_m_shade = int(interp(prof.elo_matches, [0,100], [0x70,255]))
+    elo_m_shade = int(interp(prof.nmatches, [0,100], [0x70,255]))
     return {
       'tag_idx': ("#aaa", f"{idx+1:>3} "),
       'tag_name': ("#ddd", f"{helpers.truncate(helpers.short_fname(prof.fullname), 15, '..'):<15} "),
-      'tag_rating': (BTFL_DARK_GRANOLA, f"{'*' * prof.rating:>5} "),
+      'tag_rating': (BTFL_DARK_GRANOLA, f"{'*' * prof.stars:>5} "),
       'tag_elo': (
-        ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.rating],
+        ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.stars],
         f"{prof.elo:>4} ",
       ),
-      'tag_elo_matches': ("#"+f"{elo_m_shade:02x}"*3, f"{f'({prof.elo_matches})':<5}"),
+      'tag_nmatches': ("#"+f"{elo_m_shade:02x}"*3, f"{f'({prof.nmatches})':<5}"),
     }
 
 
@@ -269,12 +269,12 @@ class EloGui:
     self.report_outcome_cb = callback
     self._enable_arrows(True)
 
-  def conclude_match(self, results:list[EloChange], callback:Callable) -> None:
+  def conclude_match(self, results:list[RatChange], callback:Callable) -> None:
     for card,res in zip(self.cards, results):
       card.show_results(res)
     for profile,res in zip(self.curr_profiles, results):
-      profile.elo = res.new_elo
-      profile.elo_matches += 1
+      profile.elo = res.new_rating
+      profile.nmatches += 1
     self.root.after(3000, callback)
 
   def display_leaderboard(self, leaderboard:list[ProfileInfo],

@@ -3,41 +3,11 @@ import os
 import time
 import numpy as np
 
-from elo_rater_types import EloChange, Outcome, ProfileInfo
+from elo_rater_types import RatChange, Outcome, ProfileInfo
 from db_managers import MetadataManager, HistoryManager
+from rating_backends import ELO
 from helpers import short_fname
 
-
-class ELOMath:
-  INITIAL_ELO = 1200
-  STD = 200
-
-  @staticmethod
-  def rat_to_elo(rat:int) -> int:
-    return ELOMath.INITIAL_ELO + ELOMath.STD*rat
-
-  @staticmethod
-  def elo_to_rat(elo:int) -> int:
-    return np.clip((elo-ELOMath.INITIAL_ELO)//ELOMath.STD, 0, 5)
-
-  @staticmethod
-  def calc_changes(l:ProfileInfo, r:ProfileInfo, outcome:Outcome) -> list[EloChange]:
-    ql = 10**(l.elo/400)
-    qr = 10**(r.elo/400)
-    er = qr/(ql+qr)
-    sr = np.interp(outcome.value, [-1,1], [0,1])
-    delta = sr-er
-    dl = round(ELOMath.get_k(l) * -delta)
-    dr = round(ELOMath.get_k(r) *  delta)
-    return [EloChange(l.elo+dl, dl),EloChange(r.elo+dr, dr)]
-
-  @staticmethod
-  def get_k(p:ProfileInfo) -> float:
-    if p.elo_matches<30 and p.elo<2300:
-      return 40
-    if p.elo_matches>30 and p.elo>2400:
-      return 10
-    return 20
 
 class EloCompetition:
   def __init__(self, img_dir:str, refresh:bool):
@@ -59,13 +29,13 @@ class EloCompetition:
   def get_leaderboard(self) -> list[ProfileInfo]:
     return self.db.get_leaderboard()
 
-  def consume_result(self, outcome:Outcome) -> list[EloChange]:
+  def consume_result(self, outcome:Outcome) -> list[RatChange]:
     assert len(self.curr_match) == 2
-    elo_changes = ELOMath.calc_changes(*self.curr_match, outcome)
+    elo_changes = ELO().process_match(*self.curr_match, outcome)
 
     logging.info("%s vs %s: %2d %s%s", *self.curr_match, outcome.value, *elo_changes)
     self.db.save_match(self.curr_match, outcome)
-    self.db.update_elo(self.curr_match, elo_changes)
+    self.db.update_rating(self.curr_match, elo_changes)
 
     self.curr_match = []
     return elo_changes
@@ -74,7 +44,7 @@ class EloCompetition:
     boost = 10
     logging.info("boost %d to %s", boost, profile)
     self.db.save_boost(profile, boost)
-    self.db.update_elo([profile], [EloChange(profile.elo+boost, boost)])
+    self.db.update_rating([profile], [RatChange(profile.elo+boost, boost)])
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
                        for prof in self.curr_match]
 
@@ -82,7 +52,7 @@ class EloCompetition:
 class DBAccess:
   def __init__(self, img_dir:str, refresh:bool) -> None:
     self.img_dir = img_dir
-    self.meta_mgr = MetadataManager(img_dir, refresh, ELOMath.rat_to_elo)
+    self.meta_mgr = MetadataManager(img_dir, refresh, ELO().stars_to_rating)
     self.history_mgr = HistoryManager(img_dir)
 
   def save_match(self, profiles:list[ProfileInfo], outcome:Outcome) -> None:
@@ -96,12 +66,12 @@ class DBAccess:
   def save_boost(self, profile:ProfileInfo, points:int) -> None:
     self.history_mgr.save_boost(int(time.time()), short_fname(profile.fullname), points)
 
-  def update_elo(self, profiles:list[ProfileInfo], elo_changes:list[EloChange]) -> None:
+  def update_rating(self, profiles:list[ProfileInfo], elo_changes:list[RatChange]) -> None:
     for profile,change in zip(profiles, elo_changes):
-      self.meta_mgr.update_elo(
+      self.meta_mgr.update_rating(
         profile.fullname,
-        change.new_elo,
-        ELOMath.elo_to_rat(change.new_elo)
+        change.new_rating,
+        ELO().rating_to_stars(change.new_rating)
       )
 
   def get_leaderboard(self) -> list[ProfileInfo]:
@@ -123,16 +93,22 @@ class DBAccess:
 
   def _validate_and_convert_info(self, info) -> ProfileInfo:
     short_name = info.name
-    assert all(info.index[:4] == ['tags', 'rating', 'elo', 'elo_matches']), str(info)
-    assert isinstance(info['tags'],        str),      f"{type(info['tags'])       }  {short_name}"
-    assert isinstance(info['rating'],      np.int64), f"{type(info['rating'])     }  {short_name}"
-    assert isinstance(info['elo'],         np.int64), f"{type(info['elo'])        }  {short_name}"
-    assert isinstance(info['elo_matches'], np.int64), f"{type(info['elo_matches'])}  {short_name}"
-    assert 0 <= info['rating'] <= 5
+
+    expected_dtypes = {
+      'tags': str,
+      'stars': np.int64,
+      'elo': np.int64,
+      'nmatches': np.int64,
+    }
+    assert all(col in info.index for col in expected_dtypes.keys()), str(info)
+    assert 0 <= info['stars'] <= 5
+    for col,t in expected_dtypes.items():
+      assert isinstance(info[col], t), f"{type(info[col])} {short_name}"
+
     return ProfileInfo(
       tags = info['tags'],
       fullname = os.path.join(self.img_dir, short_name),
-      rating = int(info['rating']),
+      stars = int(info['stars']),
       elo = int(info['elo']),
-      elo_matches = int(info['elo_matches']),
+      nmatches = int(info['nmatches']),
     )

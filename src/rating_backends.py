@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from elo_rater_types import ProfileInfo, Outcome, EloChange
+from elo_rater_types import ProfileInfo, Outcome, RatChange
 
 
 class RatingBackend(ABC):
@@ -14,7 +14,7 @@ class RatingBackend(ABC):
 
   @abstractmethod
   def process_match(self, l:ProfileInfo, r:ProfileInfo,
-                    outcome:Outcome) -> list[EloChange]:
+                    outcome:Outcome) -> list[RatChange]:
     pass
 
 class ELO(RatingBackend):
@@ -30,7 +30,7 @@ class ELO(RatingBackend):
     return np.clip((rat-self.BASE_RATING)//self.STD, 0, 5)
 
   def process_match(self, l:ProfileInfo, r:ProfileInfo,
-                    outcome:Outcome) -> list[EloChange]:
+                    outcome:Outcome) -> list[RatChange]:
     ql = 10**(l.elo/(self.STD*2))
     qr = 10**(r.elo/(self.STD*2))
     er = qr/(ql+qr)
@@ -38,7 +38,7 @@ class ELO(RatingBackend):
     delta = sr-er
     dl = round(self.get_k(l) * -delta)
     dr = round(self.get_k(r) *  delta)
-    return (EloChange(l.elo+dl,dl), EloChange(r.elo+dr,dr))
+    return (RatChange(l.elo+dl,dl), RatChange(r.elo+dr,dr))
 
   def get_k(self, p:ProfileInfo) -> float:
     if p.nmatches<30 and p.elo<2300:
