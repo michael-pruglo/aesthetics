@@ -1,8 +1,9 @@
 # aesthetics battle royale
 
-Exploration of personal style. Provided a media library with metadata, explore, rate, tag, use DL.
+Exploration of personal style. Provided a media library with metadata - explore, rate, tag, use DL.
 
 Run with:
+
 ```py
 python src/ae_rater.py [path/to/media]
 ```
@@ -33,8 +34,8 @@ python src/ae_rater.py [path/to/media]
 |-------------|
 ```
 
-## TODO:
+## TODO
+
 - add glicko math
 - fix bug: boost increases nmatches
 - add tests
-
