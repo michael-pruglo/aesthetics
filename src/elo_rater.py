@@ -4,7 +4,7 @@ import logging
 
 from helpers import short_fname
 from elo_rater_types import Outcome, ProfileInfo
-from elo_rater_view import EloGui
+from elo_rater_view import RaterGui
 from elo_rater_model import EloCompetition
 
 
@@ -24,7 +24,7 @@ def setup_logger(log_filename):
 class App:
   def __init__(self, media_dir:str):
     self.model = EloCompetition(media_dir, refresh=False)
-    self.gui = EloGui(give_boost_cb=self._give_boost)
+    self.gui = RaterGui(give_boost_cb=self._give_boost)
 
   def run(self) -> None:
     self._start_next_match()
@@ -32,9 +32,9 @@ class App:
 
   def _consume_result(self, outcome:Outcome) -> None:
     participants = self.model.get_curr_match() #needs to be before model.consume_result()
-    rating_changes = self.model.consume_result(outcome)
+    rating_opinions = self.model.consume_result(outcome)
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants, outcome)
-    self.gui.conclude_match(rating_changes, self._start_next_match)
+    self.gui.conclude_match(rating_opinions, self._start_next_match)
 
   def _start_next_match(self) -> None:
     participants = self.model.generate_match()

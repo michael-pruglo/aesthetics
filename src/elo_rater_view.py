@@ -8,7 +8,7 @@ from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
 import helpers
-from elo_rater_types import RatChange, Outcome, ProfileInfo
+from elo_rater_types import *
 
 
 CHANGE_MATCH_DELAY = 3000
@@ -107,7 +107,7 @@ class ProfileCard(tk.Frame):
   def show_profile(self, profile:ProfileInfo) -> None:
     self.name.configure(text=helpers.short_fname(profile.fullname))
     self._show_tags(profile.tags)
-    self._show_rating(profile.stars, profile.elo, profile.nmatches)
+    self._show_rating(profile.stars, profile.ratings, profile.nmatches)
     self.media.show_media(profile.fullname)
 
   def set_style(self, outcome:int=None) -> None:
@@ -131,8 +131,8 @@ class ProfileCard(tk.Frame):
     taglist = "\n".join(map(indent_hierarchical, tags))
     self.tags.configure(text=taglist or "-")
 
-  def _show_rating(self, rating, elo, nmatches):
-    self.rating.configure(text=f"{'★'*rating}  {elo} (matches: {nmatches})")
+  def _show_rating(self, rating, ratings, nmatches):
+    self.rating.configure(text=f"{'★'*rating}  {ratings} (matches: {nmatches})")
 
 class Leaderboard(tk.Text):
   class FeatureType(Enum):
@@ -207,7 +207,7 @@ class Leaderboard(tk.Text):
     self.tag_configure(tagfix, background=bgs[0], foreground=fgfeatured, spacing1=spacing, spacing3=spacing)
     self.insert(tk.END, textfixs[0], tagfix)
 
-    for tag,(fg,txt) in blueprint.items():
+    for tag,fg,txt in blueprint:
       if is_featured:
         fg = {
           'tag_idx': fgfeatured,
@@ -224,20 +224,21 @@ class Leaderboard(tk.Text):
     self.insert(tk.END, '\n')
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple]:
-    elo_m_shade = int(interp(prof.nmatches, [0,100], [0x70,255]))
-    return {
-      'tag_idx': ("#aaa", f"{idx+1:>3} "),
-      'tag_name': ("#ddd", f"{helpers.truncate(helpers.short_fname(prof.fullname), 15, '..'):<15} "),
-      'tag_rating': (BTFL_DARK_GRANOLA, f"{'*' * prof.stars:>5} "),
-      'tag_elo': (
-        ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.stars],
-        f"{prof.elo:>4} ",
-      ),
-      'tag_nmatches': ("#"+f"{elo_m_shade:02x}"*3, f"{f'({prof.nmatches})':<5}"),
-    }
+    rat_color = ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.stars]
+    nmatches_color = int(interp(prof.nmatches, [0,100], [0x70,255]))
+    return [
+      ('tag_idx', "#aaa", f"{idx+1:>3} "),
+      ('tag_name', "#ddd", f"{helpers.truncate(helpers.short_fname(prof.fullname), 15, '..'):<15} "),
+      ('tag_stars', BTFL_DARK_GRANOLA, f"{'*' * prof.stars:>5} "),
+    ] + [
+      (f'tag_rating{sysname}', rat_color, f"{rat:>4} ")
+      for sysname,rat in prof.ratings.items()
+    ] + [
+      ('tag_nmatches', "#"+f"{nmatches_color:02x}"*3, f"{f'({prof.nmatches})':<5}"),
+    ]
 
 
-class EloGui:
+class RaterGui:
   def __init__(self, give_boost_cb:Callable[[ProfileInfo],None]):
     self.root = tk.Tk()
     self.root.geometry("1766x878+77+77")
@@ -250,7 +251,7 @@ class EloGui:
 
     self.curr_prof_shnames:list[str] = []
     self.cards:list[ProfileCard] = [None, None]
-    MID_W = 0.166
+    MID_W = 0.1862967158 # TODO: fix width
     HELP_H = 0.07
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root)
@@ -274,9 +275,9 @@ class EloGui:
     self.report_outcome_cb = callback
     self._enable_arrows(True)
 
-  def conclude_match(self, results:dict[str,list[RatChange]],
+  def conclude_match(self, opinions:RatingOpinions,
                      initiate_next_match_cb:Callable) -> None:
-    for system_name,changes in results.items():
+    for system_name,changes in opinions.items():
       for card,change in zip(self.cards, changes):
         card.show_results(system_name, change)
 

@@ -15,22 +15,21 @@ def _db_row(fname):
     'stars': int(stars),
   }
 
-def _default_elo(row, default_elo:Callable[[int], int]):
-  is_nan = row.isna()
+def _default_init(row, default_values_getter):
   assert 0 <= row['stars'] <= 5
-  if is_nan['elo']: row['elo'] = default_elo(row['stars'])
-  if is_nan['nmatches']: row['nmatches'] = 0
+  if row.isna()['nmatches']: row['nmatches'] = 0
+  for column,value in default_values_getter(row['stars']).items():
+    row[column] = value
   return row
 
 
 class MetadataManager:
-  def __init__(self, img_dir:str, refresh:bool=False, default_elo:Callable[[int], int]=None):
+  def __init__(self, img_dir:str, refresh:bool=False, default_values_getter:Callable[[int], dict]=None):
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
     metadata_dtypes = {
       'name': str,
       'tags': str,
       'stars': int,
-      'elo': int,
       'nmatches': int,
     }
     if os.path.exists(self.db_fname):
@@ -48,7 +47,7 @@ class MetadataManager:
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
-      self.df = self.df.apply(_default_elo, axis=1, args=(default_elo,))
+      self.df = self.df.apply(_default_init, axis=1, args=(default_values_getter,))
       self.df.sort_values('stars', ascending=False, inplace=True)
       self._commit()
 
@@ -72,25 +71,26 @@ class MetadataManager:
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update_rating(self, fullname:str, new_rating:int) -> None:
+  def update(self, fullname:str, values:dict, consensus_stars:int=None) -> None:
     short_name = short_fname(fullname)
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
-    self.df.loc[short_name, 'elo'] = new_rating
-    self.df.loc[short_name, 'nmatches'] += 1
-    logging.debug("update_rating(%s, %d): committing", short_name, new_rating)
-    logging.debug("%s", self.df.loc[short_name])
-    self._commit()
 
-  def update_stars(self, fullname:str, new_stars:int) -> None:
-    short_name = short_fname(fullname)
-    prev_stars = self.df.loc[short_name, 'stars']
-    if prev_stars != new_stars:
-      assert 0 <= new_stars <= 5
-      self.df.loc[short_name, 'stars'] = new_stars
-      write_metadata(fullname, rating=new_stars)
-      logging.info("file %s updated stars on disk: %s -> %s",
-                   short_name, '★'*prev_stars, '★'*new_stars)
+    for column,value in values.items():
+      self.df.loc[short_name, column] = value #TODO: prettify with pandas
+
+    if consensus_stars:
+      prev_stars = self.df.loc[short_name, 'stars']
+      if prev_stars != consensus_stars:
+        assert 0 <= consensus_stars <= 5
+        self.df.loc[short_name, 'stars'] = consensus_stars
+        write_metadata(fullname, rating=consensus_stars)
+        logging.info("file %s updated stars on disk: %s -> %s",
+                     short_name, '★'*prev_stars, '★'*consensus_stars)
+
+    self.df.loc[short_name, 'nmatches'] += 1
+
+    logging.debug("updated db: %s", self.df.loc[short_name])
     self._commit()
 
   def _get_frequent_tags(self, min_tag_freq):

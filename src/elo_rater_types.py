@@ -10,7 +10,7 @@ class ProfileInfo:
   tags : str
   fullname : str
   stars : int
-  elo : int
+  ratings : dict[str,int]
   nmatches : int
 
   def __str__(self):
@@ -24,7 +24,7 @@ class ProfileInfo:
       BG_GRAY,
       FG_WHITE,   f"{truncate(short_fname(self.fullname), 15):<15} ",
       FG_YELLOW,  f"{'★' * self.stars:>5} ",
-      FG_ELO,     f"{self.elo:>4} ",
+      FG_ELO,     f"{self.ratings} ",
       FG_MATCHES, f"{f'({self.nmatches})':<5}",
       COLOR_RESET
     ])
@@ -34,10 +34,12 @@ class ProfileInfo:
 class RatChange:
   new_rating : int
   delta_rating : int
+  new_stars : int
 
-  def __str__(self):
+  def __repr__(self):
       BG_GRAY     = "\033[48;5;238m"
       FG_WHITE    = "\033[38;5;231m"
+      FG_YELLOW   = "\033[38;5;214m"
       FG_RED      = "\033[38;5;196m"
       FG_GRAY     = "\033[38;5;248m"
       FG_GREEN    = "\033[38;5;46m"
@@ -48,9 +50,14 @@ class RatChange:
       return ''.join([
         BG_GRAY,
         FG_WHITE,    f" {self.new_rating:>4}",
+        FG_YELLOW,   f"{'★' * self.new_stars:>5} ",
         delta_color, f"{f'[{self.delta_rating:+}]':>5} ",
         COLOR_RESET
       ])
+
+
+RatSystemName = str
+RatingOpinions = dict[RatSystemName, list[RatChange]]
 
 
 class Outcome(Enum):

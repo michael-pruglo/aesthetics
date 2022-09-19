@@ -2,8 +2,9 @@ import logging
 import os
 import time
 import numpy as np
+from typing import Callable
 
-from elo_rater_types import RatChange, Outcome, ProfileInfo
+from elo_rater_types import *
 from db_managers import MetadataManager, HistoryManager
 from rating_backends import RatingBackend, ELO
 from helpers import short_fname
@@ -11,9 +12,11 @@ from helpers import short_fname
 
 class EloCompetition:
   def __init__(self, img_dir:str, refresh:bool):
-    self.db = DBAccess(img_dir, refresh)
     self.curr_match:list[ProfileInfo] = []
     self.rat_systems:list[RatingBackend] = [ELO(), ELO(1500, 100)]
+    def default_values_getter(stars:int)->dict:
+      return {s.name():s.stars_to_rating(stars) for s in self.rat_systems}
+    self.db = DBAccess(img_dir, refresh, default_values_getter)
 
   def get_curr_match(self) -> list[ProfileInfo]:
     return self.curr_match
@@ -28,57 +31,39 @@ class EloCompetition:
     return self.curr_match
 
   def get_leaderboard(self) -> list[ProfileInfo]:
-    return self.db.get_leaderboard()
+    return self.db.get_leaderboard(sortpriority=[s.name() for s in self.rat_systems])
 
-  def consume_result(self, outcome:Outcome) -> dict[str,list[RatChange]]:
-    """
-    calc rating changes and commit them to db
-    returns dict[RatSystem name -> list[Ratchange] for every player]
-    """
-    NPLAYERS = 2 # atm only accepts 1v1 matches
-    assert len(self.curr_match) == NPLAYERS
+  def consume_result(self, outcome:Outcome) -> RatingOpinions:
+    assert len(self.curr_match) == 2 # atm only accepts 1v1 matches
     logging.info("%s vs %s: %2d", *self.curr_match, outcome.value)
     self.db.save_match(self.curr_match, outcome)
 
-    proposed_stars = [[] for _ in range(NPLAYERS)]
-    rat_changes = {}
-    for system in self.rat_systems:
-      individual_changes = system.process_match(*self.curr_match, outcome)
-      assert len(individual_changes) == NPLAYERS
-      system_name = type(system).__name__
-      rat_changes[system_name] = individual_changes
-      logging.info("  %s: %s %s", system_name, *individual_changes)
-      for i,ch in enumerate(individual_changes):
-        self.db.update_rating(self.curr_match[i], ch)
-        proposed_stars[i].append(system.rating_to_stars(ch.new_rating))
-
-    for prof,prop_stars in zip(self.curr_match, proposed_stars):
-      if all(x==prop_stars[0] for x in prop_stars):
-        self.db.update_stars(prof, prop_stars[0])
+    opinions = {s.name(): s.process_match(*self.curr_match, outcome)
+                for s in self.rat_systems}
+    logging.info("opinions: %s", opinions)
+    self.db.apply_opinions(self.curr_match, opinions)
 
     self.curr_match = []
-    return rat_changes
+    return opinions
 
   def give_boost(self, short_name:str) -> None:
     profile = self.db.retreive_profile(short_name)
     self.db.save_boost(profile)
-    logging.info("boost to %s", profile)
-    proposed_stars = []
-    for system in self.rat_systems:
-      rat_change,new_stars = system.get_boost(profile)
-      self.db.update_rating(profile, rat_change)
-      proposed_stars.append(new_stars)
-    if all(x==proposed_stars[0] for x in proposed_stars):
-      self.db.update_stars(profile, proposed_stars[0])
+    logging.info("boost %s", profile)
+
+    self.db.apply_opinions(
+      [profile],
+      {s.name(): [s.get_boost(profile)] for s in self.rat_systems}
+    )
 
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
                        for prof in self.curr_match]
 
 
 class DBAccess:
-  def __init__(self, img_dir:str, refresh:bool) -> None:
+  def __init__(self, img_dir:str, refresh:bool, default_values_getter:Callable[[int],dict]) -> None:
     self.img_dir = img_dir
-    self.meta_mgr = MetadataManager(img_dir, refresh, ELO().stars_to_rating)
+    self.meta_mgr = MetadataManager(img_dir, refresh, default_values_getter)
     self.history_mgr = HistoryManager(img_dir)
 
   def save_match(self, profiles:list[ProfileInfo], outcome:Outcome) -> None:
@@ -92,15 +77,22 @@ class DBAccess:
   def save_boost(self, profile:ProfileInfo) -> None:
     self.history_mgr.save_boost(int(time.time()), short_fname(profile.fullname))
 
-  def update_rating(self, profile:ProfileInfo, change:RatChange) -> None:
-    self.meta_mgr.update_rating(profile.fullname, change.new_rating)
+  def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions) -> None:
+    for i,prof in enumerate(profiles):
+      values = {}
+      proposed_stars = []
+      for sysname,changes in opinions.items():
+        proposed_stars.append(changes[i].new_stars)
+        values[sysname] = changes[i].new_rating
+      consensus_stars = None
+      if all(x==proposed_stars[0] for x in proposed_stars):
+        consensus_stars = proposed_stars[0]
 
-  def update_stars(self, profile:ProfileInfo, stars:int) -> None:
-    self.meta_mgr.update_stars(profile.fullname, stars)
+      self.meta_mgr.update(prof.fullname, values, consensus_stars)
 
-  def get_leaderboard(self) -> list[ProfileInfo]:
+  def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()
-    db.sort_values('elo', ascending=False, inplace=True)
+    db.sort_values(['stars']+sortpriority, ascending=False, inplace=True)
     return [self._validate_and_convert_info(db.iloc[i]) for i in range(len(db))]
 
   def retreive_profile(self, short_name:str) -> ProfileInfo:
@@ -121,8 +113,10 @@ class DBAccess:
     expected_dtypes = {
       'tags': str,
       'stars': np.int64,
-      'elo': np.int64,
       'nmatches': np.int64,
+
+      'Elo122': np.int64, #TODO: generalize
+      'Elo151': np.int64,
     }
     assert all(col in info.index for col in expected_dtypes.keys()), str(info)
     assert 0 <= info['stars'] <= 5
@@ -133,6 +127,6 @@ class DBAccess:
       tags = info['tags'],
       fullname = os.path.join(self.img_dir, short_name),
       stars = int(info['stars']),
-      elo = int(info['elo']),
+      ratings = {n:int(info[n]) for n in ['Elo122', 'Elo151']},
       nmatches = int(info['nmatches']),
     )
