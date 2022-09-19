@@ -72,12 +72,18 @@ class MetadataManager:
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update_rating(self, fullname:str, new_rating:int, new_stars:int) -> None:
+  def update_rating(self, fullname:str, new_rating:int) -> None:
     short_name = short_fname(fullname)
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
     self.df.loc[short_name, 'elo'] = new_rating
     self.df.loc[short_name, 'nmatches'] += 1
+    logging.debug("update_rating(%s, %d): committing", short_name, new_rating)
+    logging.debug("%s", self.df.loc[short_name])
+    self._commit()
+
+  def update_stars(self, fullname:str, new_stars:int) -> None:
+    short_name = short_fname(fullname)
     prev_stars = self.df.loc[short_name, 'stars']
     if prev_stars != new_stars:
       assert 0 <= new_stars <= 5
@@ -85,8 +91,6 @@ class MetadataManager:
       write_metadata(fullname, rating=new_stars)
       logging.info("file %s updated stars on disk: %s -> %s",
                    short_name, '★'*prev_stars, '★'*new_stars)
-    logging.debug("update_rating(%s, %d): committing", short_name, new_rating)
-    logging.debug("%s", self.df.loc[short_name])
     self._commit()
 
   def _get_frequent_tags(self, min_tag_freq):
@@ -118,7 +122,6 @@ class HistoryManager:
     boosts_dtypes = {
       "timestamp": int,
       "name": str,
-      "points": int,
     }
     if os.path.exists(self.boosts_fname):
       logging.info("boosts csv exists, read")
@@ -131,7 +134,7 @@ class HistoryManager:
     self.matches_df.loc[len(self.matches_df)] = [timestamp, name1, name2, outcome]
     self.matches_df.to_csv(self.matches_fname, index=False)
 
-  def save_boost(self, timestamp:int, name:str, points:int) -> None:
-    self.boosts_df.loc[len(self.boosts_df)] = [timestamp, name, points]
+  def save_boost(self, timestamp:int, name:str) -> None:
+    self.boosts_df.loc[len(self.boosts_df)] = [timestamp, name]
     self.boosts_df.to_csv(self.boosts_fname, index=False)
 

@@ -11,6 +11,8 @@ import helpers
 from elo_rater_types import RatChange, Outcome, ProfileInfo
 
 
+CHANGE_MATCH_DELAY = 3000
+
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
 BTFL_LIGHT_GRAY = "#ccc"
@@ -116,8 +118,11 @@ class ProfileCard(tk.Frame):
     for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
-  def show_results(self, res:RatChange) -> None:
-    self.rating.configure(text=f"NEW: {res.new_rating}  ({res.delta_rating:+})")
+  def show_results(self, system_name:str, res:RatChange) -> None:
+    self.rating.configure(text='; '.join([
+      self.rating.cget('text'),
+      f"{system_name}: {res.new_rating}({res.delta_rating:+})",
+    ]))
 
   def _show_tags(self, tags):
     tags = sorted(tags.split(' '))
@@ -243,8 +248,8 @@ class EloGui:
     style.configure('.', background=BTFL_DARK_BG)
     style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
 
-    self.curr_profiles:list[ProfileInfo] = [None, None]
-    self.cards        :list[ProfileCard] = [None, None]
+    self.curr_prof_shnames:list[str] = []
+    self.cards:list[ProfileCard] = [None, None]
     MID_W = 0.166
     HELP_H = 0.07
     for i in range(2):
@@ -265,17 +270,17 @@ class EloGui:
     for card,profile in zip(self.cards, profiles):
       card.show_profile(profile)
       card.set_style(None)
-    self.curr_profiles = profiles
+    self.curr_prof_shnames = [helpers.short_fname(p.fullname) for p in profiles]
     self.report_outcome_cb = callback
     self._enable_arrows(True)
 
-  def conclude_match(self, results:list[RatChange], callback:Callable) -> None:
-    for card,res in zip(self.cards, results):
-      card.show_results(res)
-    for profile,res in zip(self.curr_profiles, results):
-      profile.elo = res.new_rating
-      profile.nmatches += 1
-    self.root.after(3000, callback)
+  def conclude_match(self, results:dict[str,list[RatChange]],
+                     initiate_next_match_cb:Callable) -> None:
+    for system_name,changes in results.items():
+      for card,change in zip(self.cards, changes):
+        card.show_results(system_name, change)
+
+    self.root.after(CHANGE_MATCH_DELAY, initiate_next_match_cb)
 
   def display_leaderboard(self, leaderboard:list[ProfileInfo],
                           feature:list[ProfileInfo]=None, outcome:Outcome=None) -> None:
@@ -307,6 +312,6 @@ class EloGui:
     self.report_outcome_cb(outcome)
 
   def _on_give_boost(self, event):
-    assert self.curr_profiles
-    is_right = event.keysym=="Right"
-    self.give_boost_cb(self.curr_profiles[is_right])
+    assert self.curr_prof_shnames
+    is_right = (event.keysym=="Right")
+    self.give_boost_cb(self.curr_prof_shnames[is_right])

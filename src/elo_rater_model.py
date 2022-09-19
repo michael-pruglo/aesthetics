@@ -5,7 +5,7 @@ import numpy as np
 
 from elo_rater_types import RatChange, Outcome, ProfileInfo
 from db_managers import MetadataManager, HistoryManager
-from rating_backends import ELO
+from rating_backends import RatingBackend, ELO
 from helpers import short_fname
 
 
@@ -13,6 +13,7 @@ class EloCompetition:
   def __init__(self, img_dir:str, refresh:bool):
     self.db = DBAccess(img_dir, refresh)
     self.curr_match:list[ProfileInfo] = []
+    self.rat_systems:list[RatingBackend] = [ELO(), ELO(1500, 100)]
 
   def get_curr_match(self) -> list[ProfileInfo]:
     return self.curr_match
@@ -29,22 +30,47 @@ class EloCompetition:
   def get_leaderboard(self) -> list[ProfileInfo]:
     return self.db.get_leaderboard()
 
-  def consume_result(self, outcome:Outcome) -> list[RatChange]:
-    assert len(self.curr_match) == 2
-    elo_changes = ELO().process_match(*self.curr_match, outcome)
-
-    logging.info("%s vs %s: %2d %s%s", *self.curr_match, outcome.value, *elo_changes)
+  def consume_result(self, outcome:Outcome) -> dict[str,list[RatChange]]:
+    """
+    calc rating changes and commit them to db
+    returns dict[RatSystem name -> list[Ratchange] for every player]
+    """
+    NPLAYERS = 2 # atm only accepts 1v1 matches
+    assert len(self.curr_match) == NPLAYERS
+    logging.info("%s vs %s: %2d", *self.curr_match, outcome.value)
     self.db.save_match(self.curr_match, outcome)
-    self.db.update_rating(self.curr_match, elo_changes)
+
+    proposed_stars = [[] for _ in range(NPLAYERS)]
+    rat_changes = {}
+    for system in self.rat_systems:
+      individual_changes = system.process_match(*self.curr_match, outcome)
+      assert len(individual_changes) == NPLAYERS
+      system_name = type(system).__name__
+      rat_changes[system_name] = individual_changes
+      logging.info("  %s: %s %s", system_name, *individual_changes)
+      for i,ch in enumerate(individual_changes):
+        self.db.update_rating(self.curr_match[i], ch)
+        proposed_stars[i].append(system.rating_to_stars(ch.new_rating))
+
+    for prof,prop_stars in zip(self.curr_match, proposed_stars):
+      if all(x==prop_stars[0] for x in prop_stars):
+        self.db.update_stars(prof, prop_stars[0])
 
     self.curr_match = []
-    return elo_changes
+    return rat_changes
 
-  def give_boost(self, profile:ProfileInfo) -> None:
-    boost = 10
-    logging.info("boost %d to %s", boost, profile)
-    self.db.save_boost(profile, boost)
-    self.db.update_rating([profile], [RatChange(profile.elo+boost, boost)])
+  def give_boost(self, short_name:str) -> None:
+    profile = self.db.retreive_profile(short_name)
+    self.db.save_boost(profile)
+    logging.info("boost to %s", profile)
+    proposed_stars = []
+    for system in self.rat_systems:
+      rat_change,new_stars = system.get_boost(profile)
+      self.db.update_rating(profile, rat_change)
+      proposed_stars.append(new_stars)
+    if all(x==proposed_stars[0] for x in proposed_stars):
+      self.db.update_stars(profile, proposed_stars[0])
+
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
                        for prof in self.curr_match]
 
@@ -63,16 +89,14 @@ class DBAccess:
       outcome.value
     )
 
-  def save_boost(self, profile:ProfileInfo, points:int) -> None:
-    self.history_mgr.save_boost(int(time.time()), short_fname(profile.fullname), points)
+  def save_boost(self, profile:ProfileInfo) -> None:
+    self.history_mgr.save_boost(int(time.time()), short_fname(profile.fullname))
 
-  def update_rating(self, profiles:list[ProfileInfo], elo_changes:list[RatChange]) -> None:
-    for profile,change in zip(profiles, elo_changes):
-      self.meta_mgr.update_rating(
-        profile.fullname,
-        change.new_rating,
-        ELO().rating_to_stars(change.new_rating)
-      )
+  def update_rating(self, profile:ProfileInfo, change:RatChange) -> None:
+    self.meta_mgr.update_rating(profile.fullname, change.new_rating)
+
+  def update_stars(self, profile:ProfileInfo, stars:int) -> None:
+    self.meta_mgr.update_stars(profile.fullname, stars)
 
   def get_leaderboard(self) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()

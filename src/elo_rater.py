@@ -32,17 +32,17 @@ class App:
 
   def _consume_result(self, outcome:Outcome) -> None:
     participants = self.model.get_curr_match() #needs to be before model.consume_result()
-    elo_changes = self.model.consume_result(outcome)
+    rating_changes = self.model.consume_result(outcome)
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants, outcome)
-    self.gui.conclude_match(elo_changes, self._start_next_match)
+    self.gui.conclude_match(rating_changes, self._start_next_match)
 
   def _start_next_match(self) -> None:
     participants = self.model.generate_match()
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
     self.gui.display_match(participants, self._consume_result)
 
-  def _give_boost(self, profile:ProfileInfo) -> None:
-    self.model.give_boost(profile)
+  def _give_boost(self, short_name:str) -> None:
+    self.model.give_boost(short_name)
     updated_prof = self.model.get_curr_match()
     self.gui.display_leaderboard(self.model.get_leaderboard(), updated_prof)
     self.gui.display_match(updated_prof, self._consume_result)

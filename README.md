@@ -35,4 +35,5 @@ python src/elo_rater.py [path/to/media]
 
 ## TODO:
 - add glicko math
+- fix bug: boost and consume_result add 2 matches, b/c db.update_rating implicitly assumes 1 match per call
 
