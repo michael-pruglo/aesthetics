@@ -4,21 +4,21 @@ Exploration of personal style. Provided a media library with metadata, explore, 
 
 Run with:
 ```py
-python src/elo_rater.py [path/to/media]
+python src/ae_rater.py [path/to/media]
 ```
 
 ```
-|--------------|    |----------|
-|  elo_rater   | -> | elo_view |
-| (controller) |    |  (view)  |
-|--------------|    |----------|
+|--------------|    |---------------|
+|  ae_rater    | -> | ae_rater_view |
+| (controller) |    |    (view)     |
+|--------------|    |---------------|
       |
       V
-|-----------|    |-----------------|   
-| elo_model | -> | rating_backends |
-| (model)   |    | (ELO, Glicko..) |
-|-----------|    |-----------------|   
-      |          
+|----------------|    |-----------------|
+| ae_rater_model | -> | rating_backends |
+|     (model)    |    | (ELO, Glicko..) |
+|----------------|    |-----------------|
+      |
       V
 |-------------|
 | db_managers |
@@ -35,5 +35,6 @@ python src/elo_rater.py [path/to/media]
 
 ## TODO:
 - add glicko math
-- fix bug: boost and consume_result add 2 matches, b/c db.update_rating implicitly assumes 1 match per call
+- fix bug: boost increases nmatches
+- add tests
 

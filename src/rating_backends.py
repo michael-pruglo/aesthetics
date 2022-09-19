@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from elo_rater_types import *
+from ae_rater_types import *
 
 
 class RatingBackend(ABC):

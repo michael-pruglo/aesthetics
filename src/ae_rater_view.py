@@ -8,10 +8,10 @@ from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
 import helpers
-from elo_rater_types import *
+from ae_rater_types import *
 
 
-CHANGE_MATCH_DELAY = 3000
+CHANGE_MATCH_DELAY = 10000
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"

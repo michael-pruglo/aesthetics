@@ -3,9 +3,9 @@ import sys
 import logging
 
 from helpers import short_fname
-from elo_rater_types import Outcome, ProfileInfo
-from elo_rater_view import RaterGui
-from elo_rater_model import EloCompetition
+from ae_rater_types import Outcome, ProfileInfo
+from ae_rater_view import RaterGui
+from ae_rater_model import EloCompetition
 
 
 def setup_logger(log_filename):

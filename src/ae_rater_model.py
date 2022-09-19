@@ -4,7 +4,7 @@ import time
 import numpy as np
 from typing import Callable
 
-from elo_rater_types import *
+from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
 from rating_backends import RatingBackend, ELO
 from helpers import short_fname
