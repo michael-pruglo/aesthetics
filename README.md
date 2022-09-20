@@ -39,3 +39,5 @@ python src/ae_rater.py [path/to/media]
 - add glicko math
 - fix bug: boost increases nmatches
 - add tests
+- change visualization of rating in ProfileCard from ugly dicts
+

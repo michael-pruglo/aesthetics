@@ -49,7 +49,7 @@ class App:
 
 
 if __name__ == "__main__":
-  given_dir = sys.argv[1] if len(sys.argv)>1 else "./test_imgs/"
+  given_dir = sys.argv[1] if len(sys.argv)>1 else "./sample_imgs/"
   given_dir = os.path.abspath(given_dir)
   assert os.path.exists(given_dir), f"path {given_dir} doesn't exist"
 
