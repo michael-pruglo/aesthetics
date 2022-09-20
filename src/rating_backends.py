@@ -28,7 +28,7 @@ class RatingBackend(ABC):
 class ELO(RatingBackend):
   def __init__(self, base_rating=1200, std=200):
     super().__init__()
-    self.BASE_RATING = base_rating # new player with 0 stars
+    self.BASE_RATING = base_rating  # new player with 0 stars
     self.STD = std
 
   def name(self):

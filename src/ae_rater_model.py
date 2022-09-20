@@ -34,7 +34,7 @@ class EloCompetition:
     return self.db.get_leaderboard(sortpriority=[s.name() for s in self.rat_systems])
 
   def consume_result(self, outcome:Outcome) -> RatingOpinions:
-    assert len(self.curr_match) == 2 # atm only accepts 1v1 matches
+    assert len(self.curr_match) == 2  # atm only accepts 1v1 matches
     logging.info("%s vs %s: %2d", *self.curr_match, outcome.value)
     self.db.save_match(self.curr_match, outcome)
 
@@ -115,7 +115,7 @@ class DBAccess:
       'stars': np.int64,
       'nmatches': np.int64,
 
-      'Elo122': np.int64, #TODO: generalize
+      'Elo122': np.int64,  # TODO: generalize
       'Elo151': np.int64,
     }
     assert all(col in info.index for col in expected_dtypes.keys()), str(info)
@@ -124,9 +124,9 @@ class DBAccess:
       assert isinstance(info[col], t), f"{type(info[col])} {short_name}"
 
     return ProfileInfo(
-      tags = info['tags'],
-      fullname = os.path.join(self.img_dir, short_name),
-      stars = int(info['stars']),
-      ratings = {n:int(info[n]) for n in ['Elo122', 'Elo151']},
-      nmatches = int(info['nmatches']),
+      tags=info['tags'],
+      fullname=os.path.join(self.img_dir, short_name),
+      stars=int(info['stars']),
+      ratings={n:int(info[n]) for n in ['Elo122', 'Elo151']},
+      nmatches=int(info['nmatches']),
     )

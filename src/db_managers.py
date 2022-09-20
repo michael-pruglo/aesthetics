@@ -15,16 +15,18 @@ def _db_row(fname):
     'stars': int(stars),
   }
 
+
 def _default_init(row, default_values_getter):
   assert 0 <= row['stars'] <= 5
-  if row.isna()['nmatches']: row['nmatches'] = 0
-  for column,value in default_values_getter(row['stars']).items():
+  if row.isna()['nmatches']:
+    row['nmatches'] = 0
+  for column, value in default_values_getter(row['stars']).items():
     row[column] = value
   return row
 
 
 class MetadataManager:
-  def __init__(self, img_dir:str, refresh:bool=False, default_values_getter:Callable[[int], dict]=None):
+  def __init__(self, img_dir:str, refresh:bool=False, defaults_getter:Callable[[int], dict]=None):
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
     metadata_dtypes = {
       'name': str,
@@ -47,7 +49,7 @@ class MetadataManager:
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
-      self.df = self.df.apply(_default_init, axis=1, args=(default_values_getter,))
+      self.df = self.df.apply(_default_init, axis=1, args=(defaults_getter,))
       self.df.sort_values('stars', ascending=False, inplace=True)
       self._commit()
 
@@ -77,7 +79,7 @@ class MetadataManager:
       raise KeyError(f"{short_name} not in database")
 
     for column,value in values.items():
-      self.df.loc[short_name, column] = value #TODO: prettify with pandas
+      self.df.loc[short_name, column] = value  # TODO: prettify with pandas
 
     if consensus_stars:
       prev_stars = self.df.loc[short_name, 'stars']
@@ -137,4 +139,3 @@ class HistoryManager:
   def save_boost(self, timestamp:int, name:str) -> None:
     self.boosts_df.loc[len(self.boosts_df)] = [timestamp, name]
     self.boosts_df.to_csv(self.boosts_fname, index=False)
-

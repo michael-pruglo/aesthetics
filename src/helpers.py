@@ -1,10 +1,13 @@
 from typing import Callable
 
+
 def truncate(s:str, lim:int, suffix:str='…') -> str:
   return s[:lim-len(suffix)]+suffix if len(s)>lim else s
 
+
 def short_fname(fullname:str):
   return fullname.rsplit('/', maxsplit=1)[-1]
+
 
 # https://www.rapidtables.com/convert/color/rgb-to-hsl.html
 def rgb_to_hsl(r, g, b) -> tuple:
@@ -32,6 +35,7 @@ def rgb_to_hsl(r, g, b) -> tuple:
 
   return h, s, l
 
+
 def hsl_to_rgb(h, s, l) -> tuple:
   c = (1-abs(2*l-1)) * s
   x = c * (1-abs(h/60%2-1))
@@ -42,6 +46,7 @@ def hsl_to_rgb(h, s, l) -> tuple:
   b = round((b+m)*255)
   return r,g,b
 
+
 def hex_to_rgb(col:str) -> tuple:
   if len(col) == 4:
     col = '#' + ''.join([c*2 for c in col[1:]])
@@ -49,8 +54,10 @@ def hex_to_rgb(col:str) -> tuple:
   r,g,b = (int(col[i:i+2],16) for i in range(1,len(col)-1,2))
   return r,g,b
 
+
 def rgb_to_hex(r,g,b) -> str:
   return '#' + ''.join([f"{v:02x}" for v in (r,g,b)])
+
 
 def spice_up_color(
   colorstr:str,

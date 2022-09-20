@@ -79,14 +79,15 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
         elem.pack_forget()
     if self.vid_frame:
       self.vid_frame.unbind("<<Ended>>")
-      self.vid_frame = None #slower, but stop+reuse the existing causes bugs
+      self.vid_frame = None  # slower, but stop+reuse the existing causes bugs
     self.update()
+
 
 class ProfileCard(tk.Frame):
   def __init__(self, idx:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    is_right  = idx%2
-    self.bg = RIGHT_COLORBG   if is_right else LEFT_COLORBG
+    is_right = idx % 2
+    self.bg = RIGHT_COLORBG if is_right else LEFT_COLORBG
     self.fg = RIGHT_COLORFG if is_right else LEFT_COLORFG
     self.wincolor = RIGHT_COLORWIN if is_right else LEFT_COLORWIN
     self.drawcolor = COLORDRAW
@@ -133,6 +134,7 @@ class ProfileCard(tk.Frame):
 
   def _show_rating(self, rating, ratings, nmatches):
     self.rating.configure(text=f"{'★'*rating}  {ratings} (matches: {nmatches})")
+
 
 class Leaderboard(tk.Text):
   class FeatureType(Enum):
@@ -251,7 +253,7 @@ class RaterGui:
 
     self.curr_prof_shnames:list[str] = []
     self.cards:list[ProfileCard] = [None, None]
-    MID_W = 0.1862967158 # TODO: fix width
+    MID_W = 0.1862967158  # TODO: fix width
     HELP_H = 0.07
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root)
