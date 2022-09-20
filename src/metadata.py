@@ -18,7 +18,7 @@ def get_metadata(fname:str) -> tuple[list, int]:
       logging.warning("no hierarchical tags in %s", short_fname(fname))
       propname = (consts.XMP_NS_DC, "subject")
       if not xmp.does_property_exist(*propname):
-        logging.error("No tags in metadata of %s", short_fname(fname))
+        logging.warning("No tags in metadata of %s", short_fname(fname))
         return []
     n = xmp.count_array_items(*propname)
     if n==0:

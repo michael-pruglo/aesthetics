@@ -27,7 +27,7 @@ class TestReadingMetadata(unittest.TestCase):
       "006f129e1d4baaa9cd5e766d06256f58.jpg", getter, 5,
       {"hair", "hair|front_locks", "face", "eyes", "eyes|eyelines"},
     )
-    self._test_metadata_read("no_metadata.png", getter, 0, set())
+    self._test_metadata_read("no_metadata.JPG", getter, 0, set())
 
   def test_libxmp(self):
     self._test_metaread_function(get_metadata)
@@ -38,9 +38,9 @@ class TestReadingMetadata(unittest.TestCase):
 
 class TestWritingMetadata(unittest.TestCase):
   def setUp(self):
-    original = os.path.join(MEDIA_FOLDER, "fixed/no_metadata.png")
+    original = os.path.join(MEDIA_FOLDER, "fixed/no_metadata.JPG")
     self.assertTrue(os.path.exists(original), original)
-    self.fname = os.path.join(MEDIA_FOLDER, "fixed/tmp_write.png")
+    self.fname = os.path.join(MEDIA_FOLDER, "fixed/tmp_write.jpg")
     self.assertFalse(os.path.exists(self.fname), self.fname)
     shutil.copyfile(original, self.fname)
     self.assertTrue(os.path.exists(self.fname), self.fname)
@@ -50,12 +50,24 @@ class TestWritingMetadata(unittest.TestCase):
     os.remove(self.fname)
     self.assertFalse(os.path.exists(self.fname), self.fname)
 
-  # def test_libxmp_writing_rating(self):
-  # def test_libxmp_writing_tags(self):
-  # def test_libxmp_writing_both(self):
-  # def test_libxmp_writing_append(self):
-  #   append = True and False
-  #   pass
+  def _test_writing(self, tags:list[str]=None, rating:int=None):
+    write_metadata(self.fname, tags, rating)
+    t, r = get_metadata(self.fname)
+    self.assertListEqual(t, tags or [])
+    self.assertEqual(r, rating or 0)
+
+  def test_writing_rating(self):
+    self._test_writing(rating=3)
+
+  def test_writing_tags(self):
+    self._test_writing(tags=['blah', 'blah|hierarchical', 'another'])
+
+  def test_writing_both(self):
+    self._test_writing(["mood", "mood|smile", "color"], 4)
+
+  def test_writing_append(self):
+    append = True and False
+    pass
 
 
 if __name__ == '__main__':
