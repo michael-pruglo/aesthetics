@@ -9,6 +9,7 @@ from helpers import short_fname
 
 def _db_row(fname):
   tags, stars = get_metadata(fname)
+  assert tags, f"media without tags not allowed: {short_fname(fname)}"
   return {
     'name': short_fname(fname),
     'tags': ' '.join(sorted(tags)).lower(),

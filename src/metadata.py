@@ -9,7 +9,7 @@ def get_metadata(fname:str) -> tuple[list, int]:
   xmpfile = XMPFiles(file_path=fname)
   xmp = xmpfile.get_xmp()
   if xmp is None:
-    raise RuntimeError(f"file {fname} has no xmp")
+    return [], 0
   xmpfile.close_file()
 
   def get_tags():
@@ -64,12 +64,12 @@ def write_metadata(fname:str, tags:list=None, rating:int=None) -> None:
 def get_metadata2(fname:str) -> tuple[list, int]:
   not_image = fname.split('.')[-1].lower() in ['mp4', 'gif', 'mov']
   if not_image:
-    raise RuntimeError(f"{fname} is not an image")
+    raise NotImplementedError(f"{fname} is not an image")
 
   with Image.open(fname) as im:
     xmp = im.getxmp()
     if 'xmpmeta' not in xmp:
-      raise RuntimeError(f"no XMP in {fname}")
+      return [], 0
 
     desc = xmp['xmpmeta']['RDF']['Description']
     tags = []
@@ -79,7 +79,8 @@ def get_metadata2(fname:str) -> tuple[list, int]:
       logging.warning("no hierarchical tags in %s", fname)
       tags = desc[fmt]['Bag']['li']
     else:
-      raise RuntimeError(f'No XMP tags in {fname}')
+      logging.warning("no tags in %s", fname)
+      tags = []
 
     rating = -1
     if (rat:='Rating') in desc.keys():

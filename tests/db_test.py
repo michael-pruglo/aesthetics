@@ -27,8 +27,7 @@ class TestReadingMetadata(unittest.TestCase):
       "006f129e1d4baaa9cd5e766d06256f58.jpg", getter, 5,
       {"hair", "hair|front_locks", "face", "eyes", "eyes|eyelines"},
     )
-    with self.assertRaises(RuntimeError):
-      self._test_metadata_read("no_metadata.png", getter, 0, {})
+    self._test_metadata_read("no_metadata.png", getter, 0, set())
 
   def test_libxmp(self):
     self._test_metaread_function(get_metadata)
