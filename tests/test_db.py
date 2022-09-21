@@ -10,6 +10,7 @@ from src.db_managers import *
 
 MEDIA_FOLDER = os.path.abspath("./tests/test_media/")
 BACKUP_FOLDER = os.path.join(MEDIA_FOLDER, "bak/")
+EXTRA_FOLDER = os.path.join(MEDIA_FOLDER, "extra/")
 IMMITATED_CHANGES = 3
 
 
@@ -30,6 +31,11 @@ class TestMetadataManager(unittest.TestCase):
       for f in os.listdir(BACKUP_FOLDER):
         shutil.move(os.path.join(BACKUP_FOLDER, f), os.path.join(MEDIA_FOLDER, f))
       os.rmdir(BACKUP_FOLDER)
+    if os.path.exists(EXTRA_FOLDER):
+      for f in os.listdir(EXTRA_FOLDER):
+        extra_file = os.path.join(MEDIA_FOLDER, f)
+        if os.path.exists(extra_file):
+          os.remove(extra_file)
 
   def _create_mgr(self, *args, **kwargs) -> MetadataManager:
     mm = MetadataManager(MEDIA_FOLDER, *args, **kwargs)
@@ -60,6 +66,13 @@ class TestMetadataManager(unittest.TestCase):
     write_metadata(files[1], rating=5-get_metadata(files[1])[1])
     write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-get_metadata(files[2])[1])
 
+  def _add_extra_files(self):
+    for f in os.listdir(EXTRA_FOLDER):
+      fullname = os.path.join(EXTRA_FOLDER, f)
+      assert os.path.isfile(fullname)
+      shutil.copy(fullname, MEDIA_FOLDER)
+    return len(os.listdir(EXTRA_FOLDER))
+
   def test_init_fresh(self):
     mm = self._create_mgr()
     self._check_db(mm.get_db(), len(self.initial_files))
@@ -75,14 +88,15 @@ class TestMetadataManager(unittest.TestCase):
     mm = self._create_mgr()
     self._check_db(mm.get_db(), len(self.initial_files)+CANARIES)
 
-  def test_init_updated_files_no_refresh(self):
+  def test_init_no_refresh(self):
     mm0 = self._create_mgr()
     db0 = mm0.get_db()
     self._immitate_external_metadata_change()
+    self._add_extra_files()
     mm1 = self._create_mgr()
     self.assertTrue(mm1.get_db().equals(db0))
 
-  def test_init_updated_files_refresh(self):
+  def test_init_updated_files(self):
     mm0 = self._create_mgr()
     db0 = mm0.get_db()
     self._immitate_external_metadata_change()
@@ -91,6 +105,17 @@ class TestMetadataManager(unittest.TestCase):
     self.assertFalse(db1.equals(db0))
     diff = (db1.sort_index().compare(db0.sort_index()))
     self.assertTupleEqual(diff.shape, (IMMITATED_CHANGES,2*2), diff)
+
+  def test_init_extra_files(self):
+    mm0 = self._create_mgr()
+    db0 = mm0.get_db()
+    extra_amount = self._add_extra_files()
+    mm1 = self._create_mgr(refresh=True)
+    db1 = mm1.get_db()
+    old_rows = db1.index.isin(db0.index)
+    old_portion, new_portion = db1.loc[old_rows], db1.loc[~old_rows]
+    self.assertTrue(old_portion.sort_index().equals(db0.sort_index()))
+    self._check_db(new_portion, extra_amount)
 
 
 if __name__ == '__main__':
