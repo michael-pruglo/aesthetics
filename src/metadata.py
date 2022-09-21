@@ -1,29 +1,30 @@
 import logging
+from typing import Iterable
 from libxmp import XMPFiles, consts
 from PIL import Image
 
 from helpers import short_fname
 
 
-def get_metadata(fname:str) -> tuple[list, int]:
+def get_metadata(fname:str) -> tuple[set[str],int]:
   xmpfile = XMPFiles(file_path=fname)
   xmp = xmpfile.get_xmp()
   if xmp is None:
-    return [], 0
+    return set(), 0
   xmpfile.close_file()
 
   def get_tags():
     propname = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
     if not xmp.does_property_exist(*propname):
-      logging.warning("no hierarchical tags in %s", short_fname(fname))
       propname = (consts.XMP_NS_DC, "subject")
       if not xmp.does_property_exist(*propname):
         logging.warning("No tags in metadata of %s", short_fname(fname))
-        return []
+        return set()
+      logging.warning("No hierarchical tags in %s", short_fname(fname))
     n = xmp.count_array_items(*propname)
     if n==0:
       logging.warning("ZERO tags in %s", short_fname(fname))
-    return [xmp.get_array_item(*propname, i+1) for i in range(n)]
+    return {xmp.get_array_item(*propname, i+1) for i in range(n)}
 
   def get_rating():
     propname = (consts.XMP_NS_XMP, "Rating")
@@ -34,26 +35,22 @@ def get_metadata(fname:str) -> tuple[list, int]:
 
   return get_tags(), get_rating()
 
-def write_metadata(fname:str, tags:list=None, rating:int=None) -> None:
+
+def write_metadata(fname:str, tags:Iterable[str]=None, append:bool=True, rating:int=None) -> None:
   xmpfile = XMPFiles(file_path=fname, open_forupdate=True)
   xmp = xmpfile.get_xmp()
   if not xmpfile.can_put_xmp(xmp):
     raise RuntimeError(f"file {fname}: metadata not writable")
 
-  if tags is not None:
+  def write_tag(property:tuple):
+    if not xmp.does_array_item_exist(*property):
+      xmp.append_array_item(*property, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
+  if tags:
     for tag in tags:
-      hier_prop = (consts.XMP_NS_Lightroom, "hierarchicalSubject", tag)
-      if xmp.does_array_item_exist(*hier_prop):
-        logging.warning("%s: hier already exists '%s'", short_fname(fname), tag)
-      else:
-        xmp.append_array_item(*hier_prop, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
-      subj_prop = (consts.XMP_NS_DC, "subject", tag.split('|')[-1])
-      if xmp.does_array_item_exist(*subj_prop):
-        logging.warning("%s: subj already exists '%s'", short_fname(fname), tag.split('|')[-1])
-      else:
-        xmp.append_array_item(*subj_prop, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
+      write_tag((consts.XMP_NS_Lightroom, "hierarchicalSubject", tag))
+      write_tag((consts.XMP_NS_DC, "subject", tag.split('|')[-1]))
 
-  if rating is not None:
+  if rating:
     r_prop = (consts.XMP_NS_XMP, "Rating")
     xmp.set_property_int(*r_prop, rating)
 
@@ -61,7 +58,7 @@ def write_metadata(fname:str, tags:list=None, rating:int=None) -> None:
   xmpfile.close_file()
 
 
-def get_metadata2(fname:str) -> tuple[list, int]:
+def get_metadata2(fname:str) -> tuple[set[str],int]:
   not_image = fname.split('.')[-1].lower() in ['mp4', 'gif', 'mov']
   if not_image:
     raise NotImplementedError(f"{fname} is not an image")
@@ -69,7 +66,7 @@ def get_metadata2(fname:str) -> tuple[list, int]:
   with Image.open(fname) as im:
     xmp = im.getxmp()
     if 'xmpmeta' not in xmp:
-      return [], 0
+      return set(), 0
 
     desc = xmp['xmpmeta']['RDF']['Description']
     tags = []
@@ -88,4 +85,4 @@ def get_metadata2(fname:str) -> tuple[list, int]:
     else:
       rating = 0
 
-    return tags, rating
+    return set(tags), rating

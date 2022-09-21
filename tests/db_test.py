@@ -18,11 +18,9 @@ class TestReadingMetadata(unittest.TestCase):
   ):
     fname = os.path.join(MEDIA_FOLDER, "fixed/"+short_name)
     self.assertTrue(os.path.exists(fname), fname)
-    tags, rating = getter(fname)
-    self.assertEqual(rating, expected_rating)
-    self.assertSetEqual(set(tags), expected_tags)
+    self.assertTupleEqual(getter(fname), (expected_tags, expected_rating))
 
-  def _test_metaread_function(self, getter:Callable[[str],tuple[list,int]]):
+  def _test_metaread_function(self, getter:Callable[[str],tuple[set[str],int]]):
     self._test_metadata_read(
       "006f129e1d4baaa9cd5e766d06256f58.jpg", getter, 5,
       {"hair", "hair|front_locks", "face", "eyes", "eyes|eyelines"},
@@ -50,25 +48,28 @@ class TestWritingMetadata(unittest.TestCase):
     os.remove(self.fname)
     self.assertFalse(os.path.exists(self.fname), self.fname)
 
-  def _test_writing(self, tags:list[str]=None, rating:int=None):
-    write_metadata(self.fname, tags, rating)
+  def _test_writing(self, tags:set[str]=None, rating:int=None):
+    write_metadata(self.fname, tags=tags, append=False, rating=rating)
     t, r = get_metadata(self.fname)
-    self.assertListEqual(t, tags or [])
+    self.assertSetEqual(t, tags or set())
     self.assertEqual(r, rating or 0)
 
   def test_writing_rating(self):
     self._test_writing(rating=3)
 
   def test_writing_tags(self):
-    self._test_writing(tags=['blah', 'blah|hierarchical', 'another'])
+    self._test_writing(tags={'blah', 'blah|hierarchical', 'another'})
 
   def test_writing_both(self):
-    self._test_writing(["mood", "mood|smile", "color"], 4)
+    self._test_writing({"mood", "mood|smile", "color"}, 4)
 
   def test_writing_append(self):
-    append = True and False
-    pass
+    tgs = {"a","b|_c","b|_d","b"}
+    rat = 3
+    write_metadata(self.fname, tags=tgs, rating=rat)
+    self.assertTupleEqual(get_metadata(self.fname), (tgs, rat))
+
 
 
 if __name__ == '__main__':
-  unittest.main(verbosity=2)
+  unittest.main()
