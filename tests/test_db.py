@@ -16,11 +16,12 @@ class TestMetadataManager(unittest.TestCase):
                        if os.path.isfile(os.path.join(MEDIA_FOLDER, f))
                        and f.split('.')[-1] != 'csv'])
     assert self.nfiles > 2
+    self.metafile = os.path.join(MEDIA_FOLDER, 'metadata_db.csv')
+    self.assertFalse(os.path.exists(self.metafile))
 
   def tearDown(self) -> None:
-    db_file = os.path.join(MEDIA_FOLDER, "metadata_db.csv")
-    if os.path.exists(db_file):
-      os.remove(db_file)
+    if os.path.exists(self.metafile):
+      os.remove(self.metafile)
 
   def _check_db(self, db:pd.DataFrame, expected_len:int):
     self.assertEqual(len(db), expected_len)
@@ -37,26 +38,26 @@ class TestMetadataManager(unittest.TestCase):
 
   def test_init_fresh(self):
     mm = MetadataManager(MEDIA_FOLDER)
+    self.assertTrue(os.path.exists(self.metafile))
     self._check_db(mm.get_db(), self.nfiles)
 
   def test_init_existing_csv(self):
     mm0 = MetadataManager(MEDIA_FOLDER)
-    metafile = os.path.join(MEDIA_FOLDER, 'metadata_db.csv')
-    self.assertTrue(os.path.exists(metafile))
+    self.assertTrue(os.path.exists(self.metafile))
+
     # make sure next manager reads db from disk, doesn't create anew
     db0 = mm0.get_db()
     CANARIES = 2
-    pd.concat([db0, db0.sample(CANARIES)]).to_csv(metafile)
+    pd.concat([db0, db0.sample(CANARIES)]).to_csv(self.metafile)
 
     mm = MetadataManager(MEDIA_FOLDER)
     self._check_db(mm.get_db(), self.nfiles+CANARIES)
 
-
   def test_init_updated_files_no_refresh(self):
     pass
+
   def test_init_updated_files_refresh(self):
     pass
-
 
 
 if __name__ == '__main__':
