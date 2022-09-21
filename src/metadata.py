@@ -36,19 +36,24 @@ def get_metadata(fname:str) -> tuple[set[str],int]:
   return get_tags(), get_rating()
 
 
-def write_metadata(fname:str, tags:Iterable[str]=None, append:bool=True, rating:int=None) -> None:
+def write_metadata(fname:str, tags:Iterable[str]=None, rating:int=None, append:bool=True) -> None:
   xmpfile = XMPFiles(file_path=fname, open_forupdate=True)
   xmp = xmpfile.get_xmp()
   if not xmpfile.can_put_xmp(xmp):
     raise RuntimeError(f"file {fname}: metadata not writable")
 
-  def write_tag(property:tuple):
-    if not xmp.does_array_item_exist(*property):
-      xmp.append_array_item(*property, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
+  def write_tag(property, tag):
+    if not xmp.does_array_item_exist(*property, tag):
+      xmp.append_array_item(*property, tag, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
   if tags:
+    hier_tag_prop = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
+    subj_tag_prop = (consts.XMP_NS_DC, "subject")
+    if not append:
+      xmp.delete_property(*hier_tag_prop)
+      xmp.delete_property(*subj_tag_prop)
     for tag in tags:
-      write_tag((consts.XMP_NS_Lightroom, "hierarchicalSubject", tag))
-      write_tag((consts.XMP_NS_DC, "subject", tag.split('|')[-1]))
+      write_tag(hier_tag_prop, tag)
+      write_tag(subj_tag_prop, tag.split('|')[-1])
 
   if rating:
     r_prop = (consts.XMP_NS_XMP, "Rating")
