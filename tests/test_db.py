@@ -11,7 +11,6 @@ from src.db_managers import *
 MEDIA_FOLDER = os.path.abspath("./tests/test_media/")
 BACKUP_FOLDER = os.path.join(MEDIA_FOLDER, "bak/")
 EXTRA_FOLDER = os.path.join(MEDIA_FOLDER, "extra/")
-IMMITATED_CHANGES = 3
 
 
 class TestMetadataManager(unittest.TestCase):
@@ -42,7 +41,7 @@ class TestMetadataManager(unittest.TestCase):
     self.assertTrue(os.path.exists(self.metafile))
     return mm
 
-  def _check_db(self, db:pd.DataFrame, expected_len:int):
+  def _check_db(self, db:pd.DataFrame, expected_len:int) -> None:
     self.assertEqual(len(db), expected_len)
     self.assertTrue({'tags','stars','nmatches'}.issubset(db.columns))
     self.assertTrue((db['tags'].notna()).all())
@@ -55,9 +54,10 @@ class TestMetadataManager(unittest.TestCase):
       given_metadata = ({t for t in row['tags'].split()}, row['stars'])
       self.assertTupleEqual(given_metadata, expected_metadata, short_name)
 
-  def _immitate_external_metadata_change(self):
+  def _immitate_external_metadata_change(self) -> int:
+    num_files = 3
     files = [os.path.join(MEDIA_FOLDER, f)
-             for f in random.sample(self.initial_files, IMMITATED_CHANGES)]
+             for f in random.sample(self.initial_files, num_files)]
     if not os.path.exists(BACKUP_FOLDER):
       os.mkdir(BACKUP_FOLDER)
     for f in files:
@@ -65,13 +65,36 @@ class TestMetadataManager(unittest.TestCase):
     write_metadata(files[0], tags=["canary", "canary|tagcanary"])
     write_metadata(files[1], rating=5-get_metadata(files[1])[1])
     write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-get_metadata(files[2])[1])
+    return num_files
 
-  def _add_extra_files(self):
+  def _add_extra_files(self) -> int:
     for f in os.listdir(EXTRA_FOLDER):
       fullname = os.path.join(EXTRA_FOLDER, f)
       assert os.path.isfile(fullname)
       shutil.copy(fullname, MEDIA_FOLDER)
     return len(os.listdir(EXTRA_FOLDER))
+
+  def _test_external_change(self, update_existing=False, add_new=False, refresh=False) -> None:
+    db0 = self._create_mgr().get_db()
+    if update_existing:
+      changed_amount = self._immitate_external_metadata_change()
+    if add_new:
+      extra_amount = self._add_extra_files()
+    db1 = self._create_mgr(refresh=refresh).get_db()
+
+    if not refresh:
+      self.assertTrue(db1.equals(db0))
+    else:
+      old_rows = db1.index.isin(db0.index)
+      old_portion, new_portion = db1.loc[old_rows], db1.loc[~old_rows]
+      if update_existing:
+        diff = (old_portion.sort_index().compare(db0.sort_index()))
+        self.assertTupleEqual(diff.shape, (changed_amount,2*2), diff)
+      else:
+        self.assertTrue(old_portion.sort_index().equals(db0.sort_index()))
+      if add_new:
+        self._check_db(new_portion, extra_amount)
+
 
   def test_init_fresh(self):
     mm = self._create_mgr()
@@ -89,33 +112,16 @@ class TestMetadataManager(unittest.TestCase):
     self._check_db(mm.get_db(), len(self.initial_files)+CANARIES)
 
   def test_init_no_refresh(self):
-    mm0 = self._create_mgr()
-    db0 = mm0.get_db()
-    self._immitate_external_metadata_change()
-    self._add_extra_files()
-    mm1 = self._create_mgr()
-    self.assertTrue(mm1.get_db().equals(db0))
+    self._test_external_change(True, True, False)
 
   def test_init_updated_files(self):
-    mm0 = self._create_mgr()
-    db0 = mm0.get_db()
-    self._immitate_external_metadata_change()
-    mm1 = self._create_mgr(refresh=True)
-    db1 = mm1.get_db()
-    self.assertFalse(db1.equals(db0))
-    diff = (db1.sort_index().compare(db0.sort_index()))
-    self.assertTupleEqual(diff.shape, (IMMITATED_CHANGES,2*2), diff)
+    self._test_external_change(True, False, True)
 
   def test_init_extra_files(self):
-    mm0 = self._create_mgr()
-    db0 = mm0.get_db()
-    extra_amount = self._add_extra_files()
-    mm1 = self._create_mgr(refresh=True)
-    db1 = mm1.get_db()
-    old_rows = db1.index.isin(db0.index)
-    old_portion, new_portion = db1.loc[old_rows], db1.loc[~old_rows]
-    self.assertTrue(old_portion.sort_index().equals(db0.sort_index()))
-    self._check_db(new_portion, extra_amount)
+    self._test_external_change(False, True, True)
+
+  def test_init_updated_and_extra(self):
+    self._test_external_change(True, True, True)
 
 
 if __name__ == '__main__':
