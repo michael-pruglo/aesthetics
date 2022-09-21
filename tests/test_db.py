@@ -1,5 +1,6 @@
 import unittest
 import os
+import pandas as pd
 
 from src.metadata import get_metadata
 from src.db_managers import *
@@ -21,20 +22,41 @@ class TestMetadataManager(unittest.TestCase):
     if os.path.exists(db_file):
       os.remove(db_file)
 
-  def test_init_fresh(self):
-    mm = MetadataManager(MEDIA_FOLDER)
-    db = mm.get_db()
-    self.assertEqual(len(db), self.nfiles)
+  def _check_db(self, db:pd.DataFrame, expected_len:int):
+    self.assertEqual(len(db), expected_len)
     self.assertTrue({'tags','stars','nmatches'}.issubset(db.columns))
     self.assertTrue((db['tags'].notna()).all())
     self.assertTrue((db['stars'].between(0,5)).all())
     self.assertTrue((db['nmatches']==0).all())
     for short_name, row in db.sample(len(db)//5).iterrows():
       fname = os.path.join(MEDIA_FOLDER, short_name)
-      assert os.path.exists(fname)
-      expected = get_metadata(fname)
-      given = ({t for t in row['tags'].split()}, int(row['stars']))
-      self.assertTupleEqual(given, expected, short_name)
+      self.assertTrue(os.path.exists(fname))
+      expected_metadata = get_metadata(fname)
+      given_metadata = ({t for t in row['tags'].split()}, row['stars'])
+      self.assertTupleEqual(given_metadata, expected_metadata, short_name)
+
+  def test_init_fresh(self):
+    mm = MetadataManager(MEDIA_FOLDER)
+    self._check_db(mm.get_db(), self.nfiles)
+
+  def test_init_existing_csv(self):
+    mm0 = MetadataManager(MEDIA_FOLDER)
+    metafile = os.path.join(MEDIA_FOLDER, 'metadata_db.csv')
+    self.assertTrue(os.path.exists(metafile))
+    # make sure next manager reads db from disk, doesn't create anew
+    db0 = mm0.get_db()
+    CANARIES = 2
+    pd.concat([db0, db0.sample(CANARIES)]).to_csv(metafile)
+
+    mm = MetadataManager(MEDIA_FOLDER)
+    self._check_db(mm.get_db(), self.nfiles+CANARIES)
+
+
+  def test_init_updated_files_no_refresh(self):
+    pass
+  def test_init_updated_files_refresh(self):
+    pass
+
 
 
 if __name__ == '__main__':
