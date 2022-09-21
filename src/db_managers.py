@@ -21,8 +21,11 @@ def _default_init(row, default_values_getter):
   assert 0 <= row['stars'] <= 5
   if row.isna()['nmatches']:
     row['nmatches'] = 0
-  for column, value in default_values_getter(row['stars']).items():
-    row[column] = value
+  if default_values_getter:
+    for column, value in default_values_getter(row['stars']).items():
+      row[column] = value
+  else:
+    logging.warning("no default_values_getter was supplied. Ratings are not initialized.")
   return row
 
 
