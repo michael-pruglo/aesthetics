@@ -259,7 +259,7 @@ class Leaderboard(tk.Text):
 
 
 class RaterGui:
-  def __init__(self, give_boost_cb:Callable[[ProfileInfo],None]):
+  def __init__(self, give_boost_cb:Callable[[str],None]):
     self.root = tk.Tk()
     self.root.geometry("1766x878+77+77")
     self.root.title("aesthetics")
