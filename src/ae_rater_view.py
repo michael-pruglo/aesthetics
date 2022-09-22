@@ -7,7 +7,7 @@ from typing import Callable
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
-import helpers
+import helpers as hlp
 from ae_rater_types import *
 
 
@@ -22,11 +22,11 @@ RIGHT_COLORBG = "#353539"
 spice_fg_rgb  = lambda r,g,b: tuple([int(max(x*1.2,255) if x==max(r,g,b) else x) for x in (r,g,b)])
 spice_fg_hsl  = lambda h,s,l: (h, .1, .6)
 spice_win_hsl = lambda h,s,l: (h, .3, .3)
-LEFT_COLORFG   = helpers.spice_up_color(LEFT_COLORBG,   spice_fg_rgb,  spice_fg_hsl)
-RIGHT_COLORFG  = helpers.spice_up_color(RIGHT_COLORBG,  spice_fg_rgb,  spice_fg_hsl)
-LEFT_COLORWIN  = helpers.spice_up_color(LEFT_COLORBG,   None, spice_win_hsl)
-RIGHT_COLORWIN = helpers.spice_up_color(RIGHT_COLORBG,  None, spice_win_hsl)
-COLORDRAW      = helpers.spice_up_color(RIGHT_COLORWIN, None, lambda h,s,l: (60, s, l))
+LEFT_COLORFG   = hlp.spice_up_color(LEFT_COLORBG,   spice_fg_rgb,  spice_fg_hsl)
+RIGHT_COLORFG  = hlp.spice_up_color(RIGHT_COLORBG,  spice_fg_rgb,  spice_fg_hsl)
+LEFT_COLORWIN  = hlp.spice_up_color(LEFT_COLORBG,   None, spice_win_hsl)
+RIGHT_COLORWIN = hlp.spice_up_color(RIGHT_COLORBG,  None, spice_win_hsl)
+COLORDRAW      = hlp.spice_up_color(RIGHT_COLORWIN, None, lambda h,s,l: (60, s, l))
 
 
 class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .configure(background=)
@@ -38,7 +38,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     self.err_label = None
 
   def show_media(self, fname):
-    ext = fname.split('.')[-1].lower()
+    ext = hlp.file_extension(fname)
     if ext in ['jpg', 'jpeg', 'png', 'gif']:
       self.show_img(fname)
     elif ext in ['mp4', 'mov']:
@@ -106,7 +106,7 @@ class ProfileCard(tk.Frame):
     self.rating.place(relwidth=1,         relheight=(1-PH)/2, rely=(PH+1)/2)
 
   def show_profile(self, profile:ProfileInfo) -> None:
-    self.name.configure(text=helpers.short_fname(profile.fullname))
+    self.name.configure(text=hlp.short_fname(profile.fullname))
     self._show_tags(profile.tags)
     self._show_rating(profile.stars, profile.ratings, profile.nmatches)
     self.media.show_media(profile.fullname)
@@ -248,7 +248,7 @@ class Leaderboard(tk.Text):
     nmatches_color = int(interp(prof.nmatches, [0,100], [0x70,255]))
     return [
       ('tag_idx', "#aaa", f"{idx+1:>3} "),
-      ('tag_name', "#ddd", f"{helpers.truncate(helpers.short_fname(prof.fullname), 15, '..'):<15} "),
+      ('tag_name', "#ddd", f"{hlp.truncate(hlp.short_fname(prof.fullname), 15, '..'):<15} "),
       ('tag_stars', BTFL_DARK_GRANOLA, f"{'*' * prof.stars:>5} "),
     ] + [
       (f'tag_rating{sysname}', rat_color, f"{rat:>4} ")
@@ -291,7 +291,7 @@ class RaterGui:
     for card,profile in zip(self.cards, profiles):
       card.show_profile(profile)
       card.set_style(None)
-    self.curr_prof_shnames = [helpers.short_fname(p.fullname) for p in profiles]
+    self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
     self.report_outcome_cb = callback
     self._enable_arrows(True)
 

@@ -2,6 +2,7 @@ import os
 import shutil
 import random
 
+from src.helpers import file_extension
 from src.metadata import get_metadata, write_metadata
 
 MEDIA_FOLDER = os.path.abspath("./tests/test_media/")
@@ -13,7 +14,7 @@ EXTRA_FOLDER = os.path.join(MEDIA_FOLDER, "extra/")
 def get_initial_mediafiles() -> list[str]:
   return [f for f in os.listdir(MEDIA_FOLDER)
           if os.path.isfile(os.path.join(MEDIA_FOLDER, f))
-          and f.split('.')[-1] != 'csv']
+          and file_extension(f) != 'csv']
 
 def backup_files(fullnames:list[str]) -> None:
   if not os.path.exists(BACKUP_FOLDER):
@@ -39,8 +40,9 @@ def immitate_external_metadata_change() -> int:
   return num_files
 
 def disk_cleanup() -> None:
-  if os.path.exists(METAFILE):
-    os.remove(METAFILE)
+  for f in os.listdir(MEDIA_FOLDER):
+    if file_extension(f) == 'csv':
+      os.remove(os.path.join(MEDIA_FOLDER, f))
   if os.path.exists(BACKUP_FOLDER):
     for f in os.listdir(BACKUP_FOLDER):
       shutil.move(os.path.join(BACKUP_FOLDER, f), os.path.join(MEDIA_FOLDER, f))

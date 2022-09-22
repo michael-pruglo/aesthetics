@@ -3,7 +3,7 @@ from typing import Iterable
 from libxmp import XMPFiles, consts
 from PIL import Image
 
-from helpers import short_fname
+import helpers as hlp
 
 
 def get_metadata(fullname:str) -> tuple[set[str],int]:
@@ -18,12 +18,12 @@ def get_metadata(fullname:str) -> tuple[set[str],int]:
     if not xmp.does_property_exist(*propname):
       propname = (consts.XMP_NS_DC, "subject")
       if not xmp.does_property_exist(*propname):
-        logging.warning("No tags in metadata of %s", short_fname(fullname))
+        logging.warning("No tags in metadata of %s", hlp.short_fname(fullname))
         return set()
-      logging.warning("No hierarchical tags in %s", short_fname(fullname))
+      logging.warning("No hierarchical tags in %s", hlp.short_fname(fullname))
     n = xmp.count_array_items(*propname)
     if n==0:
-      logging.warning("ZERO tags in %s", short_fname(fullname))
+      logging.warning("ZERO tags in %s", hlp.short_fname(fullname))
     return {xmp.get_array_item(*propname, i+1) for i in range(n)}
 
   def get_rating():
@@ -64,7 +64,7 @@ def write_metadata(fullname:str, tags:Iterable[str]=None, rating:int=None, appen
 
 
 def get_metadata2(fullname:str) -> tuple[set[str],int]:
-  not_image = fullname.split('.')[-1].lower() in ['mp4', 'gif', 'mov']
+  not_image = hlp.file_extension(fullname) in ['mp4', 'gif', 'mov']
   if not_image:
     raise NotImplementedError(f"{fullname} is not an image")
 

@@ -17,8 +17,7 @@ class TestCompetition(unittest.TestCase):
     self.model = RatingCompetition(MEDIA_FOLDER, refresh=False)
 
   def tearDown(self):
-    if os.path.exists(METAFILE):
-      os.remove(METAFILE)
+    hlp.disk_cleanup()
 
   def _get_leaderboard_line(self, fullname:str) -> ProfileInfo:
     ldbrd = self.model.get_leaderboard()
@@ -36,18 +35,28 @@ class TestCompetition(unittest.TestCase):
     self.assertTrue(is_sorted(ldbrd))
     self.assertSetEqual({short_fname(p.fullname) for p in ldbrd}, set(mediafiles))
 
-  def test_boost(self):
-    participants = self.model.generate_match()
-    fullname = participants[0].fullname
-    profile_before = self._get_leaderboard_line(fullname)
-    hlp.backup_files([fullname])
-    self.model.give_boost(short_fname(fullname))
-    profile_after = self._get_leaderboard_line(fullname)
+  def test_boost_generic(self):
+    p = self.model.generate_match()[0]
+    profile_before = self._get_leaderboard_line(p.fullname)
+    self.assertEqual(p, profile_before)
+    hlp.backup_files([p.fullname])
+    self.model.give_boost(short_fname(p.fullname))
+    profile_after = self._get_leaderboard_line(p.fullname)
     self.assertEqual(profile_after.tags, profile_after.tags)
     self.assertEqual(profile_before.nmatches, profile_after.nmatches)
     self.assertLessEqual(profile_before.stars, profile_after.stars)
     self.assertTrue(all(profile_before.ratings[s] < profile_after.ratings[s]
                         for s in profile_before.ratings.keys()))
+
+  def test_boost_starchange(self):
+    stars_before = 5
+    while stars_before == 5:
+      p = self.model.generate_match()[0]
+      stars_before = self._get_leaderboard_line(p.fullname).stars
+    hlp.backup_files([p.fullname])
+    self.model.give_boost(short_fname(p.fullname))
+    profile_after = self._get_leaderboard_line(p.fullname)
+    # test both when there is consensus, and when there isn't
 
 
 if __name__ == '__main__':

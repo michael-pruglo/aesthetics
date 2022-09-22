@@ -5,9 +5,12 @@ def truncate(s:str, lim:int, suffix:str='…') -> str:
   return s[:lim-len(suffix)]+suffix if len(s)>lim else s
 
 
-def short_fname(fullname:str):
+def short_fname(fullname:str) -> str:
   return fullname.rsplit('/', maxsplit=1)[-1]
 
+
+def file_extension(name:str) -> str:
+  return name.rsplit('.', maxsplit=1)[-1].lower()
 
 # https://www.rapidtables.com/convert/color/rgb-to-hsl.html
 def rgb_to_hsl(r, g, b) -> tuple:
