@@ -154,7 +154,7 @@ class TestMetadataManager(unittest.TestCase):
     for short_name in random.sample(self.initial_files, 4):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
       tags_before, stars_before = get_metadata(fullname)
-      upd_stars = 5 - stars_before
+      upd_stars = 5 - stars_before if random.randint(0,1) else None
 
       self._backup_files([fullname])
       mm.update(fullname, {}, consensus_stars=upd_stars)
@@ -162,7 +162,10 @@ class TestMetadataManager(unittest.TestCase):
       # updates on disk
       tags_after, stars_after = get_metadata(fullname)
       self.assertSetEqual(tags_before, tags_after, short_name)
-      self.assertEqual(stars_after, upd_stars, short_name)
+      if upd_stars is None:
+        self.assertEqual(stars_after, stars_before, short_name)
+      else:
+        self.assertEqual(stars_after, upd_stars, short_name)
 
       # updates in program
       self._check_row(short_name, mm.get_file_info(short_name))
