@@ -6,7 +6,7 @@ import pandas as pd
 
 from src.metadata import get_metadata, write_metadata
 from src.db_managers import MetadataManager
-from tests import MEDIA_FOLDER, BACKUP_FOLDER, EXTRA_FOLDER
+from tests import MEDIA_FOLDER, BACKUP_FOLDER, EXTRA_FOLDER, METAFILE
 
 
 def defgettr(stars:int) -> dict:
@@ -16,16 +16,15 @@ def defgettr(stars:int) -> dict:
 class TestMetadataManager(unittest.TestCase):
   def setUp(self) -> None:
     assert os.path.exists(MEDIA_FOLDER)
+    assert not os.path.exists(METAFILE)
     self.initial_files = [f for f in os.listdir(MEDIA_FOLDER)
                           if os.path.isfile(os.path.join(MEDIA_FOLDER, f))
                           and f.split('.')[-1] != 'csv']
     assert len(self.initial_files) > 2
-    self.metafile = os.path.join(MEDIA_FOLDER, 'metadata_db.csv')
-    assert not os.path.exists(self.metafile)
 
   def tearDown(self) -> None:
-    if os.path.exists(self.metafile):
-      os.remove(self.metafile)
+    if os.path.exists(METAFILE):
+      os.remove(METAFILE)
     if os.path.exists(BACKUP_FOLDER):
       for f in os.listdir(BACKUP_FOLDER):
         shutil.move(os.path.join(BACKUP_FOLDER, f), os.path.join(MEDIA_FOLDER, f))
@@ -44,7 +43,7 @@ class TestMetadataManager(unittest.TestCase):
 
   def _create_mgr(self, *args, **kwargs) -> MetadataManager:
     mm = MetadataManager(MEDIA_FOLDER, *args, **kwargs)
-    self.assertTrue(os.path.exists(self.metafile))
+    self.assertTrue(os.path.exists(METAFILE))
     return mm
 
   def _check_row(self, short_name:str, row:pd.Series) -> None:
@@ -116,7 +115,7 @@ class TestMetadataManager(unittest.TestCase):
     # make sure next manager reads db from disk, doesn't create anew
     db0 = mm0.get_db()
     CANARIES = 2
-    pd.concat([db0, db0.sample(CANARIES)]).to_csv(self.metafile)
+    pd.concat([db0, db0.sample(CANARIES)]).to_csv(METAFILE)
 
     mm = self._create_mgr()
     self._check_db(mm.get_db(), len(self.initial_files)+CANARIES)

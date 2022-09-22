@@ -2,11 +2,20 @@
 
 Exploration of personal style. Provided a media library with metadata - explore, rate, tag, use DL.
 
-Run with:
+## Run:
 
-```py
+Run gui app with
+
+```bash
 python src/ae_rater.py [path/to/media]
 ```
+
+Run tests with
+```bash
+python -m unittests
+```
+
+## Architecture
 
 ```
 |--------------|    |---------------|
