@@ -1,3 +1,5 @@
+![unit tests](https://github.com/michael-pruglo/aesthetics/actions/workflows/python-app.yml/badge.svg)
+
 # aesthetics battle royale
 
 Exploration of personal style. Provided a media library with metadata - explore, rate, tag, use DL.

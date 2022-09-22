@@ -1,4 +1,5 @@
 tkVideoPlayer
+defusedxml
 python-xmp-toolkit
 pandas
 numpy
