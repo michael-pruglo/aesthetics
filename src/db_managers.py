@@ -92,10 +92,11 @@ class MetadataManager:
     for column,value in values.items():
       self.df.loc[short_name, column] = value  # TODO: prettify with pandas
 
-    if consensus_stars:
+    if consensus_stars is not None:
       prev_stars = self.df.loc[short_name, 'stars']
       if prev_stars != consensus_stars:
-        assert 0 <= consensus_stars <= 5
+        if consensus_stars < 0 or consensus_stars > 5:
+          raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
         self.df.loc[short_name, 'stars'] = consensus_stars
         write_metadata(fullname, rating=consensus_stars)
         logging.info("file %s updated stars on disk: %s -> %s",

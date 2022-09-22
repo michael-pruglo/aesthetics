@@ -6,8 +6,8 @@ from PIL import Image
 from helpers import short_fname
 
 
-def get_metadata(fname:str) -> tuple[set[str],int]:
-  xmpfile = XMPFiles(file_path=fname)
+def get_metadata(fullname:str) -> tuple[set[str],int]:
+  xmpfile = XMPFiles(file_path=fullname)
   xmp = xmpfile.get_xmp()
   if xmp is None:
     return set(), 0
@@ -18,12 +18,12 @@ def get_metadata(fname:str) -> tuple[set[str],int]:
     if not xmp.does_property_exist(*propname):
       propname = (consts.XMP_NS_DC, "subject")
       if not xmp.does_property_exist(*propname):
-        logging.warning("No tags in metadata of %s", short_fname(fname))
+        logging.warning("No tags in metadata of %s", short_fname(fullname))
         return set()
-      logging.warning("No hierarchical tags in %s", short_fname(fname))
+      logging.warning("No hierarchical tags in %s", short_fname(fullname))
     n = xmp.count_array_items(*propname)
     if n==0:
-      logging.warning("ZERO tags in %s", short_fname(fname))
+      logging.warning("ZERO tags in %s", short_fname(fullname))
     return {xmp.get_array_item(*propname, i+1) for i in range(n)}
 
   def get_rating():
@@ -36,11 +36,11 @@ def get_metadata(fname:str) -> tuple[set[str],int]:
   return get_tags(), get_rating()
 
 
-def write_metadata(fname:str, tags:Iterable[str]=None, rating:int=None, append:bool=True) -> None:
-  xmpfile = XMPFiles(file_path=fname, open_forupdate=True)
+def write_metadata(fullname:str, tags:Iterable[str]=None, rating:int=None, append:bool=True) -> None:
+  xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
   xmp = xmpfile.get_xmp()
   if not xmpfile.can_put_xmp(xmp):
-    raise RuntimeError(f"file {fname}: metadata not writable")
+    raise RuntimeError(f"file {fullname}: metadata not writable")
 
   def write_tag(property, tag):
     if not xmp.does_array_item_exist(*property, tag):
@@ -63,12 +63,12 @@ def write_metadata(fname:str, tags:Iterable[str]=None, rating:int=None, append:b
   xmpfile.close_file()
 
 
-def get_metadata2(fname:str) -> tuple[set[str],int]:
-  not_image = fname.split('.')[-1].lower() in ['mp4', 'gif', 'mov']
+def get_metadata2(fullname:str) -> tuple[set[str],int]:
+  not_image = fullname.split('.')[-1].lower() in ['mp4', 'gif', 'mov']
   if not_image:
-    raise NotImplementedError(f"{fname} is not an image")
+    raise NotImplementedError(f"{fullname} is not an image")
 
-  with Image.open(fname) as im:
+  with Image.open(fullname) as im:
     xmp = im.getxmp()
     if 'xmpmeta' not in xmp:
       return set(), 0
@@ -78,10 +78,10 @@ def get_metadata2(fname:str) -> tuple[set[str],int]:
     if (hier:='hierarchicalSubject') in desc.keys():
       tags = desc[hier]['Bag']['li']
     elif (fmt:='format') in desc.keys():
-      logging.warning("no hierarchical tags in %s", fname)
+      logging.warning("no hierarchical tags in %s", fullname)
       tags = desc[fmt]['Bag']['li']
     else:
-      logging.warning("no tags in %s", fname)
+      logging.warning("no tags in %s", fullname)
       tags = []
 
     rating = -1

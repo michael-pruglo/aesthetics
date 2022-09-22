@@ -40,6 +40,12 @@ class TestMetadataManager(unittest.TestCase):
         if os.path.exists(extra_file):
           os.remove(extra_file)
 
+  def _backup_files(self, fullnames:list[str]) -> None:
+    if not os.path.exists(BACKUP_FOLDER):
+      os.mkdir(BACKUP_FOLDER)
+    for f in fullnames:
+      shutil.copy(f, BACKUP_FOLDER)
+
   def _create_mgr(self, *args, **kwargs) -> MetadataManager:
     mm = MetadataManager(MEDIA_FOLDER, *args, **kwargs)
     self.assertTrue(os.path.exists(self.metafile))
@@ -66,10 +72,7 @@ class TestMetadataManager(unittest.TestCase):
     num_files = 3
     files = [os.path.join(MEDIA_FOLDER, f)
              for f in random.sample(self.initial_files, num_files)]
-    if not os.path.exists(BACKUP_FOLDER):
-      os.mkdir(BACKUP_FOLDER)
-    for f in files:
-      shutil.copy(f, BACKUP_FOLDER)
+    self._backup_files(files)
     write_metadata(files[0], tags=["canary", "canary|tagcanary"])
     write_metadata(files[1], rating=5-get_metadata(files[1])[1])
     write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-get_metadata(files[2])[1])
@@ -136,6 +139,32 @@ class TestMetadataManager(unittest.TestCase):
     with self.assertRaises(KeyError):
       mm.get_file_info("NONEXISTENT")
     for short_name in random.sample(self.initial_files, 4):
+      self._check_row(short_name, mm.get_file_info(short_name))
+
+  def test_update_raises(self):
+    mm = self._create_mgr(defaults_getter=defgettr)
+    with self.assertRaises(KeyError):
+      mm.update("NONEXISTENT", {'elo':1230, 'glicko':1400}, 2)
+    with self.assertRaises(ValueError):
+      fullname = os.path.join(MEDIA_FOLDER, random.choice(self.initial_files))
+      mm.update(fullname, {}, 6)
+
+  def test_update_stars(self):
+    mm = self._create_mgr(defaults_getter=defgettr)
+    for short_name in random.sample(self.initial_files, 4):
+      fullname = os.path.join(MEDIA_FOLDER, short_name)
+      tags_before, stars_before = get_metadata(fullname)
+      upd_stars = 5 - stars_before
+
+      self._backup_files([fullname])
+      mm.update(fullname, {}, consensus_stars=upd_stars)
+
+      # updates on disk
+      tags_after, stars_after = get_metadata(fullname)
+      self.assertSetEqual(tags_before, tags_after, short_name)
+      self.assertEqual(stars_after, upd_stars, short_name)
+
+      # updates in program
       self._check_row(short_name, mm.get_file_info(short_name))
 
 
