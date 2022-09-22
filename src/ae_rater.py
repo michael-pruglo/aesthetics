@@ -5,7 +5,7 @@ import logging
 from helpers import short_fname
 from ae_rater_types import Outcome, ProfileInfo
 from ae_rater_view import RaterGui
-from ae_rater_model import EloCompetition
+from ae_rater_model import RatingCompetition
 
 
 def setup_logger(log_filename):
@@ -23,7 +23,7 @@ def setup_logger(log_filename):
 
 class App:
   def __init__(self, media_dir:str):
-    self.model = EloCompetition(media_dir, refresh=False)
+    self.model = RatingCompetition(media_dir, refresh=False)
     self.gui = RaterGui(give_boost_cb=self._give_boost)
 
   def run(self) -> None:

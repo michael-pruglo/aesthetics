@@ -10,7 +10,7 @@ from rating_backends import RatingBackend, ELO
 from helpers import short_fname
 
 
-class EloCompetition:
+class RatingCompetition:
   def __init__(self, img_dir:str, refresh:bool):
     self.curr_match:list[ProfileInfo] = []
     self.rat_systems:list[RatingBackend] = [ELO(), ELO(1500, 100)]

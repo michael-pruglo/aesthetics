@@ -6,11 +6,7 @@ import pandas as pd
 
 from src.metadata import get_metadata, write_metadata
 from src.db_managers import MetadataManager
-
-
-MEDIA_FOLDER = os.path.abspath("./tests/test_media/")
-BACKUP_FOLDER = os.path.join(MEDIA_FOLDER, "bak/")
-EXTRA_FOLDER = os.path.join(MEDIA_FOLDER, "extra/")
+from tests import MEDIA_FOLDER, BACKUP_FOLDER, EXTRA_FOLDER
 
 
 def defgettr(stars:int) -> dict:
