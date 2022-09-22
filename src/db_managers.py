@@ -84,13 +84,12 @@ class MetadataManager:
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update(self, fullname:str, values:dict, is_match:bool, consensus_stars:int=None) -> None:
+  def update(self, fullname:str, upd_data:dict, is_match:bool, consensus_stars:int=None) -> None:
     short_name = short_fname(fullname)
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
 
-    for column,value in values.items():
-      self.df.loc[short_name, column] = value  # TODO: prettify with pandas
+    self.df.loc[short_name, upd_data.keys()] = upd_data.values()
 
     if consensus_stars is not None:
       prev_stars = self.df.loc[short_name, 'stars']

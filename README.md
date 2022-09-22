@@ -37,6 +37,6 @@ python src/ae_rater.py [path/to/media]
 ## TODO
 
 - add glicko math
-- add tests
+- add more tests
 - change visualization of rating in ProfileCard from ugly dicts
 

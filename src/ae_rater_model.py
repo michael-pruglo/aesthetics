@@ -80,16 +80,16 @@ class DBAccess:
 
   def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions, is_match:bool) -> None:
     for i,prof in enumerate(profiles):
-      values = {}
+      new_ratings = {}
       proposed_stars = []
       for sysname,changes in opinions.items():
         proposed_stars.append(changes[i].new_stars)
-        values[sysname] = changes[i].new_rating
+        new_ratings[sysname] = changes[i].new_rating
       consensus_stars = None
       if all(x==proposed_stars[0] for x in proposed_stars):
         consensus_stars = proposed_stars[0]
 
-      self.meta_mgr.update(prof.fullname, values, is_match, consensus_stars)
+      self.meta_mgr.update(prof.fullname, new_ratings, is_match, consensus_stars)
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()
