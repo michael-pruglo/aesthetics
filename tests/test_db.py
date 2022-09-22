@@ -154,10 +154,10 @@ class TestMetadataManager(unittest.TestCase):
     tst_updates = []
     for short_name in random.sample(self.initial_files, len(self.initial_files)//3):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
-      tags_before, stars_before = get_metadata(fullname)
+      disk_tags_before, disk_stars_before = get_metadata(fullname)
       row_before = mm.get_file_info(short_name)
       if random.randint(0,1):
-        upd_stars = 5 - stars_before
+        upd_stars = 5 - disk_stars_before
         tst_updates.append((short_name, upd_stars))
       else:
         upd_stars = None
@@ -166,13 +166,12 @@ class TestMetadataManager(unittest.TestCase):
       self._backup_files([fullname])
       mm.update(fullname, upd_data={}, is_match=inc_match, consensus_stars=upd_stars)
 
-      # updates on disk
-      tags_after, stars_after = get_metadata(fullname)
-      self.assertSetEqual(tags_before, tags_after, short_name)
+      disk_tags_after, disk_stars_after = get_metadata(fullname)
+      self.assertSetEqual(disk_tags_before, disk_tags_after, short_name)
       if upd_stars is None:
-        self.assertEqual(stars_after, stars_before, short_name)
+        self.assertEqual(disk_stars_after, disk_stars_before, short_name)
       else:
-        self.assertEqual(stars_after, upd_stars, short_name)
+        self.assertEqual(disk_stars_after, upd_stars, short_name)
 
       row_after = mm.get_file_info(short_name)
       self._check_row(short_name, row_after)
