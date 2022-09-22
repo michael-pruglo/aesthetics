@@ -41,7 +41,7 @@ class EloCompetition:
     opinions = {s.name(): s.process_match(*self.curr_match, outcome)
                 for s in self.rat_systems}
     logging.info("opinions: %s", opinions)
-    self.db.apply_opinions(self.curr_match, opinions)
+    self.db.apply_opinions(self.curr_match, opinions, is_match=True)
 
     self.curr_match = []
     return opinions
@@ -53,7 +53,8 @@ class EloCompetition:
 
     self.db.apply_opinions(
       [profile],
-      {s.name(): [s.get_boost(profile)] for s in self.rat_systems}
+      {s.name(): [s.get_boost(profile)] for s in self.rat_systems},
+      is_match=False,
     )
 
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
@@ -77,7 +78,7 @@ class DBAccess:
   def save_boost(self, profile:ProfileInfo) -> None:
     self.history_mgr.save_boost(int(time.time()), short_fname(profile.fullname))
 
-  def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions) -> None:
+  def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions, is_match:bool) -> None:
     for i,prof in enumerate(profiles):
       values = {}
       proposed_stars = []
@@ -88,7 +89,7 @@ class DBAccess:
       if all(x==proposed_stars[0] for x in proposed_stars):
         consensus_stars = proposed_stars[0]
 
-      self.meta_mgr.update(prof.fullname, values, consensus_stars)
+      self.meta_mgr.update(prof.fullname, values, is_match, consensus_stars)
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()

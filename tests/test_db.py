@@ -147,17 +147,24 @@ class TestMetadataManager(unittest.TestCase):
       mm.update("NONEXISTENT", {'elo':1230, 'glicko':1400}, 2)
     with self.assertRaises(ValueError):
       fullname = os.path.join(MEDIA_FOLDER, random.choice(self.initial_files))
-      mm.update(fullname, {}, 6)
+      mm.update(fullname, values={}, is_match=random.randint(0,1), consensus_stars=6)
 
   def test_update_stars(self):
     mm = self._create_mgr(defaults_getter=defgettr)
-    for short_name in random.sample(self.initial_files, 4):
+    tst_updates = []
+    for short_name in random.sample(self.initial_files, len(self.initial_files)//3):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
       tags_before, stars_before = get_metadata(fullname)
-      upd_stars = 5 - stars_before if random.randint(0,1) else None
+      row_before = mm.get_file_info(short_name)
+      if random.randint(0,1):
+        upd_stars = 5 - stars_before
+        tst_updates.append((short_name, upd_stars))
+      else:
+        upd_stars = None
+      inc_match = random.randint(0,1)
 
       self._backup_files([fullname])
-      mm.update(fullname, {}, consensus_stars=upd_stars)
+      mm.update(fullname, values={}, is_match=inc_match, consensus_stars=upd_stars)
 
       # updates on disk
       tags_after, stars_after = get_metadata(fullname)
@@ -167,8 +174,41 @@ class TestMetadataManager(unittest.TestCase):
       else:
         self.assertEqual(stars_after, upd_stars, short_name)
 
-      # updates in program
-      self._check_row(short_name, mm.get_file_info(short_name))
+      row_after = mm.get_file_info(short_name)
+      self._check_row(short_name, row_after)
+      self.assertEqual(row_after['nmatches'], row_before['nmatches']+inc_match)
+
+    mm1 = self._create_mgr(defaults_getter=defgettr)
+    for short_name, stars in tst_updates:
+      row_next_run = mm1.get_file_info(short_name)
+      self.assertEqual(row_next_run['stars'], stars)
+
+  def test_update_rating(self):
+    mm = self._create_mgr(defaults_getter=defgettr)
+    tst_updates = []
+    for short_name in random.sample(self.initial_files, len(self.initial_files)//3):
+      fullname = os.path.join(MEDIA_FOLDER, short_name)
+      row_before = mm.get_file_info(short_name)
+      is_boost = random.randint(0,1)
+      val_updates = {col:random.randint(0,2000)
+                     for col in random.sample(["elo","glicko","tst"], random.randint(1,3))}
+
+      self._backup_files([fullname])
+      mm.update(fullname, values=val_updates, is_match=not is_boost, consensus_stars=None)
+
+      row_after = mm.get_file_info(short_name)
+      self.assertEqual(row_after['nmatches'], row_before['nmatches']+(not is_boost))
+      for col, given_val in row_after.iteritems():
+        expected_val = val_updates[col] if col in val_updates else row_before[col]
+        if col=='nmatches':
+          expected_val += not is_boost
+        self.assertEqual(given_val, expected_val, f"for column '{col}'")
+      tst_updates.append((short_name, row_after))
+
+    mm1 = self._create_mgr(defaults_getter=defgettr)
+    for short_name, row_after in tst_updates:
+      row_next_run = mm1.get_file_info(short_name)
+      self.assertTrue(row_next_run.equals(row_after))
 
 
 if __name__ == '__main__':

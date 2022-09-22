@@ -84,7 +84,7 @@ class MetadataManager:
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update(self, fullname:str, values:dict, consensus_stars:int=None) -> None:
+  def update(self, fullname:str, values:dict, is_match:bool, consensus_stars:int=None) -> None:
     short_name = short_fname(fullname)
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
@@ -102,7 +102,8 @@ class MetadataManager:
         logging.info("file %s updated stars on disk: %s -> %s",
                      short_name, '★'*prev_stars, '★'*consensus_stars)
 
-    self.df.loc[short_name, 'nmatches'] += 1
+    if is_match:
+      self.df.loc[short_name, 'nmatches'] += 1
 
     logging.debug("updated db: %s", self.df.loc[short_name])
     self._commit()
