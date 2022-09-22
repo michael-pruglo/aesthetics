@@ -97,12 +97,8 @@ class DBAccess:
     return [self._validate_and_convert_info(db.iloc[i]) for i in range(len(db))]
 
   def retreive_profile(self, short_name:str) -> ProfileInfo:
-    try:
-      info = self.meta_mgr.get_file_info(short_name)
-      return self._validate_and_convert_info(info)
-    except KeyError as e:
-      print(e)
-      return ProfileInfo("-", "err", -1, -1, -1)
+    info = self.meta_mgr.get_file_info(short_name)
+    return self._validate_and_convert_info(info)
 
   def retreive_rand_profile(self) -> ProfileInfo:
     info = self.meta_mgr.get_rand_file_info()

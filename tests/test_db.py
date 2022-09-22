@@ -4,8 +4,8 @@ import random
 import shutil
 import pandas as pd
 
-from src.metadata import get_metadata
-from src.db_managers import *
+from src.metadata import get_metadata, write_metadata
+from src.db_managers import MetadataManager
 
 
 MEDIA_FOLDER = os.path.abspath("./tests/test_media/")
@@ -21,8 +21,8 @@ class TestMetadataManager(unittest.TestCase):
   def setUp(self) -> None:
     assert os.path.exists(MEDIA_FOLDER)
     self.initial_files = [f for f in os.listdir(MEDIA_FOLDER)
-                       if os.path.isfile(os.path.join(MEDIA_FOLDER, f))
-                       and f.split('.')[-1] != 'csv']
+                          if os.path.isfile(os.path.join(MEDIA_FOLDER, f))
+                          and f.split('.')[-1] != 'csv']
     assert len(self.initial_files) > 2
     self.metafile = os.path.join(MEDIA_FOLDER, 'metadata_db.csv')
     assert not os.path.exists(self.metafile)

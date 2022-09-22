@@ -39,4 +39,5 @@ python src/ae_rater.py [path/to/media]
 - add glicko math
 - add more tests
 - change visualization of rating in ProfileCard from ugly dicts
+- fix bug boost doesn't update stars on disk
 

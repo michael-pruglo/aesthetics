@@ -142,6 +142,14 @@ class Leaderboard(tk.Text):
     LEFT = auto()
     RIGHT = auto()
 
+  @dataclass
+  class LineVisualCfg:
+    bgs: list[str]
+    is_featured: bool
+    fgfeatured: str
+    spacing: int
+    textfixs: list[str]
+
   def __init__(self, master) -> None:
     super().__init__(master, padx=0, pady=10, bd=0, cursor="arrow",
             font=tk.font.Font(family='courier 10 pitch', size=9), background=BTFL_DARK_BG)
@@ -153,7 +161,7 @@ class Leaderboard(tk.Text):
     self.configure(state=tk.NORMAL)
     self.delete("1.0", tk.END)
 
-    displayed_rows = {}
+    displayed_rows:dict[int,Leaderboard.FeatureType] = {}
     for i in range(min(self.HEAD_LEN, len(leaderboard))):
       displayed_rows.setdefault(i, self.FeatureType.NONE)
     for featured,feature_type in zip(feature, [self.FeatureType.LEFT, self.FeatureType.RIGHT]):
@@ -173,59 +181,69 @@ class Leaderboard(tk.Text):
     self.configure(state=tk.DISABLED)
 
   def _write_profile(self, idx:int, prof:ProfileInfo, feat:FeatureType, outcome):
-    blueprint = self._get_display_blueprint(idx, prof)
+    cfg = self._get_line_visual_cfg(feat, outcome)
 
+    tagfix = 'tag_prefix'+str(idx)
+    self.tag_configure(tagfix, background=cfg.bgs[0], foreground=cfg.fgfeatured, spacing1=cfg.spacing, spacing3=cfg.spacing)
+    self.insert(tk.END, cfg.textfixs[0], tagfix)
+
+    for tag,fg,txt in self._get_display_blueprint(idx, prof):
+      if cfg.is_featured:
+        fg = {
+          'tag_idx': cfg.fgfeatured,
+          'tag_name': cfg.fgfeatured,
+        }.get(tag, fg)
+      tag += str(idx)
+      self.tag_configure(tag, background=cfg.bgs[1], foreground=fg, spacing1=cfg.spacing, spacing3=cfg.spacing)
+      self.insert(tk.END, txt, tag)
+
+    tagfix = 'tag_suffix'+str(idx)
+    self.tag_configure(tagfix, background=cfg.bgs[2], foreground=cfg.fgfeatured, spacing1=cfg.spacing, spacing3=cfg.spacing)
+    self.insert(tk.END, cfg.textfixs[1], tagfix)
+
+    self.insert(tk.END, '\n')
+
+  def _get_line_visual_cfg(self, feat, outcome) -> LineVisualCfg:
     default_bg = BTFL_DARK_BG
     lenfix = 3
-    bgs = [default_bg, "#282828", default_bg]
-    textfixs = [' '*lenfix,' '*lenfix]
-    spacing = 0
-    is_featured = False
-    fgfeatured = BTFL_LIGHT_GRAY
+    featured_spacing = 10
+
     if feat == self.FeatureType.LEFT:
       outcome_bg = {
         Outcome.WIN_LEFT: LEFT_COLORWIN,
         Outcome.DRAW: COLORDRAW,
         Outcome.WIN_RIGHT: LEFT_COLORBG,
       }.get(outcome, LEFT_COLORBG)
-      bgs = [outcome_bg]*2 + [default_bg]
-      textfixs = ['<'*lenfix,' '*lenfix]
-      fgfeatured = LEFT_COLORFG
-      is_featured = True
+      return self.LineVisualCfg(
+        bgs = [outcome_bg]*2 + [default_bg],
+        is_featured = True,
+        fgfeatured = LEFT_COLORFG,
+        spacing = featured_spacing,
+        textfixs = ['<'*lenfix,' '*lenfix],
+      )
     if feat == self.FeatureType.RIGHT:
       outcome_bg = {
         Outcome.WIN_LEFT: RIGHT_COLORBG,
         Outcome.DRAW: COLORDRAW,
         Outcome.WIN_RIGHT: RIGHT_COLORWIN,
       }.get(outcome, RIGHT_COLORBG)
-      bgs = [default_bg] + [outcome_bg]*2
-      textfixs = [' '*lenfix,'>'*lenfix]
-      fgfeatured = RIGHT_COLORFG
-      is_featured = True
-    if is_featured:
-      spacing = 10
+      return self.LineVisualCfg(
+        bgs = [default_bg] + [outcome_bg]*2,
+        is_featured = True,
+        fgfeatured = RIGHT_COLORFG,
+        spacing = featured_spacing,
+        textfixs = [' '*lenfix,'>'*lenfix],
+      )
 
-    tagfix = 'tag_prefix'+str(idx)
-    self.tag_configure(tagfix, background=bgs[0], foreground=fgfeatured, spacing1=spacing, spacing3=spacing)
-    self.insert(tk.END, textfixs[0], tagfix)
+    return self.LineVisualCfg(
+      bgs = [default_bg, "#282828", default_bg],
+      is_featured = False,
+      fgfeatured = BTFL_LIGHT_GRAY,
+      spacing = 0,
+      textfixs = [' '*lenfix,' '*lenfix],
+    )
 
-    for tag,fg,txt in blueprint:
-      if is_featured:
-        fg = {
-          'tag_idx': fgfeatured,
-          'tag_name': fgfeatured,
-        }.get(tag, fg)
-      tag += str(idx)
-      self.tag_configure(tag, background=bgs[1], foreground=fg, spacing1=spacing, spacing3=spacing)
-      self.insert(tk.END, txt, tag)
-
-    tagfix = 'tag_suffix'+str(idx)
-    self.tag_configure(tagfix, background=bgs[2], foreground=fgfeatured, spacing1=spacing, spacing3=spacing)
-    self.insert(tk.END, textfixs[1], tagfix)
-
-    self.insert(tk.END, '\n')
-
-  def _get_display_blueprint(self, idx, prof) -> list[tuple]:
+  def _get_display_blueprint(self, idx, prof) -> list[tuple[str,str,str]]:
     rat_color = ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.stars]
     nmatches_color = int(interp(prof.nmatches, [0,100], [0x70,255]))
     return [

@@ -61,8 +61,8 @@ def rgb_to_hex(r,g,b) -> str:
 
 def spice_up_color(
   colorstr:str,
-  rgbop:Callable[[tuple],tuple]=None,
-  hslop:Callable[[tuple],tuple]=None,
+  rgbop:Callable[[int,int,int],tuple]=None,
+  hslop:Callable[[int,float,float],tuple]=None,
 ) -> str:
   rgb = hex_to_rgb(colorstr)
   if rgbop:
