@@ -45,6 +45,14 @@ class TestMetadataManager(unittest.TestCase):
     self.assertTrue(os.path.exists(self.metafile))
     return mm
 
+  def _check_row(self, short_name:str, row:pd.Series) -> None:
+    self.assertTrue({'tags','stars','nmatches'}.issubset(row.index))
+    fname = os.path.join(MEDIA_FOLDER, short_name)
+    self.assertTrue(os.path.exists(fname))
+    expected_metadata = get_metadata(fname)
+    given_metadata = ({t for t in row['tags'].split()}, row['stars'])
+    self.assertTupleEqual(given_metadata, expected_metadata, short_name)
+
   def _check_db(self, db:pd.DataFrame, expected_len:int) -> None:
     self.assertEqual(len(db), expected_len)
     self.assertTrue({'tags','stars','nmatches'}.issubset(db.columns))
@@ -52,11 +60,7 @@ class TestMetadataManager(unittest.TestCase):
     self.assertTrue((db['stars'].between(0,5)).all())
     self.assertTrue((db['nmatches']==0).all())
     for short_name, row in db.sample(len(db)//5).iterrows():
-      fname = os.path.join(MEDIA_FOLDER, short_name)
-      self.assertTrue(os.path.exists(fname))
-      expected_metadata = get_metadata(fname)
-      given_metadata = ({t for t in row['tags'].split()}, row['stars'])
-      self.assertTupleEqual(given_metadata, expected_metadata, short_name)
+      self._check_row(short_name, row)
 
   def _immitate_external_metadata_change(self) -> int:
     num_files = 3
@@ -126,6 +130,13 @@ class TestMetadataManager(unittest.TestCase):
   def test_defgettr_updated_files(self):     self._test_external_change(True, False, True, defgettr)
   def test_defgettr_extra_files(self):       self._test_external_change(False, True, True, defgettr)
   def test_defgettr_updated_and_extra(self): self._test_external_change(True, True, True, defgettr)
+
+  def test_get_info(self):
+    mm = self._create_mgr(defaults_getter=defgettr)
+    with self.assertRaises(KeyError):
+      mm.get_file_info("NONEXISTENT")
+    for short_name in random.sample(self.initial_files, 4):
+      self._check_row(short_name, mm.get_file_info(short_name))
 
 
 if __name__ == '__main__':
