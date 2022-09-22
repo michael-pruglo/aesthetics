@@ -85,9 +85,16 @@ class DBAccess:
       for sysname,changes in opinions.items():
         proposed_stars.append(changes[i].new_stars)
         new_ratings[sysname] = changes[i].new_rating
-      consensus_stars = None
-      if all(x==proposed_stars[0] for x in proposed_stars):
-        consensus_stars = proposed_stars[0]
+
+      min_stars, max_stars = min(proposed_stars), max(proposed_stars)
+      if min_stars == max_stars:
+        consensus_stars = max_stars
+      elif min_stars > prof.stars:
+        consensus_stars = min_stars
+      elif max_stars < prof.stars:
+        consensus_stars = max_stars
+      else:
+        consensus_stars = None
 
       self.meta_mgr.update(prof.fullname, new_ratings, is_match, consensus_stars)
 
