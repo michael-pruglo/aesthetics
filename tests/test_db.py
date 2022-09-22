@@ -1,12 +1,12 @@
 import unittest
 import os
 import random
-import shutil
 import pandas as pd
 
-from src.metadata import get_metadata, write_metadata
+from src.metadata import get_metadata
 from src.db_managers import MetadataManager
-from tests.helpers import *
+import tests.helpers as hlp
+from tests.helpers import MEDIA_FOLDER, METAFILE
 
 
 def defgettr(stars:int) -> dict:
@@ -17,28 +17,12 @@ class TestMetadataManager(unittest.TestCase):
   def setUp(self) -> None:
     assert os.path.exists(MEDIA_FOLDER)
     assert not os.path.exists(METAFILE)
-    self.initial_files = get_initial_mediafiles()
+    self.initial_files = hlp.get_initial_mediafiles()
     self.nfiles = len(self.initial_files)
     assert self.nfiles > 2
 
   def tearDown(self) -> None:
-    if os.path.exists(METAFILE):
-      os.remove(METAFILE)
-    if os.path.exists(BACKUP_FOLDER):
-      for f in os.listdir(BACKUP_FOLDER):
-        shutil.move(os.path.join(BACKUP_FOLDER, f), os.path.join(MEDIA_FOLDER, f))
-      os.rmdir(BACKUP_FOLDER)
-    if os.path.exists(EXTRA_FOLDER):
-      for f in os.listdir(EXTRA_FOLDER):
-        extra_file = os.path.join(MEDIA_FOLDER, f)
-        if os.path.exists(extra_file):
-          os.remove(extra_file)
-
-  def _backup_files(self, fullnames:list[str]) -> None:
-    if not os.path.exists(BACKUP_FOLDER):
-      os.mkdir(BACKUP_FOLDER)
-    for f in fullnames:
-      shutil.copy(f, BACKUP_FOLDER)
+    hlp.disk_cleanup()
 
   def _create_mgr(self, *args, **kwargs) -> MetadataManager:
     mm = MetadataManager(MEDIA_FOLDER, *args, **kwargs)
@@ -62,30 +46,13 @@ class TestMetadataManager(unittest.TestCase):
     for short_name, row in db.sample(len(db)//5).iterrows():
       self._check_row(short_name, row)
 
-  def _immitate_external_metadata_change(self) -> int:
-    num_files = 3
-    files = [os.path.join(MEDIA_FOLDER, f)
-             for f in random.sample(self.initial_files, num_files)]
-    self._backup_files(files)
-    write_metadata(files[0], tags=["canary", "canary|tagcanary"])
-    write_metadata(files[1], rating=5-get_metadata(files[1])[1])
-    write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-get_metadata(files[2])[1])
-    return num_files
-
-  def _add_extra_files(self) -> int:
-    for f in os.listdir(EXTRA_FOLDER):
-      fullname = os.path.join(EXTRA_FOLDER, f)
-      assert os.path.isfile(fullname)
-      shutil.copy(fullname, MEDIA_FOLDER)
-    return len(os.listdir(EXTRA_FOLDER))
-
   def _test_external_change(self, update_existing=False, add_new=False,
                             refresh=False, defgettr=None) -> None:
     db0 = self._create_mgr(defaults_getter=defgettr).get_db()
     if update_existing:
-      changed_amount = self._immitate_external_metadata_change()
+      changed_amount = hlp.immitate_external_metadata_change()
     if add_new:
-      extra_amount = self._add_extra_files()
+      extra_amount = hlp.inject_extra_files()
     db1 = self._create_mgr(refresh=refresh, defaults_getter=defgettr).get_db()
 
     self.assertTrue(db1.notna().all(axis=None))
@@ -157,7 +124,7 @@ class TestMetadataManager(unittest.TestCase):
         upd_stars = None
       inc_match = random.randint(0,1)
 
-      self._backup_files([fullname])
+      hlp.backup_files([fullname])
       mm.update(fullname, upd_data={}, is_match=inc_match, consensus_stars=upd_stars)
 
       disk_tags_after, disk_stars_after = get_metadata(fullname)
@@ -186,7 +153,7 @@ class TestMetadataManager(unittest.TestCase):
       val_updates = {col:random.randint(0,2000)
                      for col in random.sample(["elo","glicko","tst"], random.randint(1,3))}
 
-      self._backup_files([fullname])
+      hlp.backup_files([fullname])
       mm.update(fullname, upd_data=val_updates, is_match=not is_boost, consensus_stars=None)
 
       row_after = mm.get_file_info(short_name)
