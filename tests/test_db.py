@@ -6,7 +6,7 @@ import pandas as pd
 
 from src.metadata import get_metadata, write_metadata
 from src.db_managers import MetadataManager
-from tests import MEDIA_FOLDER, BACKUP_FOLDER, EXTRA_FOLDER, METAFILE
+from tests.helpers import *
 
 
 def defgettr(stars:int) -> dict:
@@ -17,10 +17,9 @@ class TestMetadataManager(unittest.TestCase):
   def setUp(self) -> None:
     assert os.path.exists(MEDIA_FOLDER)
     assert not os.path.exists(METAFILE)
-    self.initial_files = [f for f in os.listdir(MEDIA_FOLDER)
-                          if os.path.isfile(os.path.join(MEDIA_FOLDER, f))
-                          and f.split('.')[-1] != 'csv']
-    assert len(self.initial_files) > 2
+    self.initial_files = get_initial_mediafiles()
+    self.nfiles = len(self.initial_files)
+    assert self.nfiles > 2
 
   def tearDown(self) -> None:
     if os.path.exists(METAFILE):
@@ -107,7 +106,7 @@ class TestMetadataManager(unittest.TestCase):
 
   def test_init_fresh(self):
     mm = self._create_mgr()
-    self._check_db(mm.get_db(), len(self.initial_files))
+    self._check_db(mm.get_db(), self.nfiles)
 
   def test_init_existing_csv(self):
     mm0 = self._create_mgr()
@@ -118,7 +117,7 @@ class TestMetadataManager(unittest.TestCase):
     pd.concat([db0, db0.sample(CANARIES)]).to_csv(METAFILE)
 
     mm = self._create_mgr()
-    self._check_db(mm.get_db(), len(self.initial_files)+CANARIES)
+    self._check_db(mm.get_db(), self.nfiles+CANARIES)
 
   def test_init_no_refresh(self):            self._test_external_change(True, True, False)
   def test_init_updated_files(self):         self._test_external_change(True, False, True)
@@ -147,7 +146,7 @@ class TestMetadataManager(unittest.TestCase):
   def test_update_stars(self):
     mm = self._create_mgr(defaults_getter=defgettr)
     tst_updates = []
-    for short_name in random.sample(self.initial_files, len(self.initial_files)//3):
+    for short_name in random.sample(self.initial_files, self.nfiles//3):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
       disk_tags_before, disk_stars_before = get_metadata(fullname)
       row_before = mm.get_file_info(short_name)
@@ -180,7 +179,7 @@ class TestMetadataManager(unittest.TestCase):
   def test_update_rating(self):
     mm = self._create_mgr(defaults_getter=defgettr)
     tst_updates = []
-    for short_name in random.sample(self.initial_files, len(self.initial_files)//3):
+    for short_name in random.sample(self.initial_files, self.nfiles//3):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
       row_before = mm.get_file_info(short_name)
       is_boost = random.randint(0,1)

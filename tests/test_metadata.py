@@ -4,9 +4,7 @@ import shutil
 from typing import Callable
 
 from src.metadata import *
-
-
-MEDIA_FOLDER = os.path.abspath("./tests/test_media/")
+from tests.helpers import MEDIA_FOLDER
 
 
 class TestReadingMetadata(unittest.TestCase):
