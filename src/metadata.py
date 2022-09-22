@@ -55,7 +55,7 @@ def write_metadata(fname:str, tags:Iterable[str]=None, rating:int=None, append:b
       write_tag(hier_tag_prop, tag)
       write_tag(subj_tag_prop, tag.split('|')[-1])
 
-  if rating:
+  if rating is not None:
     r_prop = (consts.XMP_NS_XMP, "Rating")
     xmp.set_property_int(*r_prop, rating)
 

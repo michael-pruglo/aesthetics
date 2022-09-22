@@ -23,7 +23,11 @@ def _default_init(row, default_values_getter):
     row['nmatches'] = 0
   if default_values_getter:
     for column, value in default_values_getter(row['stars']).items():
-      row[column] = value
+      if (column not in row) or pd.isnull(row[column]):
+        row[column] = value
+      else:
+        msg = f"value {row[column]} already exists for {row.index}, will not be overwritten by {value}"
+        logging.warning(msg)
   else:
     logging.warning("no default_values_getter was supplied. Ratings are not initialized.")
   return row

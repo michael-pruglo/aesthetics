@@ -13,6 +13,10 @@ BACKUP_FOLDER = os.path.join(MEDIA_FOLDER, "bak/")
 EXTRA_FOLDER = os.path.join(MEDIA_FOLDER, "extra/")
 
 
+def defgettr(stars:int) -> dict:
+  return {"elo":1200+stars, "glicko":1500+stars, "tst":stars*10}
+
+
 class TestMetadataManager(unittest.TestCase):
   def setUp(self) -> None:
     assert os.path.exists(MEDIA_FOLDER)
@@ -74,14 +78,16 @@ class TestMetadataManager(unittest.TestCase):
       shutil.copy(fullname, MEDIA_FOLDER)
     return len(os.listdir(EXTRA_FOLDER))
 
-  def _test_external_change(self, update_existing=False, add_new=False, refresh=False) -> None:
-    db0 = self._create_mgr().get_db()
+  def _test_external_change(self, update_existing=False, add_new=False,
+                            refresh=False, defgettr=None) -> None:
+    db0 = self._create_mgr(defaults_getter=defgettr).get_db()
     if update_existing:
       changed_amount = self._immitate_external_metadata_change()
     if add_new:
       extra_amount = self._add_extra_files()
-    db1 = self._create_mgr(refresh=refresh).get_db()
+    db1 = self._create_mgr(refresh=refresh, defaults_getter=defgettr).get_db()
 
+    self.assertTrue(db1.notna().all(axis=None))
     if not refresh:
       self.assertTrue(db1.equals(db0))
     else:
@@ -89,7 +95,8 @@ class TestMetadataManager(unittest.TestCase):
       old_portion, new_portion = db1.loc[old_rows], db1.loc[~old_rows]
       if update_existing:
         diff = (old_portion.sort_index().compare(db0.sort_index()))
-        self.assertTupleEqual(diff.shape, (changed_amount,2*2), diff)
+        err_msg = f"should update only tags and rating, leaving others untouched:\n{diff}"
+        self.assertTupleEqual(diff.shape, (changed_amount,2*2), err_msg)
       else:
         self.assertTrue(old_portion.sort_index().equals(db0.sort_index()))
       if add_new:
@@ -111,17 +118,14 @@ class TestMetadataManager(unittest.TestCase):
     mm = self._create_mgr()
     self._check_db(mm.get_db(), len(self.initial_files)+CANARIES)
 
-  def test_init_no_refresh(self):
-    self._test_external_change(True, True, False)
-
-  def test_init_updated_files(self):
-    self._test_external_change(True, False, True)
-
-  def test_init_extra_files(self):
-    self._test_external_change(False, True, True)
-
-  def test_init_updated_and_extra(self):
-    self._test_external_change(True, True, True)
+  def test_init_no_refresh(self):            self._test_external_change(True, True, False)
+  def test_init_updated_files(self):         self._test_external_change(True, False, True)
+  def test_init_extra_files(self):           self._test_external_change(False, True, True)
+  def test_init_updated_and_extra(self):     self._test_external_change(True, True, True)
+  def test_defgettr_no_refresh(self):        self._test_external_change(True, True, False, defgettr)
+  def test_defgettr_updated_files(self):     self._test_external_change(True, False, True, defgettr)
+  def test_defgettr_extra_files(self):       self._test_external_change(False, True, True, defgettr)
+  def test_defgettr_updated_and_extra(self): self._test_external_change(True, True, True, defgettr)
 
 
 if __name__ == '__main__':
