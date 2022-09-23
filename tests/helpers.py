@@ -1,6 +1,7 @@
 import os
 import shutil
 import random
+from typing import Iterable
 
 from src.helpers import file_extension
 from src.metadata import get_metadata, write_metadata
@@ -16,7 +17,7 @@ def get_initial_mediafiles() -> list[str]:
           if os.path.isfile(os.path.join(MEDIA_FOLDER, f))
           and file_extension(f) != 'csv']
 
-def backup_files(fullnames:list[str]) -> None:
+def backup_files(fullnames:Iterable[str]) -> None:
   if not os.path.exists(BACKUP_FOLDER):
     os.mkdir(BACKUP_FOLDER)
   for f in fullnames:

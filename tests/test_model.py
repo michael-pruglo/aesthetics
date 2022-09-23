@@ -1,9 +1,10 @@
 import unittest
 import os
+import random
 
 from src.helpers import short_fname
 from src.metadata import get_metadata
-from src.ae_rater_types import ProfileInfo
+from src.ae_rater_types import Outcome, ProfileInfo
 from src.ae_rater_model import RatingCompetition
 import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER
@@ -70,6 +71,92 @@ class TestCompetition(unittest.TestCase):
         else:
           self.assertEqual(profile_after.stars, stars_before, dbg_info)
         prof = profile_after
+
+  def test_match_outcomes(self):
+    ldbrd = self.model.get_leaderboard()
+
+    def prepare_schedule() -> list[tuple]:
+      schedule:list[tuple] = []
+
+      # first match: draw between identical ratings
+      for _ in range(1000):  # near-infinite, bc there can be no identical stars
+        l = random.randint(2, len(ldbrd)-2)
+        if ldbrd[l+1].stars == ldbrd[l].stars:
+          schedule.append((l, l+1, Outcome.DRAW, Outcome.DRAW))
+          break
+        if ldbrd[l-1].stars == ldbrd[l].stars:
+          schedule.append((l, l-1, Outcome.DRAW, Outcome.DRAW))
+          break
+
+      # next matches
+      topish = random.randint(3, len(ldbrd)//2)
+      stronger = topish-2
+      schedule.append((topish, stronger, Outcome.WIN_LEFT, Outcome.WIN_LEFT))
+      weak = random.randint(len(ldbrd)//2+1, len(ldbrd)-2)
+      schedule.append((topish, weak, Outcome.WIN_RIGHT, Outcome.WIN_RIGHT))
+
+      schedule.append((0, len(ldbrd)-1, Outcome.WIN_LEFT, Outcome.DRAW))
+      schedule.append((0, len(ldbrd)-1, Outcome.DRAW, Outcome.WIN_RIGHT))
+
+      return schedule
+
+    schedule = prepare_schedule()
+    idxs = set()
+    for l,r,*_ in schedule:
+      idxs.update([l,r])
+    hlp.backup_files(ldbrd[i].fullname for i in idxs)
+
+    def simulate_match(lidx:int, ridx:int, outcome:Outcome, real_change:Outcome) -> tuple:
+      l = self._get_leaderboard_line(ldbrd[lidx].fullname)
+      r = self._get_leaderboard_line(ldbrd[ridx].fullname)
+      self.model.curr_match = [l, r]
+      self.model.consume_result(outcome)
+      new_l = self._get_leaderboard_line(l.fullname)
+      new_r = self._get_leaderboard_line(r.fullname)
+
+      dbg_info = f"\n{l} {r}\n{new_l} {new_r}\n {outcome}\n {real_change}"
+      self.assertEqual(new_l.nmatches, l.nmatches+1, dbg_info)
+      self.assertEqual(new_r.nmatches, r.nmatches+1, dbg_info)
+      self.assertEqual(len(self.model.get_curr_match()), 0, dbg_info)
+
+      if real_change == Outcome.DRAW:
+        self.assertFalse(new_l.stronger_than(l), dbg_info)
+        self.assertFalse(l.stronger_than(new_l), dbg_info)
+        self.assertFalse(new_r.stronger_than(r), dbg_info)
+        self.assertFalse(r.stronger_than(new_r), dbg_info)
+      elif real_change == Outcome.WIN_LEFT:
+        self.assertTrue(new_l.stronger_than(l), dbg_info)
+        self.assertTrue(r.stronger_than(new_r), dbg_info)
+      elif real_change == Outcome.WIN_RIGHT:
+        self.assertTrue(new_r.stronger_than(r), dbg_info)
+        self.assertTrue(l.stronger_than(new_l), dbg_info)
+
+      return l, r, new_l, new_r
+
+    # draw between identical profiles
+    l, r, new_l, new_r = simulate_match(*schedule[0])
+    self.assertEqual(new_l.stars, l.stars)
+    self.assertEqual(new_r.stars, r.stars)
+
+    # right has the lowest rating for its stars and loses
+    l, r, new_l, new_r = simulate_match(*schedule[1])
+    self.assertGreaterEqual(new_l.stars, l.stars)
+    self.assertEqual(new_r.stars, r.stars-1)
+
+    # left (top half) loses to weak right (bottom half) and loses a star
+    l, r, new_l, new_r = simulate_match(*schedule[2])
+    self.assertEqual(new_l.stars, l.stars-1)
+    self.assertGreaterEqual(new_r.stars, r.stars)
+
+    # super expected win of the best over the worst
+    l, r, new_l, new_r = simulate_match(*schedule[3])
+    self.assertEqual(new_l.stars, l.stars)
+    self.assertEqual(new_r.stars, r.stars)
+
+    # shocking win of the worst over the best
+    l, r, new_l, new_r = simulate_match(*schedule[4])
+    self.assertEqual(new_l.stars, l.stars-1)
+    self.assertGreaterEqual(new_r.stars, r.stars)
 
 
 if __name__ == '__main__':
