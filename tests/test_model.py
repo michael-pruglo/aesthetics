@@ -1,3 +1,4 @@
+from cProfile import Profile
 import unittest
 import os
 import random
@@ -52,7 +53,7 @@ class TestCompetition(unittest.TestCase):
 
   def test_boost_starchange(self):
     hlp.backup_files([os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()])
-    for times in range(15):
+    for times in range(3):
       prof = self.model.generate_match()[0]
       stars_before = prof.stars
       for iter in range(25):
@@ -89,11 +90,12 @@ class TestCompetition(unittest.TestCase):
           break
 
       # next matches
-      topish = random.randint(3, len(ldbrd)//2)
-      stronger = topish-2
+      topish = random.randint(3, max(4,len(ldbrd)//2))
+      stronger = topish-1
       schedule.append((topish, stronger, Outcome.WIN_LEFT, Outcome.WIN_LEFT))
       weak = random.randint(len(ldbrd)//2+1, len(ldbrd)-2)
       schedule.append((topish, weak, Outcome.WIN_RIGHT, Outcome.WIN_RIGHT))
+      schedule.append((stronger, stronger-1, Outcome.WIN_LEFT, Outcome.WIN_LEFT))
 
       schedule.append((0, len(ldbrd)-1, Outcome.WIN_LEFT, Outcome.DRAW))
       schedule.append((0, len(ldbrd)-1, Outcome.DRAW, Outcome.WIN_RIGHT))
@@ -109,15 +111,23 @@ class TestCompetition(unittest.TestCase):
     def simulate_match(lidx:int, ridx:int, outcome:Outcome, real_change:Outcome) -> tuple:
       l = self._get_leaderboard_line(ldbrd[lidx].fullname)
       r = self._get_leaderboard_line(ldbrd[ridx].fullname)
+      l_tags, l_stars = get_metadata(l.fullname)
+      r_tags, r_stars = get_metadata(r.fullname)
       self.model.curr_match = [l, r]
       self.model.consume_result(outcome)
       new_l = self._get_leaderboard_line(l.fullname)
       new_r = self._get_leaderboard_line(r.fullname)
+      new_l_tags, new_l_stars = get_metadata(l.fullname)
+      new_r_tags, new_r_stars = get_metadata(r.fullname)
 
       dbg_info = f"\n{l} {r}\n{new_l} {new_r}\n {outcome}\n {real_change}"
       self.assertEqual(new_l.nmatches, l.nmatches+1, dbg_info)
       self.assertEqual(new_r.nmatches, r.nmatches+1, dbg_info)
       self.assertEqual(len(self.model.get_curr_match()), 0, dbg_info)
+      self.assertEqual(l_tags, new_l_tags)
+      self.assertEqual(r_tags, new_r_tags)
+      self.assertEqual(new_l_stars, new_l.stars)
+      self.assertEqual(new_r_stars, new_r.stars)
 
       if real_change == Outcome.DRAW:
         self.assertFalse(new_l.stronger_than(l), dbg_info)
@@ -148,16 +158,66 @@ class TestCompetition(unittest.TestCase):
     self.assertEqual(new_l.stars, l.stars-1)
     self.assertGreaterEqual(new_r.stars, r.stars)
 
-    # super expected win of the best over the worst
+    # redeems himself for match 2, regaining star
     l, r, new_l, new_r = simulate_match(*schedule[3])
+    self.assertEqual(new_l.stars, l.stars+1)
+    self.assertLessEqual(new_r.stars, r.stars)
+
+    # super expected win of the best over the worst
+    l, r, new_l, new_r = simulate_match(*schedule[4])
     self.assertEqual(new_l.stars, l.stars)
     self.assertEqual(new_r.stars, r.stars)
 
     # shocking win of the worst over the best
-    l, r, new_l, new_r = simulate_match(*schedule[4])
+    l, r, new_l, new_r = simulate_match(*schedule[5])
     self.assertEqual(new_l.stars, l.stars-1)
     self.assertGreaterEqual(new_r.stars, r.stars)
 
+  def test_long_term(self):
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    hlp.backup_files(all_files)
+
+    loss = LongTermTester(self.model, verbosity=1).run()
+    self.assertLess(loss, 0.7)
+
+
+class LongTermTester:
+  def __init__(self, model:RatingCompetition, verbosity=0):
+    self.model = model
+    self.verbosity = verbosity
+    ldbrd = model.get_leaderboard()
+    ranks = list(range(len(ldbrd)))
+    random.shuffle(ranks)
+    self.true_leaderboard = {p.fullname:rank for p,rank in zip(ldbrd,ranks)}
+
+  def run(self, epochs=5) -> float:
+    if self.verbosity: print()
+    for epoch in range(epochs):
+      for _ in range(500):
+        l, r = self.model.generate_match()
+        self.model.consume_result(self._simulate_outcome(l,r))
+      if self.verbosity: print(f"{epoch}: loss = {self._loss()}")
+      if self.verbosity>1: print("\n\n\n")
+
+    return self._loss()
+
+  def _simulate_outcome(self, l:ProfileInfo, r:ProfileInfo) -> Outcome:
+      lrank = self.true_leaderboard[l.fullname]
+      rrank = self.true_leaderboard[r.fullname]
+      if lrank - rrank > 2:
+        return Outcome.WIN_RIGHT
+      if lrank - rrank < -2:
+        return Outcome.WIN_LEFT
+      return Outcome.DRAW
+
+  def _loss(self) -> float:
+    sq_err = 0
+    ldbrd = self.model.get_leaderboard()
+    for given_rating, p in enumerate(ldbrd):
+      expected_rating = self.true_leaderboard[p.fullname]
+      if self.verbosity>1: print(p, expected_rating)
+      sq_err += (expected_rating-given_rating)**2
+    return sq_err / len(ldbrd)
 
 if __name__ == '__main__':
   unittest.main()
