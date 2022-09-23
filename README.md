@@ -50,5 +50,5 @@ python -m unittests
 - add glicko math
 - add more tests
 - change visualization of rating in ProfileCard from ugly dicts
-- fix bug boost doesn't update stars on disk
+- add backup of initial tags and stars
 

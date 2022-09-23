@@ -11,6 +11,8 @@ METAFILE = os.path.join(MEDIA_FOLDER, 'metadata_db.csv')
 BACKUP_FOLDER = os.path.join(MEDIA_FOLDER, "bak/")
 EXTRA_FOLDER = os.path.join(MEDIA_FOLDER, "extra/")
 
+SKIPLONG = ("SKIPLONG" in os.environ, "long test")
+
 
 def get_initial_mediafiles() -> list[str]:
   return [f for f in os.listdir(MEDIA_FOLDER)
