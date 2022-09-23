@@ -13,6 +13,17 @@ class ProfileInfo:
   ratings : dict[str,int]
   nmatches : int
 
+  def stronger_than(self, other):
+    if not isinstance(other, self.__class__):
+      raise TypeError(f"cannot compare to {type(other)}")
+    if not set(self.ratings.keys()) == set(other.ratings.keys()):
+      raise ValueError(f"cannot compare profiles with different sets of ratings")
+    return (
+      self.stars >= other.stars
+      and all(self.ratings[s] >= other.ratings[s] for s in self.ratings.keys())
+      and any(self.ratings[s] >  other.ratings[s] for s in self.ratings.keys())
+    )
+
   def __str__(self):
     BG_GRAY     = "\033[48;5;236m"
     FG_WHITE    = "\033[38;5;231m"
