@@ -120,22 +120,29 @@ class TestCompetition(unittest.TestCase):
       avenger = random.randint(1, self.N-3)
       if ldbrd[avenger].stars > 0:
         break
-    bully = random.randint(max(0,avenger-5), avenger-1)
+    bully = random.randint(max(0,avenger-9), avenger-1)
     self._backup_by_idx([bully, avenger])
 
     # right has the lowest rating for its stars and loses minimally
-    l, r, new_l, new_r = self._simulate_match(bully, avenger, Outcome.WIN_LEFT, Outcome.WIN_LEFT)
-    bully_initial, avenger_initial = l.ratings, r.ratings
-    self.assertGreaterEqual(new_l.stars, l.stars)
-    self.assertEqual(new_r.stars, r.stars-1)
+    b0, a0, b1, a1 = self._simulate_match(bully, avenger, Outcome.WIN_LEFT, Outcome.WIN_LEFT)
+    self.assertGreaterEqual(b1.stars, b0.stars)
+    self.assertEqual(a1.stars, a0.stars-1)
+
+    for i, prof in enumerate(self.model.get_leaderboard()):
+      if prof.fullname == a0.fullname:
+        avenger = i
+      elif prof.fullname == b0.fullname:
+        bully = i
 
     # revenge of the right, it gets back more than initial rating
     # while left drops even less than initial ratingcome.WIN_RIGHT))
-    l, r, new_l, new_r = self._simulate_match(bully, avenger, Outcome.WIN_RIGHT, Outcome.WIN_RIGHT)
-    self.assertEqual(new_l.stars, l.stars-1)
-    self.assertEqual(new_r.stars, r.stars+1)
-    self.assertTrue(all(new_l.ratings[s]<bully_initial[s] for s in new_l.ratings.keys()))
-    self.assertTrue(all(new_r.ratings[s]>avenger_initial[s] for s in new_r.ratings.keys()))
+    l, r, b2, a2 = self._simulate_match(bully, avenger, Outcome.WIN_RIGHT, Outcome.WIN_RIGHT)
+    self.assertEqual(b1, l)
+    self.assertEqual(a1, r)
+    self.assertEqual(b2.stars, b1.stars-1)
+    self.assertEqual(a2.stars, a1.stars+1)
+    self.assertTrue(all(b2.ratings[s]<b0.ratings[s] for s in b2.ratings.keys()))
+    self.assertTrue(all(a2.ratings[s]>a0.ratings[s] for s in a2.ratings.keys()))
 
   def test_draw_between_equals(self):
     ldbrd = self.model.get_leaderboard()
