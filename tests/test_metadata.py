@@ -3,7 +3,7 @@ import os
 import shutil
 from typing import Callable
 
-from src.metadata import *
+from metadata import *
 from tests.helpers import MEDIA_FOLDER
 
 

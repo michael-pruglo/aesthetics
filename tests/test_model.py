@@ -1,12 +1,11 @@
-from cProfile import Profile
 import unittest
 import os
 import random
 
 from src.helpers import short_fname
-from src.metadata import get_metadata
-from src.ae_rater_types import Outcome, ProfileInfo
-from src.ae_rater_model import RatingCompetition
+from metadata import get_metadata
+from ae_rater_types import Outcome, ProfileInfo
+from ae_rater_model import RatingCompetition
 import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER, SKIPLONG
 
@@ -217,6 +216,7 @@ class LongTermTester:
       if self.verbosity>1: print(p, expected_rating)
       sq_err += (expected_rating-given_rating)**2
     return sq_err / len(ldbrd)
+
 
 if __name__ == '__main__':
   unittest.main()
