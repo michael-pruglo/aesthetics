@@ -68,7 +68,6 @@ class TestRatingSystem(unittest.TestCase):
   def _test_matches(self, system:RatingBackend):
     a = b = construct_profile(system)
     changes = system.process_match(a, b, Outcome.DRAW)
-    self.assertTrue(changes[0] == RatChange(a.ratings[system.name()], 0, a.stars))
     self.assertEqual(changes[0], RatChange(a.ratings[system.name()], 0, a.stars))
     self.assertEqual(changes[1], RatChange(b.ratings[system.name()], 0, b.stars))
     changes = system.process_match(a, b, Outcome.WIN_LEFT)
