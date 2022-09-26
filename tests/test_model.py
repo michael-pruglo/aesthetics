@@ -48,7 +48,7 @@ class TestCompetition(unittest.TestCase):
     self.assertEqual(profile_after.tags, profile_after.tags)
     self.assertEqual(profile_before.nmatches, profile_after.nmatches)
     self.assertLessEqual(profile_before.stars, profile_after.stars)
-    self.assertTrue(all(profile_before.ratings[s] < profile_after.ratings[s]
+    self.assertTrue(all(profile_before.ratings[s].points < profile_after.ratings[s].points
                         for s in profile_before.ratings.keys()))
 
   def test_boost_starchange(self):
@@ -73,102 +73,35 @@ class TestCompetition(unittest.TestCase):
           self.assertEqual(profile_after.stars, stars_before, dbg_info)
         prof = profile_after
 
-  def _simulate_match(self, lidx:int, ridx:int, outcome:Outcome, real_change:Outcome) -> tuple:
-    ldbrd = self.model.get_leaderboard()
-    l = self._get_leaderboard_line(ldbrd[lidx].fullname)
-    r = self._get_leaderboard_line(ldbrd[ridx].fullname)
-    l_tags, l_stars = get_metadata(l.fullname)
-    r_tags, r_stars = get_metadata(r.fullname)
-    self.model.curr_match = [l, r]
-    self.model.consume_result(outcome)
-    new_l = self._get_leaderboard_line(l.fullname)
-    new_r = self._get_leaderboard_line(r.fullname)
-    new_l_tags, new_l_stars = get_metadata(l.fullname)
-    new_r_tags, new_r_stars = get_metadata(r.fullname)
+  def test_matches_affect_disk(self):
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    hlp.backup_files(all_files)
 
-    dbg_info = f"\n{l} {r}\n{new_l} {new_r}\n {outcome}\n {real_change}"
-    self.assertEqual(new_l.nmatches, l.nmatches+1, dbg_info)
-    self.assertEqual(new_r.nmatches, r.nmatches+1, dbg_info)
-    self.assertEqual(len(self.model.get_curr_match()), 0, dbg_info)
-    self.assertEqual(l_tags, new_l_tags)
-    self.assertEqual(r_tags, new_r_tags)
-    self.assertEqual(new_l_stars, new_l.stars)
-    self.assertEqual(new_r_stars, new_r.stars)
+    for _ in range(100):
+      l, r = self.model.generate_match()
+      l_tags, l_stars = get_metadata(l.fullname)
+      r_tags, r_stars = get_metadata(r.fullname)
+      outcome = random.choice([Outcome.WIN_LEFT, Outcome.DRAW, Outcome.WIN_RIGHT])
+      self.model.consume_result(outcome)
+      new_l = self._get_leaderboard_line(l.fullname)
+      new_r = self._get_leaderboard_line(r.fullname)
+      new_l_tags, new_l_stars = get_metadata(l.fullname)
+      new_r_tags, new_r_stars = get_metadata(r.fullname)
 
-    if real_change == Outcome.DRAW:
-      self.assertFalse(new_l.stronger_than(l), dbg_info)
-      self.assertFalse(l.stronger_than(new_l), dbg_info)
-      self.assertFalse(new_r.stronger_than(r), dbg_info)
-      self.assertFalse(r.stronger_than(new_r), dbg_info)
-    elif real_change == Outcome.WIN_LEFT:
-      self.assertTrue(new_l.stronger_than(l), dbg_info)
-      self.assertTrue(r.stronger_than(new_r), dbg_info)
-    elif real_change == Outcome.WIN_RIGHT:
-      self.assertTrue(new_r.stronger_than(r), dbg_info)
-      self.assertTrue(l.stronger_than(new_l), dbg_info)
-
-    return l, r, new_l, new_r
-
-  def _backup_by_idx(self, indexes:list[int]):
-    ldbrd = self.model.get_leaderboard()
-    hlp.backup_files([ldbrd[i].fullname for i in indexes])
-
-  def test_revenge_match(self):
-    ldbrd = self.model.get_leaderboard()
-    while True:
-      avenger = random.randint(1, self.N-3)
-      if ldbrd[avenger].stars > 0:
-        break
-    bully = random.randint(max(0,avenger-9), avenger-1)
-    self._backup_by_idx([bully, avenger])
-
-    # right has the lowest rating for its stars and loses minimally
-    b0, a0, b1, a1 = self._simulate_match(bully, avenger, Outcome.WIN_LEFT, Outcome.WIN_LEFT)
-    self.assertGreaterEqual(b1.stars, b0.stars)
-    self.assertEqual(a1.stars, a0.stars-1)
-
-    for i, prof in enumerate(self.model.get_leaderboard()):
-      if prof.fullname == a0.fullname:
-        avenger = i
-      elif prof.fullname == b0.fullname:
-        bully = i
-
-    # revenge of the right, it gets back more than initial rating
-    # while left drops even less than initial ratingcome.WIN_RIGHT))
-    l, r, b2, a2 = self._simulate_match(bully, avenger, Outcome.WIN_RIGHT, Outcome.WIN_RIGHT)
-    self.assertEqual(b1, l)
-    self.assertEqual(a1, r)
-    self.assertEqual(b2.stars, b1.stars-1)
-    self.assertEqual(a2.stars, a1.stars+1)
-    self.assertTrue(all(b2.ratings[s]<b0.ratings[s] for s in b2.ratings.keys()))
-    self.assertTrue(all(a2.ratings[s]>a0.ratings[s] for s in a2.ratings.keys()))
-
-  def test_draw_between_equals(self):
-    ldbrd = self.model.get_leaderboard()
-    equals_with_next = [i for i in range(self.N-1) if ldbrd[i].ratings==ldbrd[i+1].ratings]
-    assert equals_with_next
-
-    idx = random.choice(equals_with_next)
-    self._backup_by_idx([idx, idx+1])
-    l, r, new_l, new_r = self._simulate_match(idx, idx+1, Outcome.DRAW, Outcome.DRAW)
-    self.assertEqual(new_l.stars, l.stars)
-    self.assertEqual(new_r.stars, r.stars)
-
-  def test_weak_draws_good_as_if_won(self):
-    good = random.randint(0, self.N//3)
-    weak = random.randint(self.N//3*2, self.N-1)
-    self._backup_by_idx([good, weak])
-    l, r, new_l, new_r = self._simulate_match(weak, good, Outcome.DRAW, Outcome.WIN_LEFT)
-    self.assertGreaterEqual(new_l.stars, l.stars)
-    self.assertEqual(new_r.stars, r.stars-1)
-
-  def test_superexpected_win(self):
-    supertop = random.randint(0,1)
-    superweak = random.randint(self.N-2, self.N-1)
-    self._backup_by_idx([supertop, superweak])
-    l, r, new_l, new_r = self._simulate_match(superweak, supertop, Outcome.WIN_RIGHT, Outcome.DRAW)
-    self.assertEqual(new_l.stars, l.stars)
-    self.assertEqual(new_r.stars, r.stars)
+      dbg_info = f"\n{l} {r}\n{new_l} {new_r}\n {outcome}"
+      self.assertEqual(new_l.nmatches, l.nmatches+1, dbg_info)
+      self.assertEqual(new_r.nmatches, r.nmatches+1, dbg_info)
+      self.assertEqual(len(self.model.get_curr_match()), 0, dbg_info)
+      self.assertEqual(l_tags, new_l_tags)
+      self.assertEqual(r_tags, new_r_tags)
+      self.assertEqual(l_stars, l.stars)
+      self.assertEqual(r_stars, r.stars)
+      self.assertEqual(new_l_stars, new_l.stars)
+      self.assertEqual(new_r_stars, new_r.stars)
+      self.assertTrue(all(l.ratings[s].rd >= new_l.ratings[s].rd for s in l.ratings.keys() if l.ratings[s].rd))
+      self.assertTrue(all(r.ratings[s].rd >= new_r.ratings[s].rd for s in r.ratings.keys() if r.ratings[s].rd))
+      self.assertTrue(all(l.ratings[s].timestamp < new_l.ratings[s].timestamp for s in l.ratings.keys()))
+      self.assertTrue(all(r.ratings[s].timestamp < new_r.ratings[s].timestamp for s in r.ratings.keys()))
 
   @unittest.skipIf(*SKIPLONG)
   def test_long_term(self):

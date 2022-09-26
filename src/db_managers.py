@@ -144,10 +144,10 @@ class HistoryManager:
       logging.info("boosts csv does not exist, create")
       self.boosts_df = pd.DataFrame(columns=boosts_dtypes.keys())
 
-  def save_match(self, timestamp:int, name1:str, name2:str, outcome:int) -> None:
+  def save_match(self, timestamp:float, name1:str, name2:str, outcome:int) -> None:
     self.matches_df.loc[len(self.matches_df)] = [timestamp, name1, name2, outcome]
     self.matches_df.to_csv(self.matches_fname, index=False)
 
-  def save_boost(self, timestamp:int, name:str) -> None:
+  def save_boost(self, timestamp:float, name:str) -> None:
     self.boosts_df.loc[len(self.boosts_df)] = [timestamp, name]
     self.boosts_df.to_csv(self.boosts_fname, index=False)

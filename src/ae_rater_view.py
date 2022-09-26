@@ -251,7 +251,7 @@ class Leaderboard(tk.Text):
       ('tag_name', "#ddd", f"{hlp.truncate(hlp.short_fname(prof.fullname), 15, '..'):<15} "),
       ('tag_stars', BTFL_DARK_GRANOLA, f"{'*' * prof.stars:>5} "),
     ] + [
-      (f'tag_rating{sysname}', rat_color, f"{rat:>4} ")
+      (f'tag_rating{sysname}', rat_color, f"{str(rat):>9} ")
       for sysname,rat in prof.ratings.items()
     ] + [
       ('tag_nmatches', "#"+f"{nmatches_color:02x}"*3, f"{f'({prof.nmatches})':<5}"),

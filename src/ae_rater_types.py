@@ -1,8 +1,34 @@
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from enum import Enum
+from functools import total_ordering
 from numpy import interp
 
 from helpers import truncate, short_fname
+
+
+@dataclass
+@total_ordering
+class Rating:
+  points: int
+  rd: int = 0
+  timestamp: float = field(default_factory=time.time)
+
+  def __eq__(self, other):
+    if not isinstance(other, type(self)):
+      raise NotImplementedError
+    return self.points == other.points and self.rd == other.rd
+
+  def __lt__(self, other):
+    if not isinstance(other, type(self)):
+      raise NotImplementedError
+    return (
+      self.points < other.points
+      or (self.points == other.points and self.rd > other.rd)
+    )
+
+  def __str__(self):
+    return f"{self.points}`{self.rd}`"
 
 
 @dataclass
@@ -10,7 +36,7 @@ class ProfileInfo:
   tags : str
   fullname : str
   stars : int
-  ratings : dict[str,int]
+  ratings : dict[str,Rating]
   nmatches : int
 
   def stronger_than(self, other):
@@ -43,7 +69,7 @@ class ProfileInfo:
 
 @dataclass
 class RatChange:
-  new_rating : int
+  new_rating : Rating
   delta_rating : int
   new_stars : int
 
@@ -60,7 +86,7 @@ class RatChange:
       else:                  delta_color = FG_GRAY
       return ''.join([
         BG_GRAY,
-        FG_WHITE,    f" {self.new_rating:>4}",
+        FG_WHITE,    f" {str(self.new_rating):>6}",
         FG_YELLOW,   f"{'★' * self.new_stars:>5} ",
         delta_color, f"{f'[{self.delta_rating:+}]':>5} ",
         COLOR_RESET

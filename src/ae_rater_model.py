@@ -6,16 +6,19 @@ from typing import Callable
 
 from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
-from rating_backends import RatingBackend, ELO
+from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
 
 class RatingCompetition:
   def __init__(self, img_dir:str, refresh:bool):
     self.curr_match:list[ProfileInfo] = []
-    self.rat_systems:list[RatingBackend] = [ELO(), ELO(1500, 100)]
+    self.rat_systems:list[RatingBackend] = [ELO(), Glicko()]
     def default_values_getter(stars:int)->dict:
-      return {s.name():s.stars_to_rating(stars) for s in self.rat_systems}
+      default_values = {}
+      for s in self.rat_systems:
+        default_values.update(s.get_default_values(stars))
+      return default_values
     self.db = DBAccess(img_dir, refresh, default_values_getter)
 
   def get_curr_match(self) -> list[ProfileInfo]:
@@ -31,7 +34,7 @@ class RatingCompetition:
     return self.curr_match
 
   def get_leaderboard(self) -> list[ProfileInfo]:
-    return self.db.get_leaderboard(sortpriority=[s.name() for s in self.rat_systems])
+    return self.db.get_leaderboard(sortpriority=[s.name()+"_pts" for s in self.rat_systems])
 
   def consume_result(self, outcome:Outcome) -> RatingOpinions:
     assert len(self.curr_match) == 2  # atm only accepts 1v1 matches
@@ -69,14 +72,14 @@ class DBAccess:
 
   def save_match(self, profiles:list[ProfileInfo], outcome:Outcome) -> None:
     self.history_mgr.save_match(
-      int(time.time()),
+      time.time(),
       short_fname(profiles[0].fullname),
       short_fname(profiles[1].fullname),
       outcome.value
     )
 
   def save_boost(self, profile:ProfileInfo) -> None:
-    self.history_mgr.save_boost(int(time.time()), short_fname(profile.fullname))
+    self.history_mgr.save_boost(time.time(), short_fname(profile.fullname))
 
   def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions, is_match:bool) -> None:
     for i,prof in enumerate(profiles):
@@ -84,7 +87,11 @@ class DBAccess:
       proposed_stars = []
       for sysname,changes in opinions.items():
         proposed_stars.append(changes[i].new_stars)
-        new_ratings[sysname] = changes[i].new_rating
+        new_ratings.update({
+          sysname+'_pts': changes[i].new_rating.points,
+          sysname+'_rd': changes[i].new_rating.rd,
+          sysname+'_time': changes[i].new_rating.timestamp,
+        })
 
       min_stars, max_stars = min(proposed_stars), max(proposed_stars)
       if min_stars == max_stars:
@@ -119,18 +126,26 @@ class DBAccess:
       'stars': np.int64,
       'nmatches': np.int64,
 
-      'Elo122': np.int64,  # TODO: generalize
-      'Elo151': np.int64,
+      # TODO: generalize
+      'ELO_pts': np.int64,
+      'ELO_rd': np.int64,
+      'ELO_time': np.float64,
+      'Glicko_pts': np.int64,
+      'Glicko_rd': np.int64,
+      'Glicko_time': np.float64,
     }
     assert all(col in info.index for col in expected_dtypes.keys()), str(info)
     assert 0 <= info['stars'] <= 5
     for col,t in expected_dtypes.items():
-      assert isinstance(info[col], t), f"{type(info[col])} {short_name}"
+      assert isinstance(info[col], t), f"{col} expected {t}  got {type(info[col])} {short_name}"
 
     return ProfileInfo(
       tags=info['tags'],
       fullname=os.path.join(self.img_dir, short_name),
       stars=int(info['stars']),
-      ratings={n:int(info[n]) for n in ['Elo122', 'Elo151']},
+      ratings={
+        'ELO': Rating(info['ELO_pts'], info['ELO_rd'], info['ELO_time']),
+        'Glicko': Rating(info['Glicko_pts'], info['Glicko_rd'], info['Glicko_time']),
+      },
       nmatches=int(info['nmatches']),
     )
