@@ -59,6 +59,7 @@ class MetadataManager:
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       if is_first_run:
+        logging.info("first run: creating metadata backup")
         backup_initial_metadata = os.path.join(img_dir, 'backup_initial_metadata.csv')
         fresh_tagrat.to_csv(backup_initial_metadata)
       original_dtypes = self.df.dtypes
@@ -88,22 +89,22 @@ class MetadataManager:
   def get_rand_file_info(self) -> pd.Series:
     return self.df.sample().iloc[0]
 
-  def update(self, fullname:str, upd_data:dict, is_match:bool, consensus_stars:int=None) -> None:
+  def update(self, fullname:str, upd_data:dict, is_match:bool, consensus_stars:float) -> None:
     short_name = short_fname(fullname)
     if short_name not in self.df.index:
       raise KeyError(f"{short_name} not in database")
 
     self.df.loc[short_name, upd_data.keys()] = upd_data.values()
 
-    if consensus_stars is not None:
-      prev_stars = self.df.loc[short_name, 'stars']
-      if prev_stars != consensus_stars:
-        if consensus_stars < 0:
-          raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
-        self.df.loc[short_name, 'stars'] = consensus_stars
-        write_metadata(fullname, rating=min(5, int(consensus_stars)))
-        logging.info("file %s updated stars on disk: %f -> %f",
-                     short_name, prev_stars, consensus_stars)
+    prev_stars = self.df.loc[short_name, 'stars']
+    if consensus_stars < 0:
+      raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
+    self.df.loc[short_name, 'stars'] = consensus_stars
+    disk_stars = min(5, int(consensus_stars))
+    if min(5, int(prev_stars)) != disk_stars:
+      write_metadata(fullname, rating=disk_stars)
+      logging.info("file %s updated stars on disk: %f -> %f",
+                    short_name, prev_stars, disk_stars)
 
     if is_match:
       self.df.loc[short_name, 'nmatches'] += 1
@@ -124,7 +125,7 @@ class HistoryManager:
   def __init__(self, img_dir:str):
     self.matches_fname = os.path.join(img_dir, 'match_history.csv')
     match_history_dtypes = {
-      "timestamp": int,
+      "timestamp": float,
       "name1": str,
       "name2": str,
       "outcome": int,
@@ -138,7 +139,7 @@ class HistoryManager:
 
     self.boosts_fname = os.path.join(img_dir, 'boosts_history.csv')
     boosts_dtypes = {
-      "timestamp": int,
+      "timestamp": float,
       "name": str,
     }
     if os.path.exists(self.boosts_fname):

@@ -11,7 +11,7 @@ import helpers as hlp
 from ae_rater_types import *
 
 
-CHANGE_MATCH_DELAY = 10000
+CHANGE_MATCH_DELAY = 2000
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -133,7 +133,7 @@ class ProfileCard(tk.Frame):
     self.tags.configure(text=taglist or "-")
 
   def _show_rating(self, rating, ratings, nmatches):
-    self.rating.configure(text=f"{'★'*rating}  {ratings} (matches: {nmatches})")
+    self.rating.configure(text=f"'★'{rating:.2f}  {ratings} (matches: {nmatches})")
 
 
 class Leaderboard(tk.Text):
