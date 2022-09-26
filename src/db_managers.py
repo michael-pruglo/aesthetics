@@ -43,7 +43,7 @@ class MetadataManager:
       'nmatches': int,
     }
     if os.path.exists(self.db_fname):
-      logging.info("metadata csv exists, read")
+      logging.info(f"{self.db_fname} exists, read")
       self.df = pd.read_csv(self.db_fname, keep_default_na=False)
     else:
       logging.info("metadata csv does not exist, create")

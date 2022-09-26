@@ -3,7 +3,7 @@ import sys
 import logging
 
 from helpers import short_fname
-from ae_rater_types import Outcome, ProfileInfo
+from ae_rater_types import Outcome
 from ae_rater_view import RaterGui
 from ae_rater_model import RatingCompetition
 
