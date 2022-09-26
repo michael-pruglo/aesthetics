@@ -102,8 +102,8 @@ def make_testcase(system:RatingBackend):
         self.assertLess(b_slope, 0)
 
     def test_scenario_revenge(self):
-      bully0_stars = random.randint(2,5)
-      avenger0_stars = random.randint(1,bully0_stars)
+      bully0_stars = random.randint(3,5)
+      avenger0_stars = bully0_stars - random.randint(0,2)
       matches = random.randint(0, 100)
       bully0 = construct_profile(system.stars_to_rating(bully0_stars), bully0_stars, matches)
       avenger0 = construct_profile(system.stars_to_rating(avenger0_stars), avenger0_stars, matches)
