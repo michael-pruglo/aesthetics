@@ -67,8 +67,8 @@ class TestCompetition(unittest.TestCase):
       for iter in range(25):
         self.model.give_boost(short_fname(prof.fullname))
         curr_stars_opinions = [s.get_boost(prof).new_stars for s in self.model.rat_systems]
-        self.assertTrue(all(stars_before<=n for n in curr_stars_opinions), curr_stars_opinions)
         consensus_stars = statistics.mean(curr_stars_opinions)
+        self.assertGreater(consensus_stars, stars_before)
         profile_after = self._get_leaderboard_line(prof.fullname)
         dbg_info = f"curr profile: {prof},  profile_aftter: {profile_after}, opinions:{curr_stars_opinions}"
         self.assertEqual(profile_after.stars, consensus_stars, dbg_info)
