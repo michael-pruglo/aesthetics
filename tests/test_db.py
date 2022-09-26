@@ -107,7 +107,7 @@ class TestMetadataManager(unittest.TestCase):
   def test_update_raises(self):
     mm = self._create_mgr(defaults_getter=defgettr)
     with self.assertRaises(KeyError):
-      mm.update("NONEXISTENT", {'elo':1230, 'glicko':1400}, 2)
+      mm.update("NONEXISTENT", {'elo':1230, 'glicko':1400}, 2, 4)
     with self.assertRaises(ValueError):
       fullname = os.path.join(MEDIA_FOLDER, random.choice(self.initial_files))
       mm.update(fullname, upd_data={}, is_match=random.randint(0,1), consensus_stars=-1)
@@ -123,7 +123,7 @@ class TestMetadataManager(unittest.TestCase):
         upd_stars = 5 - disk_stars_before + random.randint(1,9)/10
         tst_updates.append((short_name, upd_stars))
       else:
-        upd_stars = None
+        upd_stars = disk_stars_before
       inc_match = random.randint(0,1)
 
       hlp.backup_files([fullname])
@@ -156,7 +156,7 @@ class TestMetadataManager(unittest.TestCase):
                      for col in random.sample(["elo","glicko","tst"], random.randint(1,3))}
 
       hlp.backup_files([fullname])
-      mm.update(fullname, upd_data=val_updates, is_match=not is_boost, consensus_stars=None)
+      mm.update(fullname, upd_data=val_updates, is_match=not is_boost, consensus_stars=row_before['stars'])
 
       row_after = mm.get_file_info(short_name)
       self.assertEqual(row_after['nmatches'], row_before['nmatches']+(not is_boost))
