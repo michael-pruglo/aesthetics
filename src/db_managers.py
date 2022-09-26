@@ -133,6 +133,7 @@ class HistoryManager:
     if os.path.exists(self.matches_fname):
       logging.info("match_history csv exists, read")
       self.matches_df = pd.read_csv(self.matches_fname, dtype=match_history_dtypes)
+      logging.info("%d matches played so far", len(self.matches_df))
     else:
       logging.info("match_history csv does not exist, create")
       self.matches_df = pd.DataFrame(columns=match_history_dtypes.keys())

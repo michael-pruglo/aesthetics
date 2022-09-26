@@ -11,7 +11,7 @@ import helpers as hlp
 from ae_rater_types import *
 
 
-CHANGE_MATCH_DELAY = 2000
+CHANGE_MATCH_DELAY = 500
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -39,7 +39,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
 
   def show_media(self, fname):
     ext = hlp.file_extension(fname)
-    if ext in ['jpg', 'jpeg', 'png', 'gif']:
+    if ext in ['jpg', 'jpeg', 'png', 'gif', 'jfif']:
       self.show_img(fname)
     elif ext in ['mp4', 'mov']:
       self.show_vid(fname)
@@ -330,6 +330,7 @@ class RaterGui:
     }[event.keysym]
     self.cards[0].set_style(-outcome.value)
     self.cards[1].set_style( outcome.value)
+    self.root.update()
     self.report_outcome_cb(outcome)
 
   def _on_give_boost(self, event):
