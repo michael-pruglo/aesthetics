@@ -14,7 +14,7 @@ from helpers import short_fname
 class RatingCompetition:
   def __init__(self, img_dir:str, refresh:bool):
     self.curr_match:list[ProfileInfo] = []
-    self.rat_systems:list[RatingBackend] = [ELO(), Glicko()]
+    self.rat_systems:list[RatingBackend] = [Glicko(), ELO()]
     def default_values_getter(stars:float)->dict:
       default_values = {}
       for s in self.rat_systems:
