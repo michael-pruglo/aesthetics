@@ -37,9 +37,13 @@ def immitate_external_metadata_change() -> int:
   files = [os.path.join(MEDIA_FOLDER, f)
             for f in random.sample(get_initial_mediafiles(), num_files)]
   backup_files(files)
+  stars1 = get_metadata(files[1])[1]
+  stars2 = get_metadata(files[2])[1]
+  assert 0 <= stars1 <= 5, files[1]
+  assert 0 <= stars2 <= 5, files[2]
   write_metadata(files[0], tags=["canary", "canary|tagcanary"])
-  write_metadata(files[1], rating=5-get_metadata(files[1])[1])
-  write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-get_metadata(files[2])[1])
+  write_metadata(files[1], rating=5-stars1)
+  write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-stars2)
   return num_files
 
 def disk_cleanup() -> None:

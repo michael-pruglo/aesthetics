@@ -26,7 +26,7 @@ def make_testcase(system:RatingBackend):
       for pts in range(10,3000,20):
         rat = Rating(pts)
         new_stars = system.rating_to_stars(rat)
-        self.assertTrue(0 <= new_stars <= 5)
+        self.assertTrue(0 <= new_stars)
         self.assertTrue(new_stars >= curr_stars)
         curr_stars = new_stars
 
@@ -48,17 +48,7 @@ def make_testcase(system:RatingBackend):
         rating = Rating(system.stars_to_rating(s).points-1, random.randint(30,300))
         prof = construct_profile(rating, s-1)
         change = system.get_boost(prof)
-        self.assertEqual(change.new_stars, s)
-
-    def test_boost_caps_at_5_stars(self):
-      rating = system.stars_to_rating(5)
-      prof = construct_profile(rating, 5)
-      for _ in range(300):
-        change = system.get_boost(prof)
-        self.assertEqual(change.new_stars, 5)
-        self.assertGreater(change.new_rating.points, prof.ratings[sname].points)
-        prof.stars = change.new_stars
-        prof.ratings[sname] = change.new_rating
+        self.assertEqual(int(change.new_stars), s)
 
     def test_matches_basic(self):
       a = b = construct_profile()

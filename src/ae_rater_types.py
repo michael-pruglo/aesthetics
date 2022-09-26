@@ -35,7 +35,7 @@ class Rating:
 class ProfileInfo:
   tags : str
   fullname : str
-  stars : int
+  stars : float
   ratings : dict[str,Rating]
   nmatches : int
 
@@ -54,13 +54,13 @@ class ProfileInfo:
     BG_GRAY     = "\033[48;5;236m"
     FG_WHITE    = "\033[38;5;231m"
     FG_YELLOW   = "\033[38;5;214m"
-    FG_ELO      = "\033[38;5;{}m".format([0,26,2,228,208,9][self.stars])
+    FG_ELO      = "\033[38;5;{}m".format([0,26,2,228,208,9][min(5, int(self.stars))])
     FG_MATCHES  = "\033[38;5;{}m".format(int(interp(self.nmatches, [0,100], [232,255])))
     COLOR_RESET = "\033[0;0m"
     return ''.join([
       BG_GRAY,
       FG_WHITE,   f"{truncate(short_fname(self.fullname), 15):<15} ",
-      FG_YELLOW,  f"{'★' * self.stars:>5} ",
+      FG_YELLOW,  f"{f'★{self.stars:.2f}':>5} ",
       FG_ELO,     f"{self.ratings} ",
       FG_MATCHES, f"{f'({self.nmatches})':<5}",
       COLOR_RESET
@@ -71,7 +71,7 @@ class ProfileInfo:
 class RatChange:
   new_rating : Rating
   delta_rating : int
-  new_stars : int
+  new_stars : float
 
   def __repr__(self):
       BG_GRAY     = "\033[48;5;238m"
@@ -87,7 +87,7 @@ class RatChange:
       return ''.join([
         BG_GRAY,
         FG_WHITE,    f" {str(self.new_rating):>6}",
-        FG_YELLOW,   f"{'★' * self.new_stars:>5} ",
+        FG_YELLOW,   f"{f'★{self.new_stars:.2f}':>5} ",
         delta_color, f"{f'[{self.delta_rating:+}]':>5} ",
         COLOR_RESET
       ])

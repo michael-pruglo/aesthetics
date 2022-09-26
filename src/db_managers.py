@@ -13,12 +13,12 @@ def _db_row(fname):
   return {
     'name': short_fname(fname),
     'tags': ' '.join(sorted(tags)).lower(),
-    'stars': int(stars),
+    'stars': stars,
   }
 
 
 def _default_init(row, default_values_getter):
-  assert 0 <= row['stars'] <= 5
+  assert 0 <= row['stars'], row
   if row.isna()['nmatches']:
     row['nmatches'] = 0
   if default_values_getter:
@@ -39,7 +39,7 @@ class MetadataManager:
     metadata_dtypes = {
       'name': str,
       'tags': str,
-      'stars': int,
+      'stars': float,
       'nmatches': int,
     }
     if os.path.exists(self.db_fname):
@@ -94,12 +94,12 @@ class MetadataManager:
     if consensus_stars is not None:
       prev_stars = self.df.loc[short_name, 'stars']
       if prev_stars != consensus_stars:
-        if consensus_stars < 0 or consensus_stars > 5:
+        if consensus_stars < 0:
           raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
         self.df.loc[short_name, 'stars'] = consensus_stars
-        write_metadata(fullname, rating=consensus_stars)
-        logging.info("file %s updated stars on disk: %s -> %s",
-                     short_name, '★'*prev_stars, '★'*consensus_stars)
+        write_metadata(fullname, rating=min(5, int(consensus_stars)))
+        logging.info("file %s updated stars on disk: %f -> %f",
+                     short_name, prev_stars, consensus_stars)
 
     if is_match:
       self.df.loc[short_name, 'nmatches'] += 1

@@ -244,12 +244,12 @@ class Leaderboard(tk.Text):
     )
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple[str,str,str]]:
-    rat_color = ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][prof.stars]
+    rat_color = ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][min(5, int(prof.stars))]
     nmatches_color = int(interp(prof.nmatches, [0,100], [0x70,255]))
     return [
       ('tag_idx', "#aaa", f"{idx+1:>3} "),
       ('tag_name', "#ddd", f"{hlp.truncate(hlp.short_fname(prof.fullname), 15, '..'):<15} "),
-      ('tag_stars', BTFL_DARK_GRANOLA, f"{'*' * prof.stars:>5} "),
+      ('tag_stars', BTFL_DARK_GRANOLA, f"{f'★{prof.stars:.2f}':>5} "),
     ] + [
       (f'tag_rating{sysname}', rat_color, f"{str(rat):>9} ")
       for sysname,rat in prof.ratings.items()

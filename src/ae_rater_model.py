@@ -1,5 +1,6 @@
 import logging
 import os
+import statistics
 import time
 import numpy as np
 from typing import Callable
@@ -14,7 +15,7 @@ class RatingCompetition:
   def __init__(self, img_dir:str, refresh:bool):
     self.curr_match:list[ProfileInfo] = []
     self.rat_systems:list[RatingBackend] = [ELO(), Glicko()]
-    def default_values_getter(stars:int)->dict:
+    def default_values_getter(stars:float)->dict:
       default_values = {}
       for s in self.rat_systems:
         default_values.update(s.get_default_values(stars))
@@ -93,17 +94,7 @@ class DBAccess:
           sysname+'_time': changes[i].new_rating.timestamp,
         })
 
-      min_stars, max_stars = min(proposed_stars), max(proposed_stars)
-      if min_stars == max_stars:
-        consensus_stars = max_stars
-      elif min_stars > prof.stars:
-        consensus_stars = min_stars
-      elif max_stars < prof.stars:
-        consensus_stars = max_stars
-      else:
-        consensus_stars = None
-
-      self.meta_mgr.update(prof.fullname, new_ratings, is_match, consensus_stars)
+      self.meta_mgr.update(prof.fullname, new_ratings, is_match, statistics.mean(proposed_stars))
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()
@@ -123,7 +114,7 @@ class DBAccess:
 
     expected_dtypes = {
       'tags': str,
-      'stars': np.int64,
+      'stars': np.float64,
       'nmatches': np.int64,
 
       # TODO: generalize
@@ -135,14 +126,14 @@ class DBAccess:
       'Glicko_time': np.float64,
     }
     assert all(col in info.index for col in expected_dtypes.keys()), str(info)
-    assert 0 <= info['stars'] <= 5
+    assert 0 <= info['stars']
     for col,t in expected_dtypes.items():
       assert isinstance(info[col], t), f"{col} expected {t}  got {type(info[col])} {short_name}"
 
     return ProfileInfo(
       tags=info['tags'],
       fullname=os.path.join(self.img_dir, short_name),
-      stars=int(info['stars']),
+      stars=info['stars'],
       ratings={
         'ELO': Rating(info['ELO_pts'], info['ELO_rd'], info['ELO_time']),
         'Glicko': Rating(info['Glicko_pts'], info['Glicko_rd'], info['Glicko_time']),

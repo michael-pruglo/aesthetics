@@ -9,7 +9,8 @@ import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER, METAFILE
 
 
-def defgettr(stars:int) -> dict:
+def defgettr(stars) -> dict:
+  stars = int(stars)
   return {"elo":1200+stars, "glicko":1500+stars, "tst":stars*10}
 
 
@@ -34,14 +35,14 @@ class TestMetadataManager(unittest.TestCase):
     fname = os.path.join(MEDIA_FOLDER, short_name)
     self.assertTrue(os.path.exists(fname))
     expected_metadata = get_metadata(fname)
-    given_metadata = ({t for t in row['tags'].split()}, row['stars'])
+    given_metadata = ({t for t in row['tags'].split()}, int(row['stars']))
     self.assertTupleEqual(given_metadata, expected_metadata, short_name)
 
   def _check_db(self, db:pd.DataFrame, expected_len:int) -> None:
     self.assertEqual(len(db), expected_len)
     self.assertTrue({'tags','stars','nmatches'}.issubset(db.columns))
     self.assertTrue((db['tags'].notna()).all())
-    self.assertTrue((db['stars'].between(0,5)).all())
+    self.assertTrue((db['stars'].ge(0)).all())
     self.assertTrue((db['nmatches']==0).all())
     for short_name, row in db.sample(len(db)//5).iterrows():
       self._check_row(short_name, row)
@@ -108,7 +109,7 @@ class TestMetadataManager(unittest.TestCase):
       mm.update("NONEXISTENT", {'elo':1230, 'glicko':1400}, 2)
     with self.assertRaises(ValueError):
       fullname = os.path.join(MEDIA_FOLDER, random.choice(self.initial_files))
-      mm.update(fullname, upd_data={}, is_match=random.randint(0,1), consensus_stars=6)
+      mm.update(fullname, upd_data={}, is_match=random.randint(0,1), consensus_stars=-1)
 
   def test_update_stars(self):
     mm = self._create_mgr(defaults_getter=defgettr)
@@ -118,7 +119,7 @@ class TestMetadataManager(unittest.TestCase):
       disk_tags_before, disk_stars_before = get_metadata(fullname)
       row_before = mm.get_file_info(short_name)
       if random.randint(0,1):
-        upd_stars = 5 - disk_stars_before
+        upd_stars = 5 - disk_stars_before + random.randint(1,9)/10
         tst_updates.append((short_name, upd_stars))
       else:
         upd_stars = None
@@ -132,7 +133,7 @@ class TestMetadataManager(unittest.TestCase):
       if upd_stars is None:
         self.assertEqual(disk_stars_after, disk_stars_before, short_name)
       else:
-        self.assertEqual(disk_stars_after, upd_stars, short_name)
+        self.assertEqual(disk_stars_after, int(upd_stars), short_name)
 
       row_after = mm.get_file_info(short_name)
       self._check_row(short_name, row_after)
@@ -158,7 +159,7 @@ class TestMetadataManager(unittest.TestCase):
 
       row_after = mm.get_file_info(short_name)
       self.assertEqual(row_after['nmatches'], row_before['nmatches']+(not is_boost))
-      for col, given_val in row_after.iteritems():
+      for col, given_val in row_after.items():
         expected_val = val_updates[col] if col in val_updates else row_before[col]
         if col=='nmatches':
           expected_val += not is_boost

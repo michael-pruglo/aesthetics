@@ -7,11 +7,11 @@ from ae_rater_types import *
 
 class RatingBackend(ABC):
   @abstractmethod
-  def stars_to_rating(self, stars:int) -> Rating:
+  def stars_to_rating(self, stars:float) -> Rating:
     pass
 
   @abstractmethod
-  def rating_to_stars(self, rat:Rating) -> int:
+  def rating_to_stars(self, rat:Rating) -> float:
     pass
 
   @abstractmethod
@@ -22,7 +22,7 @@ class RatingBackend(ABC):
   def name(self) -> RatSystemName:
     return type(self).__name__
 
-  def get_default_values(self, stars: int) -> dict:
+  def get_default_values(self, stars:float) -> dict:
     def_rat = self.stars_to_rating(stars)
     return {
       self.name()+"_pts": def_rat.points,
@@ -45,10 +45,10 @@ class ELO(RatingBackend):
     self.STD = std
 
   def stars_to_rating(self, stars):
-    return Rating(self.BASE_RATING + self.STD*stars)
+    return Rating(int(self.BASE_RATING + self.STD*stars))
 
   def rating_to_stars(self, rat):
-    return np.clip((rat.points-self.BASE_RATING)//self.STD, 0, 5)
+    return max((rat.points-self.BASE_RATING)/self.STD, 0.0)
 
   def process_match(self, l, r, outcome):
     lpts = l.ratings[self.name()].points
@@ -83,11 +83,11 @@ class Glicko(RatingBackend):
     self.MIN_RD = 25
     self.MAX_RD = 350
 
-  def stars_to_rating(self, stars:int) -> Rating:
-    return Rating(self.BASE_POINTS + self.MAX_RD*stars, self.MAX_RD, time.time())
+  def stars_to_rating(self, stars):
+    return Rating(int(self.BASE_POINTS+self.MAX_RD*stars), self.MAX_RD, time.time())
 
-  def rating_to_stars(self, rat:Rating) -> int:
-    return np.clip((rat.points-self.BASE_POINTS)//self.MAX_RD, 0, 5)
+  def rating_to_stars(self, rat):
+    return max((rat.points-self.BASE_POINTS)/self.MAX_RD, 0.0)
 
   # http://glicko.net/glicko/glicko.pdf
   def process_match(self, l, r, outcome):

@@ -1,3 +1,4 @@
+import statistics
 import unittest
 import os
 import random
@@ -11,7 +12,14 @@ from tests.helpers import MEDIA_FOLDER, SKIPLONG
 
 
 def is_sorted(l:list[ProfileInfo]) -> bool:
-  return all(l[i].stars >= l[i+1].stars for i in range(len(l)-1))
+  for i, curr_prof in enumerate(l[:-1]):
+    next_prof = l[i+1]
+    if curr_prof.stars < next_prof.stars:
+      return False
+    if all(curr_prof.ratings[s].points < next_prof.ratings[s].points
+           for s in curr_prof.ratings.keys()):
+      return False
+  return True
 
 
 class TestCompetition(unittest.TestCase):
@@ -59,18 +67,16 @@ class TestCompetition(unittest.TestCase):
       for iter in range(25):
         self.model.give_boost(short_fname(prof.fullname))
         curr_stars_opinions = [s.get_boost(prof).new_stars for s in self.model.rat_systems]
-        self.assertTrue(all(stars_before<=n<=5 for n in curr_stars_opinions), curr_stars_opinions)
-        consensus_stars = min(curr_stars_opinions)
+        self.assertTrue(all(stars_before<=n for n in curr_stars_opinions), curr_stars_opinions)
+        consensus_stars = statistics.mean(curr_stars_opinions)
         profile_after = self._get_leaderboard_line(prof.fullname)
         dbg_info = f"curr profile: {prof},  profile_aftter: {profile_after}, opinions:{curr_stars_opinions}"
-        if consensus_stars != stars_before:
-          self.assertEqual(profile_after.stars, consensus_stars, dbg_info)
-          self.assertEqual(consensus_stars, stars_before+1, dbg_info)
+        self.assertEqual(profile_after.stars, consensus_stars, dbg_info)
+        if int(consensus_stars) != int(stars_before):
+          self.assertEqual(int(consensus_stars), int(stars_before)+1, dbg_info)
           _, disk_stars = get_metadata(prof.fullname)
-          self.assertEqual(disk_stars, consensus_stars, dbg_info)
+          self.assertEqual(disk_stars, int(consensus_stars), dbg_info)
           break
-        else:
-          self.assertEqual(profile_after.stars, stars_before, dbg_info)
         prof = profile_after
 
   def test_matches_affect_disk(self):
@@ -94,10 +100,10 @@ class TestCompetition(unittest.TestCase):
       self.assertEqual(len(self.model.get_curr_match()), 0, dbg_info)
       self.assertEqual(l_tags, new_l_tags)
       self.assertEqual(r_tags, new_r_tags)
-      self.assertEqual(l_stars, l.stars)
-      self.assertEqual(r_stars, r.stars)
-      self.assertEqual(new_l_stars, new_l.stars)
-      self.assertEqual(new_r_stars, new_r.stars)
+      self.assertEqual(l_stars, int(l.stars))
+      self.assertEqual(r_stars, int(r.stars))
+      self.assertEqual(new_l_stars, int(new_l.stars))
+      self.assertEqual(new_r_stars, int(new_r.stars))
       self.assertTrue(all(l.ratings[s].rd >= new_l.ratings[s].rd for s in l.ratings.keys() if l.ratings[s].rd))
       self.assertTrue(all(r.ratings[s].rd >= new_r.ratings[s].rd for s in r.ratings.keys() if r.ratings[s].rd))
       self.assertTrue(all(l.ratings[s].timestamp < new_l.ratings[s].timestamp for s in l.ratings.keys()))
@@ -108,8 +114,9 @@ class TestCompetition(unittest.TestCase):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
     hlp.backup_files(all_files)
 
-    loss = LongTermTester(self.model, verbosity=1).run()
-    self.assertLess(loss, 0.9)
+    losses = LongTermTester(self.model, verbosity=1).run()
+    self.assertLess(losses[-1], 0.9)
+    self.assertLess(losses[-1]/losses[0], 10)
 
 
 class LongTermTester:
@@ -121,16 +128,20 @@ class LongTermTester:
     random.shuffle(ranks)
     self.true_leaderboard = {p.fullname:rank for p,rank in zip(ldbrd,ranks)}
 
-  def run(self, epochs=5) -> float:
+  def run(self, epochs=10, matches_each=20) -> list[float]:
     if self.verbosity: print()
+    losses = []
     for epoch in range(epochs):
-      for _ in range(500):
+      for _ in range(matches_each//2*len(self.true_leaderboard)):
         l, r = self.model.generate_match()
         self.model.consume_result(self._simulate_outcome(l,r))
-      if self.verbosity: print(f"{epoch}: loss = {self._loss()}")
+      losses.append(self._loss())
+      if self.verbosity: print(f"{epoch}: loss = {losses[-1]}")
       if self.verbosity>1: print("\n\n\n")
+      if losses[-1] == 0:
+        return losses
 
-    return self._loss()
+    return losses
 
   def _simulate_outcome(self, l:ProfileInfo, r:ProfileInfo) -> Outcome:
       lrank = self.true_leaderboard[l.fullname]
@@ -148,8 +159,8 @@ class LongTermTester:
       expected_rating = self.true_leaderboard[p.fullname]
       if self.verbosity>1: print(p, expected_rating)
       sq_err += (expected_rating-given_rating)**2
+    assert is_sorted(ldbrd)
     return sq_err / len(ldbrd)
-
 
 if __name__ == '__main__':
   unittest.main()
