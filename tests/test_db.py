@@ -6,7 +6,7 @@ import pandas as pd
 from src.metadata import get_metadata
 from src.db_managers import MetadataManager
 import tests.helpers as hlp
-from tests.helpers import MEDIA_FOLDER, METAFILE
+from tests.helpers import BACKUP_INITIAL_FILE, MEDIA_FOLDER, METAFILE
 
 
 def defgettr(stars) -> dict:
@@ -28,6 +28,7 @@ class TestMetadataManager(unittest.TestCase):
   def _create_mgr(self, *args, **kwargs) -> MetadataManager:
     mm = MetadataManager(MEDIA_FOLDER, *args, **kwargs)
     self.assertTrue(os.path.exists(METAFILE))
+    self.assertTrue(os.path.exists(BACKUP_INITIAL_FILE))
     return mm
 
   def _check_row(self, short_name:str, row:pd.Series) -> None:

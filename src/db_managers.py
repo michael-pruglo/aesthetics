@@ -51,12 +51,16 @@ class MetadataManager:
     self.df = self.df.astype(metadata_dtypes)
     self.df.set_index('name', inplace=True)
 
-    if refresh or not os.path.exists(self.db_fname):
+    is_first_run = not os.path.exists(self.db_fname)
+    if refresh or is_first_run:
       logging.info("refreshing metadata db...")
       def is_media(fname):
         return fname.find('.')>0 and not fname.endswith('.csv')
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
+      if is_first_run:
+        backup_initial_metadata = os.path.join(img_dir, 'backup_initial_metadata.csv')
+        fresh_tagrat.to_csv(backup_initial_metadata)
       original_dtypes = self.df.dtypes
       self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
       self.df = self.df.apply(_default_init, axis=1, args=(defaults_getter,))

@@ -8,6 +8,7 @@ from src.metadata import get_metadata, write_metadata
 
 MEDIA_FOLDER = os.path.abspath("./tests/test_media/")
 METAFILE = os.path.join(MEDIA_FOLDER, 'metadata_db.csv')
+BACKUP_INITIAL_FILE = os.path.join(MEDIA_FOLDER, 'backup_initial_metadata.csv')
 BACKUP_FOLDER = os.path.join(MEDIA_FOLDER, "bak/")
 EXTRA_FOLDER = os.path.join(MEDIA_FOLDER, "extra/")
 

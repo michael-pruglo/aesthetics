@@ -47,8 +47,5 @@ python -m unittests
 
 ## TODO
 
-- add glicko math
-- add more tests
 - change visualization of rating in ProfileCard from ugly dicts
-- add backup of initial tags and stars
 
