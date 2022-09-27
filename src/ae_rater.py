@@ -29,6 +29,7 @@ class App:
   def run(self) -> None:
     self._start_next_match()
     self.gui.mainloop()
+    self.model.on_exit()
 
   def _consume_result(self, outcome:Outcome) -> None:
     participants = self.model.get_curr_match() #needs to be before model.consume_result()

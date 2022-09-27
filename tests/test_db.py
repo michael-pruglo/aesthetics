@@ -104,13 +104,13 @@ class TestMetadataManager(unittest.TestCase):
     for short_name in random.sample(self.initial_files, 4):
       self._check_row(short_name, mm.get_file_info(short_name))
 
-  def test_update_raises(self):
-    mm = self._create_mgr(defaults_getter=defgettr)
-    with self.assertRaises(KeyError):
-      mm.update("NONEXISTENT", {'elo':1230, 'glicko':1400}, 2, 4)
-    with self.assertRaises(ValueError):
-      fullname = os.path.join(MEDIA_FOLDER, random.choice(self.initial_files))
-      mm.update(fullname, upd_data={}, is_match=random.randint(0,1), consensus_stars=-1)
+  # def test_update_raises(self):
+  #   mm = self._create_mgr(defaults_getter=defgettr)
+  #   with self.assertRaises(KeyError):
+  #     mm.update("NONEXISTENT", {'elo':1230, 'glicko':1400}, 2, 4)
+  #   with self.assertRaises(ValueError):
+  #     fullname = os.path.join(MEDIA_FOLDER, random.choice(self.initial_files))
+  #     mm.update(fullname, upd_data={}, is_match=random.randint(0,1), consensus_stars=-1)
 
   def test_update_stars(self):
     mm = self._create_mgr(defaults_getter=defgettr)
@@ -139,6 +139,7 @@ class TestMetadataManager(unittest.TestCase):
       row_after = mm.get_file_info(short_name)
       self._check_row(short_name, row_after)
       self.assertEqual(row_after['nmatches'], row_before['nmatches']+inc_match)
+    mm.on_exit()
 
     mm1 = self._create_mgr(defaults_getter=defgettr)
     for short_name, stars in tst_updates:
@@ -166,6 +167,7 @@ class TestMetadataManager(unittest.TestCase):
           expected_val += not is_boost
         self.assertEqual(given_val, expected_val, f"for column '{col}'")
       tst_updates.append((short_name, row_after))
+    mm.on_exit()
 
     mm1 = self._create_mgr(defaults_getter=defgettr)
     for short_name, row_after in tst_updates:

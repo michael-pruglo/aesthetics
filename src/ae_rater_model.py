@@ -64,6 +64,9 @@ class RatingCompetition:
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
                        for prof in self.curr_match]
 
+  def on_exit(self):
+    self.db.on_exit()
+
 
 class DBAccess:
   def __init__(self, img_dir:str, refresh:bool, default_values_getter:Callable[[int],dict]) -> None:
@@ -140,3 +143,6 @@ class DBAccess:
       },
       nmatches=int(info['nmatches']),
     )
+
+  def on_exit(self):
+    self.meta_mgr.on_exit()

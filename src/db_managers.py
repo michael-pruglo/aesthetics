@@ -82,8 +82,8 @@ class MetadataManager:
     return self.df
 
   def get_file_info(self, short_name:str) -> pd.Series:
-    if short_name not in self.df.index:
-      raise KeyError(f"{short_name} not in database")
+    # if short_name not in self.df.index:
+    #   raise KeyError(f"{short_name} not in database")
     return self.df.loc[short_name]
 
   def get_rand_file_info(self) -> pd.Series:
@@ -91,14 +91,14 @@ class MetadataManager:
 
   def update(self, fullname:str, upd_data:dict, is_match:bool, consensus_stars:float) -> None:
     short_name = short_fname(fullname)
-    if short_name not in self.df.index:
-      raise KeyError(f"{short_name} not in database")
+    # if short_name not in self.df.index:
+    #   raise KeyError(f"{short_name} not in database")
 
     self.df.loc[short_name, upd_data.keys()] = upd_data.values()
 
-    prev_stars = self.df.loc[short_name, 'stars']
     if consensus_stars < 0:
       raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
+    prev_stars = self.df.loc[short_name, 'stars']
     self.df.loc[short_name, 'stars'] = consensus_stars
     disk_stars = min(5, int(consensus_stars))
     if min(5, int(prev_stars)) != disk_stars:
@@ -110,6 +110,8 @@ class MetadataManager:
       self.df.loc[short_name, 'nmatches'] += 1
 
     logging.debug("updated db: %s", self.df.loc[short_name])
+
+  def on_exit(self):
     self._commit()
 
   def _get_frequent_tags(self, min_tag_freq):
@@ -118,6 +120,7 @@ class MetadataManager:
     return tag_freq[tag_freq>=min_tag_freq]
 
   def _commit(self):
+    logging.info("commit db to disk")
     self.df.to_csv(self.db_fname)
 
 
