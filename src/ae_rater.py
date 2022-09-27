@@ -27,9 +27,13 @@ class App:
     self.gui = RaterGui(give_boost_cb=self._give_boost)
 
   def run(self) -> None:
-    self._start_next_match()
-    self.gui.mainloop()
-    self.model.on_exit()
+    try:
+      self._start_next_match()
+      self.gui.mainloop()
+    except Exception as e:
+      logging.fatal(f"exception {e}")
+    finally:
+      self.model.on_exit()
 
   def _consume_result(self, outcome:Outcome) -> None:
     participants = self.model.get_curr_match() #needs to be before model.consume_result()
