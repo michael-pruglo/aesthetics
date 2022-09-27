@@ -94,12 +94,14 @@ class MetadataManager:
     # if short_name not in self.df.index:
     #   raise KeyError(f"{short_name} not in database")
 
-    self.df.loc[short_name, upd_data.keys()] = upd_data.values()
+    row = self.df.loc[short_name].copy()
+    if upd_data:
+      row.update(upd_data)
 
     if consensus_stars < 0:
       raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
-    prev_stars = self.df.loc[short_name, 'stars']
-    self.df.loc[short_name, 'stars'] = consensus_stars
+    prev_stars = row['stars']
+    row.loc['stars'] = consensus_stars
     disk_stars = min(5, int(consensus_stars))
     if min(5, int(prev_stars)) != disk_stars:
       write_metadata(fullname, rating=disk_stars)
@@ -107,9 +109,10 @@ class MetadataManager:
                     short_name, prev_stars, disk_stars)
 
     if is_match:
-      self.df.loc[short_name, 'nmatches'] += 1
+      row.loc['nmatches'] += 1
 
-    logging.debug("updated db: %s", self.df.loc[short_name])
+    self.df.loc[short_name] = row
+    logging.debug("updated db: %s", row)
 
   def on_exit(self):
     self._commit()
