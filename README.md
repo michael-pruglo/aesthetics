@@ -47,6 +47,7 @@ python -m unittests
 
 ## TODO
 
-- change visualization of rating in ProfileCard from ugly dicts
-- give instant visual feedback, and only then calc
+- improve performance
+- add megaboosts
+
 

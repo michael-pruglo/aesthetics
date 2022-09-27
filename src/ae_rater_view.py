@@ -11,7 +11,7 @@ import helpers as hlp
 from ae_rater_types import *
 
 
-CHANGE_MATCH_DELAY = 500
+CHANGE_MATCH_DELAY = 90
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -39,9 +39,9 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
 
   def show_media(self, fname):
     ext = hlp.file_extension(fname)
-    if ext in ['jpg', 'jpeg', 'png', 'gif', 'jfif']:
+    if ext in ['jpg', 'jpeg', 'png', 'jfif']:
       self.show_img(fname)
-    elif ext in ['mp4', 'mov']:
+    elif ext in ['mp4', 'mov', 'gif']:
       self.show_vid(fname)
     else:
       self.show_err(f"cannot open {fname}: unsupported extension .{ext}")
@@ -132,8 +132,9 @@ class ProfileCard(tk.Frame):
     taglist = "\n".join(map(indent_hierarchical, tags))
     self.tags.configure(text=taglist or "-")
 
-  def _show_rating(self, rating, ratings, nmatches):
-    self.rating.configure(text=f"'★'{rating:.2f}  {ratings} (matches: {nmatches})")
+  def _show_rating(self, stars, ratings, nmatches):
+    txt = '★'*int(stars) + u"\u2BE8"*(stars-int(stars)>.5)
+    self.rating.configure(text=txt)
 
 
 class Leaderboard(tk.Text):
@@ -252,7 +253,7 @@ class Leaderboard(tk.Text):
       ('tag_stars', BTFL_DARK_GRANOLA, f"{f'★{prof.stars:.2f}':>5} "),
     ] + [
       (f'tag_rating{sysname}', rat_color, f"{str(rat):>9} ")
-      for sysname,rat in prof.ratings.items()
+      for sysname,rat in reversed(prof.ratings.items())
     ] + [
       ('tag_nmatches', "#"+f"{nmatches_color:02x}"*3, f"{f'({prof.nmatches})':<5}"),
     ]
@@ -271,7 +272,7 @@ class RaterGui:
 
     self.curr_prof_shnames:list[str] = []
     self.cards:list[ProfileCard] = [None, None]
-    MID_W = 0.1862967158  # TODO: fix width
+    MID_W = 0.24  # TODO: fix width
     HELP_H = 0.07
     for i in range(2):
       self.cards[i] = ProfileCard(i, self.root)
