@@ -9,7 +9,7 @@ Exploration of personal style. Provided a media library with metadata - explore,
 Run gui app with
 
 ```bash
-python src/ae_rater.py [path/to/media]
+python src/ae_rater.py [path/to/media] [n_cards=2]
 ```
 
 Run tests with

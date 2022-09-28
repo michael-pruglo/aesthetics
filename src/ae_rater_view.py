@@ -51,7 +51,9 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     if self.img_frame is None:
       self.img_frame = ttk.Label(self)
     self.img = Image.open(fname)
-    self.img = ImageOps.contain(self.img, (self.winfo_width(), self.winfo_height()))
+    selfsize = (self.winfo_width(), self.winfo_height())
+    assert selfsize > (10,10)
+    self.img = ImageOps.contain(self.img, selfsize)
     self.img = ImageTk.PhotoImage(self.img)
     self.img_frame.config(image=self.img)
     self.img_frame.pack(expand=True)
@@ -84,13 +86,15 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
 
 
 class ProfileCard(tk.Frame):
-  def __init__(self, idx:int, *args, **kwargs):
+  def __init__(self, idx:int, mode:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
     is_right = idx % 2
     self.bg = RIGHT_COLORBG if is_right else LEFT_COLORBG
     self.fg = RIGHT_COLORFG if is_right else LEFT_COLORFG
     self.wincolor = RIGHT_COLORWIN if is_right else LEFT_COLORWIN
     self.drawcolor = COLORDRAW
+    self.mode = mode
+    self.letter = chr(ord('a')+idx)
 
     self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)
@@ -99,7 +103,7 @@ class ProfileCard(tk.Frame):
 
     TW = 0.22
     BRDR = 0.015
-    PH = 0.95
+    PH = 0.95 if self.mode==2 else 0.8
     self.tags.place  (relwidth=TW,        relheight=PH,       relx=is_right*(1-TW))
     self.media.place (relwidth=1-TW-BRDR, relheight=PH,       relx=BRDR if is_right else TW)
     self.name.place  (relwidth=1,         relheight=(1-PH)/2, rely=PH)
@@ -133,7 +137,7 @@ class ProfileCard(tk.Frame):
     self.tags.configure(text=taglist or "-")
 
   def _show_rating(self, stars, ratings, nmatches):
-    txt = '★'*int(stars) + u"\u2BE8"*(stars-int(stars)>.5)
+    txt = self.letter + "  " + '★'*int(stars) + u"\u2BE8"*(stars-int(stars)>.5)
     self.rating.configure(text=txt)
 
 
@@ -165,7 +169,9 @@ class Leaderboard(tk.Text):
     displayed_rows:dict[int,Leaderboard.FeatureType] = {}
     for i in range(min(self.HEAD_LEN, len(leaderboard))):
       displayed_rows.setdefault(i, self.FeatureType.NONE)
-    for featured,feature_type in zip(feature, [self.FeatureType.LEFT, self.FeatureType.RIGHT]):
+
+    feature_type_seq = [self.FeatureType.LEFT, self.FeatureType.RIGHT] * (len(feature)//2)
+    for featured,feature_type in zip(feature, feature_type_seq):
       rank = next(i for i,p in enumerate(leaderboard) if p.fullname==featured.fullname)
       for i in range(max(0,rank-context), min(len(leaderboard),rank+context+1)):
         displayed_rows.setdefault(i, self.FeatureType.NONE)
@@ -266,29 +272,23 @@ class RaterGui:
     self.root.title("aesthetics")
     self.root.update()
 
-    style = ttk.Style(self.root)
-    style.configure('.', background=BTFL_DARK_BG)
-    style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
+    self.style = ttk.Style(self.root)
+    self.style.configure('.', background=BTFL_DARK_BG)
 
     self.curr_prof_shnames:list[str] = []
-    self.cards:list[ProfileCard] = [None, None]
-    MID_W = 0.24  # TODO: fix width
-    HELP_H = 0.07
-    for i in range(2):
-      self.cards[i] = ProfileCard(i, self.root)
-      self.cards[i].place(relx=i*(0.5+MID_W/2), relwidth=0.5-MID_W/2, relheight=1)
+    self.cards:list[ProfileCard] = []
     self.leaderboard = Leaderboard(self.root)
-    self.leaderboard.place(relx=0.5-MID_W/2, relwidth=MID_W, relheight=1-HELP_H)
     self.help = ttk.Label(self.root, background="#333", anchor='s',
                           justify="center", padding=(10,10),
                           text="<-/-> to choose winner\n^ to draw\nCtrl+ <-/-> to give boost")
-    self.help.place(relx=0.5-MID_W/2, rely=1-HELP_H, relwidth=MID_W, relheight=HELP_H)
 
     self.report_outcome_cb = None
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
-    assert len(profiles) == 2
+    if not self.cards:
+      self._prepare_layout(len(profiles))
+    self.root.update()
     for card,profile in zip(self.cards, profiles):
       card.show_profile(profile)
       card.set_style(None)
@@ -311,6 +311,27 @@ class RaterGui:
 
   def mainloop(self):
     self.root.mainloop()
+
+  def _prepare_layout(self, n:int):
+    if n==2:
+      self.style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
+      LDBRD_W = 0.24  # TODO: fix width
+      HELP_H = 0.07
+      for i in range(n):
+        self.cards.append(ProfileCard(i, n, self.root))
+        self.cards[i].place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
+      self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
+      self.help.place(relx=0.5-LDBRD_W/2, rely=1-HELP_H, relwidth=LDBRD_W, relheight=HELP_H)
+    elif n==10:
+      self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
+      LDBRD_W = 0.24
+      SINGLE_W = (1-LDBRD_W)/5
+      for i in range(n):
+        self.cards.append(ProfileCard(i, n, self.root))
+        self.cards[i].place(relx=i%5*SINGLE_W, rely=i//5*0.5, relwidth=SINGLE_W, relheight=0.5)
+      self.leaderboard.place(relx=1-LDBRD_W, relheight=1, relwidth=LDBRD_W)
+    else:
+      raise NotImplementedError(f"cannot show gui for {n} cards")
 
   def _enable_arrows(self, enable:bool):
     for key in '<Left>', '<Right>', '<Up>':

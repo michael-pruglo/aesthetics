@@ -26,12 +26,12 @@ class App:
     self.model = RatingCompetition(media_dir, refresh=False)
     self.gui = RaterGui(give_boost_cb=self._give_boost)
 
-  def run(self) -> None:
+  def run(self, num_participants:int) -> None:
     try:
-      self._start_next_match()
+      self._start_next_match(num_participants)
       self.gui.mainloop()
-    except Exception as e:
-      logging.fatal(f"exception {e}")
+    except Exception:
+      logging.exception("")
     finally:
       self.model.on_exit()
 
@@ -41,8 +41,8 @@ class App:
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants, outcome)
     self.gui.conclude_match(rating_opinions, self._start_next_match)
 
-  def _start_next_match(self) -> None:
-    participants = self.model.generate_match()
+  def _start_next_match(self, num_participants:int) -> None:
+    participants = self.model.generate_match(num_participants)
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
     self.gui.display_match(participants, self._consume_result)
 
@@ -58,5 +58,7 @@ if __name__ == "__main__":
   given_dir = os.path.abspath(given_dir)
   assert os.path.exists(given_dir), f"path {given_dir} doesn't exist"
 
+  num_participants = int(sys.argv[2]) if len(sys.argv)>2 else 2
+
   setup_logger(log_filename=f"./logs/matches_{short_fname(given_dir)}.log")
-  App(given_dir).run()
+  App(given_dir).run(num_participants)
