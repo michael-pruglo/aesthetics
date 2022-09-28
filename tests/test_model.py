@@ -88,7 +88,7 @@ class TestCompetition(unittest.TestCase):
     hlp.backup_files(all_files)
 
     for _ in range(42):
-      n = random.randint(2,15)
+      n = random.randint(2, min(15,len(all_files)))
       participants = self.model.generate_match(n)
       metadata = [get_metadata(p.fullname) for p in participants]
       outcome = generate_outcome(n)
