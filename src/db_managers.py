@@ -86,8 +86,8 @@ class MetadataManager:
     #   raise KeyError(f"{short_name} not in database")
     return self.df.loc[short_name]
 
-  def get_rand_file_info(self) -> pd.Series:
-    return self.df.sample().iloc[0]
+  def get_rand_files_info(self, n:int) -> pd.DataFrame:
+    return self.df.sample(n)
 
   def update(self, fullname:str, upd_data:dict, is_match:bool, consensus_stars:float) -> None:
     short_name = short_fname(fullname)
@@ -134,7 +134,7 @@ class HistoryManager:
       "timestamp": float,
       "name1": str,
       "name2": str,
-      "outcome": int,
+      "outcome": str,
     }
     if os.path.exists(self.matches_fname):
       logging.info("match_history csv exists, read")
@@ -156,7 +156,7 @@ class HistoryManager:
       logging.info("boosts csv does not exist, create")
       self.boosts_df = pd.DataFrame(columns=boosts_dtypes.keys())
 
-  def save_match(self, timestamp:float, name1:str, name2:str, outcome:int) -> None:
+  def save_match(self, timestamp:float, name1:str, name2:str, outcome:str) -> None:
     self.matches_df.loc[len(self.matches_df)] = [timestamp, name1, name2, outcome]
     self.matches_df.to_csv(self.matches_fname, index=False)
 

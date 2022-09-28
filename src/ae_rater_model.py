@@ -25,24 +25,18 @@ class RatingCompetition:
   def get_curr_match(self) -> list[ProfileInfo]:
     return self.curr_match
 
-  def generate_match(self) -> list[ProfileInfo]:
-    a = self.db.retreive_rand_profile()
-    while True:
-      b = self.db.retreive_rand_profile()
-      if b.fullname != a.fullname:
-        break
-    self.curr_match = [a,b]
+  def generate_match(self, n:int=2) -> list[ProfileInfo]:
+    self.curr_match = self.db.retreive_rand_profiles(n)
     return self.curr_match
 
   def get_leaderboard(self) -> list[ProfileInfo]:
     return self.db.get_leaderboard(sortpriority=[s.name()+"_pts" for s in self.rat_systems])
 
   def consume_result(self, outcome:Outcome) -> RatingOpinions:
-    assert len(self.curr_match) == 2  # atm only accepts 1v1 matches
-    logging.info("%s vs %s: %2d", *self.curr_match, outcome.value)
+    logging.info("%s: %s", *self.curr_match, outcome.tiers)
     self.db.save_match(self.curr_match, outcome)
 
-    opinions = {s.name(): s.process_match(*self.curr_match, outcome)
+    opinions = {s.name(): s.process_match(self.curr_match, outcome)
                 for s in self.rat_systems}
     logging.info("opinions: %s", opinions)
     self.db.apply_opinions(self.curr_match, opinions, is_match=True)
@@ -79,7 +73,7 @@ class DBAccess:
       time.time(),
       short_fname(profiles[0].fullname),
       short_fname(profiles[1].fullname),
-      outcome.value
+      outcome.tiers
     )
 
   def save_boost(self, profile:ProfileInfo) -> None:
@@ -108,9 +102,10 @@ class DBAccess:
     info = self.meta_mgr.get_file_info(short_name)
     return self._validate_and_convert_info(info)
 
-  def retreive_rand_profile(self) -> ProfileInfo:
-    info = self.meta_mgr.get_rand_file_info()
-    return self._validate_and_convert_info(info)
+  def retreive_rand_profiles(self, n:int) -> list[ProfileInfo]:
+    sample = self.meta_mgr.get_rand_files_info(n)
+    return [self._validate_and_convert_info(sample.iloc[i])
+            for i in range(len(sample))]
 
   def _validate_and_convert_info(self, info) -> ProfileInfo:
     short_name = info.name

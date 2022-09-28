@@ -1,6 +1,6 @@
+import string
 import time
 from dataclasses import dataclass, field
-from enum import Enum
 from functools import total_ordering
 from numpy import interp
 
@@ -97,7 +97,31 @@ RatSystemName = str
 RatingOpinions = dict[RatSystemName, list[RatChange]]
 
 
-class Outcome(Enum):
-  WIN_LEFT = -1
-  DRAW = 0
-  WIN_RIGHT = 1
+class Outcome:
+  def __init__(self, tiers:str):
+    self._validate_str(tiers)
+    self.tiers = tiers
+
+  def as_dict(self) -> dict[str, list[tuple[str,float]]]:
+    def idx(letter):
+      return ord(letter)-ord('a')
+
+    matches = {}
+    li_tiers = self.tiers.split()
+    for i, tier in enumerate(li_tiers):
+      for curr in tier:
+        currmatches = []
+        for loss in ''.join(li_tiers[:i]):
+          currmatches.append((idx(loss), 0.0))
+        for draw in tier:
+          if draw!=curr:
+            currmatches.append((idx(draw), 0.5))
+        for win in ''.join(li_tiers[i+1:]):
+          currmatches.append((idx(win), 1.0))
+        matches[idx(curr)] = currmatches
+    return matches
+
+  @staticmethod
+  def _validate_str(s):
+    s = ''.join(sorted(s.lower())).strip()
+    assert s==string.ascii_lowercase[:len(s)]

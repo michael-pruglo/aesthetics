@@ -211,9 +211,9 @@ class Leaderboard(tk.Text):
 
     if feat == self.FeatureType.LEFT:
       outcome_bg = {
-        Outcome.WIN_LEFT: LEFT_COLORWIN,
-        Outcome.DRAW: COLORDRAW,
-        Outcome.WIN_RIGHT: LEFT_COLORBG,
+        Outcome("a b"): LEFT_COLORWIN,
+        Outcome("ab"): COLORDRAW,
+        Outcome("b a"): LEFT_COLORBG,
       }.get(outcome, LEFT_COLORBG)
       return self.LineVisualCfg(
         bgs = [outcome_bg]*2 + [default_bg],
@@ -224,9 +224,9 @@ class Leaderboard(tk.Text):
       )
     if feat == self.FeatureType.RIGHT:
       outcome_bg = {
-        Outcome.WIN_LEFT: RIGHT_COLORBG,
-        Outcome.DRAW: COLORDRAW,
-        Outcome.WIN_RIGHT: RIGHT_COLORWIN,
+        Outcome("a b"): RIGHT_COLORBG,
+        Outcome("ab"): COLORDRAW,
+        Outcome("b a"): RIGHT_COLORWIN,
       }.get(outcome, RIGHT_COLORBG)
       return self.LineVisualCfg(
         bgs = [default_bg] + [outcome_bg]*2,
@@ -294,7 +294,8 @@ class RaterGui:
       card.set_style(None)
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
     self.report_outcome_cb = callback
-    self._enable_arrows(True)
+    if len(profiles) == 2:
+      self._enable_arrows(True)
 
   def conclude_match(self, opinions:RatingOpinions,
                      initiate_next_match_cb:Callable) -> None:
@@ -325,14 +326,14 @@ class RaterGui:
     self._enable_arrows(False)
 
     outcome = {
-      "Left": Outcome.WIN_LEFT,
-      "Up": Outcome.DRAW,
-      "Right": Outcome.WIN_RIGHT,
+      "Left": (Outcome("a b"), -1),
+      "Up":   (Outcome("ab"),   0),
+      "Right":(Outcome("b a"),  1),
     }[event.keysym]
-    self.cards[0].set_style(-outcome.value)
-    self.cards[1].set_style( outcome.value)
+    self.cards[0].set_style(-outcome[1])
+    self.cards[1].set_style( outcome[1])
     self.root.update()
-    self.report_outcome_cb(outcome)
+    self.report_outcome_cb(outcome[0])
 
   def _on_give_boost(self, event):
     assert self.curr_prof_shnames

@@ -84,10 +84,10 @@ class TestCompetition(unittest.TestCase):
     hlp.backup_files(all_files)
 
     for _ in range(100):
-      l, r = self.model.generate_match()
+      l, r = self.model.generate_match()[:2]
       l_tags, l_stars = get_metadata(l.fullname)
       r_tags, r_stars = get_metadata(r.fullname)
-      outcome = random.choice([Outcome.WIN_LEFT, Outcome.DRAW, Outcome.WIN_RIGHT])
+      outcome = random.choice([Outcome("a b"), Outcome("ab"), Outcome("b a")])
       self.model.consume_result(outcome)
       new_l = self._get_leaderboard_line(l.fullname)
       new_r = self._get_leaderboard_line(r.fullname)
@@ -147,10 +147,10 @@ class LongTermTester:
       lrank = self.true_leaderboard[l.fullname]
       rrank = self.true_leaderboard[r.fullname]
       if lrank - rrank > 2:
-        return Outcome.WIN_RIGHT
+        return Outcome("b a")
       if lrank - rrank < -2:
-        return Outcome.WIN_LEFT
-      return Outcome.DRAW
+        return Outcome("a b")
+      return Outcome("ab")
 
   def _loss(self) -> float:
     sq_err = 0

@@ -15,7 +15,7 @@ class RatingBackend(ABC):
     pass
 
   @abstractmethod
-  def process_match(self, l:ProfileInfo, r:ProfileInfo,
+  def process_match(self, participants:list[ProfileInfo],
                     outcome:Outcome) -> list[RatChange]:
     pass
 
@@ -50,16 +50,26 @@ class ELO(RatingBackend):
   def rating_to_stars(self, rat):
     return max((rat.points-self.BASE_RATING)/self.STD, 0.0)
 
-  def process_match(self, l, r, outcome):
+  def process_match(self, participants, outcome):
+    changes = [0] * len(participants)
+    for curr, matches in outcome.as_dict().items():
+      for opponent, sr in matches:
+        changes[curr] += self._process_pair(participants[curr], participants[opponent], sr)[0].delta_rating
+    ret = []
+    for i, prof in enumerate(participants):
+      newrat = Rating(prof.ratings[self.name()].points + changes[i])
+      ret.append(RatChange(newrat, changes[i], self.rating_to_stars(newrat)))
+    return ret
+
+  def _process_pair(self, l, r, sr):
     lpts = l.ratings[self.name()].points
     rpts = r.ratings[self.name()].points
     ql = 10**(lpts/(self.STD*2))
     qr = 10**(rpts/(self.STD*2))
-    er = qr/(ql+qr)
-    sr = np.interp(outcome.value, [-1,1], [0,1])
+    er = ql/(ql+qr)
     delta = sr-er
-    dl = round(self._get_k(l) * -delta)
-    dr = round(self._get_k(r) *  delta)
+    dl = round(self._get_k(l) * delta)
+    dr = round(self._get_k(r) *-delta)
     new_lrat = Rating(lpts+dl)
     new_rrat = Rating(rpts+dr)
     return [
@@ -90,24 +100,19 @@ class Glicko(RatingBackend):
     return max((rat.points-self.BASE_POINTS)/self.MAX_RD, 0.0)
 
   # http://glicko.net/glicko/glicko.pdf
-  def process_match(self, l, r, outcome):
-    lrat = l.ratings[self.name()]
-    rrat = r.ratings[self.name()]
-    assert self.MIN_RD <= lrat.rd <= self.MAX_RD
-    assert self.MIN_RD <= rrat.rd <= self.MAX_RD
-    lrat.rd = self._update_rd(lrat)
-    rrat.rd = self._update_rd(rrat)
-    converted_outcome = {
-      Outcome.WIN_LEFT: 1,
-      Outcome.DRAW: 1/2,
-      Outcome.WIN_RIGHT: 0,
-    }[outcome]
-    new_lrat = self._calc_new_rat(lrat, rrat, converted_outcome)
-    new_rrat = self._calc_new_rat(rrat, lrat, 1-converted_outcome)
-    return [
-      RatChange(new_lrat, new_lrat.points-lrat.points, self.rating_to_stars(new_lrat)),
-      RatChange(new_rrat, new_rrat.points-rrat.points, self.rating_to_stars(new_rrat)),
-    ]
+  def process_match(self, participants, outcome):
+    for i in outcome.as_dict().keys():
+      currat = participants[i].ratings[self.name()]
+      assert self.MIN_RD <= currat.rd <= self.MAX_RD
+      currat.rd = self._update_rd(currat)
+      assert self.MIN_RD <= currat.rd <= self.MAX_RD
+
+    ret = []
+    for i, matches in sorted(outcome.as_dict().items()):
+      currat = participants[i].ratings[self.name()]
+      newrat = self._calc_new_rat(currat, [participants[m[0]].ratings[self.name()] for m in matches], [m[1] for m in matches])
+      ret.append(RatChange(newrat, newrat.points-currat.points, self.rating_to_stars(newrat)))
+    return ret
 
   def _update_rd(self, rating:Rating) -> int:
     days_since_last_match = (time.time()-rating.timestamp)/86400
@@ -115,16 +120,16 @@ class Glicko(RatingBackend):
     new_rd = round(math.sqrt(rating.rd**2 + c**2))
     return min(new_rd, self.MAX_RD)
 
-  def _calc_new_rat(self, main:Rating, opponent:Rating, s:float) -> Rating:
+  def _calc_new_rat(self, main:Rating, opponents:list[Rating], results:list[float]) -> Rating:
     q = math.log(10)/400
     # almost a straight line, g close to 1 at rd=0 and slowly lowers to .67 at rd=350
-    g = 1/math.sqrt(1 + 3 * q**2 * opponent.rd**2 / math.pi**2)
+    g = lambda rdj: 1/math.sqrt(1 + 3 * q**2 * rdj**2 / math.pi**2)
     # expected outcome, closer to extremes [0,1] when rd is low
-    e = 1/(1 + 10**(-g*(main.points-opponent.points)/400))
+    e = lambda rj,rdj: 1/(1 + 10**(-g(rdj)*(main.points-rj)/400))
     # huuuuuge number, 200k even at rd=0, and grows as 4th power
-    d2 = 1/(q**2 * g**2 * e*(1-e))
-    new_pts = main.points + q/(1/main.rd**2+1/d2) * g*(s-e)
-
+    d2 = 1/(q**2 * sum([g(p.rd)**2 * e(p.points,p.rd)*(1-e(p.points,p.rd))
+                        for p in opponents]))
+    new_pts = main.points + q/(1/main.rd**2+1/d2) * sum([g(p.rd)*(s-e(p.points,p.rd)) for p,s in zip(opponents,results)])
     new_rd = math.sqrt(1/(1/main.rd**2 + 1/d2))
 
     return Rating(
