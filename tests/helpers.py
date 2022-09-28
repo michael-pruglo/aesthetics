@@ -1,7 +1,9 @@
 import os
 import shutil
 import random
+import string
 from typing import Iterable
+from ae_rater_types import Outcome
 
 from src.helpers import file_extension
 from src.metadata import get_metadata, write_metadata
@@ -60,3 +62,8 @@ def disk_cleanup() -> None:
       extra_file = os.path.join(MEDIA_FOLDER, f)
       if os.path.exists(extra_file):
         os.remove(extra_file)
+
+def generate_outcome(n:int) -> Outcome:
+  s = string.ascii_lowercase[:n] + ' '*random.randint(0,3*n)  # 3n to counteract bias towards draws
+  s = ''.join(random.sample(s,len(s))).strip()
+  return Outcome(s)

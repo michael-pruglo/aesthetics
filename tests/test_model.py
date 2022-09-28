@@ -8,7 +8,7 @@ from metadata import get_metadata
 from ae_rater_types import Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
 import tests.helpers as hlp
-from tests.helpers import MEDIA_FOLDER, SKIPLONG
+from tests.helpers import MEDIA_FOLDER, SKIPLONG, generate_outcome
 
 
 def is_sorted(l:list[ProfileInfo]) -> bool:
@@ -35,9 +35,13 @@ class TestCompetition(unittest.TestCase):
     return next(p for p in ldbrd if p.fullname==fullname)
 
   def test_match_generation(self):
+    def all_unique(li):
+      seen = list()
+      return not any(i in seen or seen.append(i) for i in li)
+
     for _ in range(15):
       participants = self.model.generate_match()
-      self.assertNotEqual(participants[0], participants[1])
+      self.assertTrue(all_unique(participants))
       self.assertListEqual(self.model.get_curr_match(), participants)
 
   def test_get_leaderboard(self):
@@ -83,31 +87,29 @@ class TestCompetition(unittest.TestCase):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
     hlp.backup_files(all_files)
 
-    for _ in range(100):
-      l, r = self.model.generate_match()[:2]
-      l_tags, l_stars = get_metadata(l.fullname)
-      r_tags, r_stars = get_metadata(r.fullname)
-      outcome = random.choice([Outcome("a b"), Outcome("ab"), Outcome("b a")])
+    for _ in range(42):
+      n = random.randint(2,15)
+      participants = self.model.generate_match(n)
+      metadata = [get_metadata(p.fullname) for p in participants]
+      outcome = generate_outcome(n)
       self.model.consume_result(outcome)
-      new_l = self._get_leaderboard_line(l.fullname)
-      new_r = self._get_leaderboard_line(r.fullname)
-      new_l_tags, new_l_stars = get_metadata(l.fullname)
-      new_r_tags, new_r_stars = get_metadata(r.fullname)
+      self.assertEqual(len(self.model.get_curr_match()), 0)
+      news = [self._get_leaderboard_line(p.fullname) for p in participants]
+      new_metadata = [get_metadata(p.fullname) for p in participants]
 
-      dbg_info = f"\n{l} {r}\n{new_l} {new_r}\n {outcome}"
-      self.assertEqual(new_l.nmatches, l.nmatches+1, dbg_info)
-      self.assertEqual(new_r.nmatches, r.nmatches+1, dbg_info)
-      self.assertEqual(len(self.model.get_curr_match()), 0, dbg_info)
-      self.assertEqual(l_tags, new_l_tags)
-      self.assertEqual(r_tags, new_r_tags)
-      self.assertEqual(l_stars, int(l.stars))
-      self.assertEqual(r_stars, int(r.stars))
-      self.assertEqual(new_l_stars, int(new_l.stars))
-      self.assertEqual(new_r_stars, int(new_r.stars))
-      self.assertTrue(all(l.ratings[s].rd >= new_l.ratings[s].rd for s in l.ratings.keys() if l.ratings[s].rd))
-      self.assertTrue(all(r.ratings[s].rd >= new_r.ratings[s].rd for s in r.ratings.keys() if r.ratings[s].rd))
-      self.assertTrue(all(l.ratings[s].timestamp < new_l.ratings[s].timestamp for s in l.ratings.keys()))
-      self.assertTrue(all(r.ratings[s].timestamp < new_r.ratings[s].timestamp for s in r.ratings.keys()))
+      for old_p, old_meta, new_p, new_meta in zip(participants, metadata, news, new_metadata):
+        dbg_info = '\n'.join(map(str, [old_p, old_meta, new_p, new_meta]))
+        self.assertEqual(new_p.nmatches, old_p.nmatches+1, dbg_info)
+        disk_tags_old, disk_tags_new = old_meta[0], new_meta[0]
+        disk_stars_old, disk_stars_new = old_meta[1], new_meta[1]
+        self.assertSetEqual(disk_tags_old, disk_tags_new)
+        self.assertEqual(int(old_p.stars), disk_stars_old)
+        self.assertEqual(int(new_p.stars), disk_stars_new)
+        for ratsys in old_p.ratings.keys():
+          old_rating = old_p.ratings[ratsys]
+          new_rating = new_p.ratings[ratsys]
+          self.assertLessEqual(new_rating.rd, old_rating.rd)
+          self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
 
   @unittest.skipIf(*SKIPLONG)
   def test_long_term(self):
