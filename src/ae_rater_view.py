@@ -266,7 +266,7 @@ class Leaderboard(tk.Text):
 
 
 class RaterGui:
-  def __init__(self, give_boost_cb:Callable[[str],None]):
+  def __init__(self, give_boost_cb:Callable[[str],None]=None):
     self.root = tk.Tk()
     self.root.geometry("1766x878+77+77")
     self.root.title("aesthetics")
@@ -298,12 +298,13 @@ class RaterGui:
       self._enable_arrows(True)
 
   def conclude_match(self, opinions:RatingOpinions,
-                     initiate_next_match_cb:Callable) -> None:
+                     initiate_next_match_cb:Callable=None) -> None:
     for system_name,changes in opinions.items():
       for card,change in zip(self.cards, changes):
         card.show_results(system_name, change)
 
-    self.root.after(CHANGE_MATCH_DELAY, initiate_next_match_cb)
+    if initiate_next_match_cb:
+      self.root.after(CHANGE_MATCH_DELAY, initiate_next_match_cb)
 
   def display_leaderboard(self, leaderboard:list[ProfileInfo],
                           feature:list[ProfileInfo]=None, outcome:Outcome=None) -> None:
