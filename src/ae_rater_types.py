@@ -99,7 +99,15 @@ RatingOpinions = dict[RatSystemName, list[RatChange]]
 
 class Outcome:
   def __init__(self, tiers:str):
-    self.tiers = tiers
+    self.tiers = ' '.join(tiers.split())
+
+  def __eq__(self, other):
+    if not isinstance(other, type(self)):
+      return False
+    return self.tiers == other.tiers
+
+  def __hash__(self) -> int:
+    return hash(self.tiers)
 
   def as_dict(self) -> dict[str, list[tuple[str,float]]]:
     def idx(letter):

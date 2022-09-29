@@ -12,7 +12,7 @@ import helpers as hlp
 from ae_rater_types import *
 
 
-CHANGE_MATCH_DELAY = 2500
+CHANGE_MATCH_DELAY = 1500
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -145,11 +145,6 @@ class ProfileCard(tk.Frame):
 
 
 class Leaderboard(tk.Text):
-  class FeatureType(Enum):
-    NONE = auto()
-    LEFT = auto()
-    RIGHT = auto()
-
   @dataclass
   class LineVisualCfg:
     bgs: list[str]
@@ -169,30 +164,29 @@ class Leaderboard(tk.Text):
     self.configure(state=tk.NORMAL)
     self.delete("1.0", tk.END)
 
-    displayed_rows:dict[int,Leaderboard.FeatureType] = {}
+    displayed_rows:dict[int,str] = {}
     for i in range(min(self.HEAD_LEN, len(leaderboard))):
-      displayed_rows.setdefault(i, self.FeatureType.NONE)
+      displayed_rows.setdefault(i, "")
 
-    feature_type_seq = [self.FeatureType.LEFT, self.FeatureType.RIGHT] * (len(feature)//2)
-    for i, (featured,feature_type) in enumerate(zip(feature, feature_type_seq)):
+    for i, featured in enumerate(feature):
       letter = chr(ord('a')+i)
       rank = next(j for j,p in enumerate(leaderboard) if p.fullname==featured.fullname)
       for j in range(max(0,rank-context), min(len(leaderboard),rank+context+1)):
-        displayed_rows.setdefault(j, self.FeatureType.NONE)
-      displayed_rows[rank] = feature_type
+        displayed_rows.setdefault(j, "")
+      displayed_rows[rank] = letter
 
     prev = -1
     for i in sorted(displayed_rows.keys()):
       if i-prev != 1:
         self.tag_configure('chunk_break', foreground=BTFL_LIGHT_GRAY, justify="center", spacing1=10, spacing3=10)
         self.insert(tk.END, "...\n", 'chunk_break')
-      self._write_profile(i, leaderboard[i], displayed_rows[i], outcome)
+      self._write_profile(i, leaderboard[i], displayed_rows[i], len(feature)==2, outcome)
       prev = i
 
     self.configure(state=tk.DISABLED)
 
-  def _write_profile(self, idx:int, prof:ProfileInfo, feat:FeatureType, outcome):
-    cfg = self._get_line_visual_cfg(feat, outcome)
+  def _write_profile(self, idx:int, prof:ProfileInfo, letter:str, both_sides:bool, outcome):
+    cfg = self._get_line_visual_cfg(letter, both_sides, outcome)
 
     tagfix = 'tag_prefix'+str(idx)
     self.tag_configure(tagfix, background=cfg.bgs[0], foreground=cfg.fgfeatured, spacing1=cfg.spacing, spacing3=cfg.spacing)
@@ -214,45 +208,56 @@ class Leaderboard(tk.Text):
 
     self.insert(tk.END, '\n')
 
-  def _get_line_visual_cfg(self, feat, outcome) -> LineVisualCfg:
+  def _get_line_visual_cfg(self, letter, both_sides, outcome) -> LineVisualCfg:
     default_bg = BTFL_DARK_BG
     lenfix = 3
     featured_spacing = 10
 
-    if feat == self.FeatureType.LEFT:
-      outcome_bg = {
-        Outcome("a b"): LEFT_COLORWIN,
-        Outcome("ab"): COLORDRAW,
-        Outcome("b a"): LEFT_COLORBG,
-      }.get(outcome, LEFT_COLORBG)
+    if letter == "":
       return self.LineVisualCfg(
-        bgs = [outcome_bg]*2 + [default_bg],
+        bgs = [default_bg, "#282828", default_bg],
+        is_featured = False,
+        fgfeatured = BTFL_LIGHT_GRAY,
+        spacing = 0,
+        textfixs = [' '*lenfix,' '*lenfix],
+      )
+
+    if both_sides:
+      if letter == "a":
+        outcome_bg = {
+          Outcome("a b"): LEFT_COLORWIN,
+          Outcome("ab"): COLORDRAW,
+          Outcome("b a"): LEFT_COLORBG,
+        }.get(outcome, LEFT_COLORBG)
+        return self.LineVisualCfg(
+          bgs = [outcome_bg]*2 + [default_bg],
+          is_featured = True,
+          fgfeatured = LEFT_COLORFG,
+          spacing = featured_spacing,
+          textfixs = ['<'*lenfix,' '*lenfix],
+        )
+      else:
+        assert letter == "b"
+        outcome_bg = {
+          Outcome("a b"): RIGHT_COLORBG,
+          Outcome("ab"): COLORDRAW,
+          Outcome("b a"): RIGHT_COLORWIN,
+        }.get(outcome, RIGHT_COLORBG)
+        return self.LineVisualCfg(
+          bgs = [default_bg] + [outcome_bg]*2,
+          is_featured = True,
+          fgfeatured = RIGHT_COLORFG,
+          spacing = featured_spacing,
+          textfixs = [' '*lenfix,'>'*lenfix],
+        )
+    else:
+      return self.LineVisualCfg(
+        bgs = [LEFT_COLORWIN if outcome else LEFT_COLORBG]*2 + [default_bg],
         is_featured = True,
         fgfeatured = LEFT_COLORFG,
         spacing = featured_spacing,
-        textfixs = ['<'*lenfix,' '*lenfix],
+        textfixs = [' '+letter+' ',' '*lenfix],
       )
-    if feat == self.FeatureType.RIGHT:
-      outcome_bg = {
-        Outcome("a b"): RIGHT_COLORBG,
-        Outcome("ab"): COLORDRAW,
-        Outcome("b a"): RIGHT_COLORWIN,
-      }.get(outcome, RIGHT_COLORBG)
-      return self.LineVisualCfg(
-        bgs = [default_bg] + [outcome_bg]*2,
-        is_featured = True,
-        fgfeatured = RIGHT_COLORFG,
-        spacing = featured_spacing,
-        textfixs = [' '*lenfix,'>'*lenfix],
-      )
-
-    return self.LineVisualCfg(
-      bgs = [default_bg, "#282828", default_bg],
-      is_featured = False,
-      fgfeatured = BTFL_LIGHT_GRAY,
-      spacing = 0,
-      textfixs = [' '*lenfix,' '*lenfix],
-    )
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple[str,str,str]]:
     rat_color = ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][min(5, int(prof.stars))]
@@ -371,7 +376,7 @@ class RaterGui:
           self.input_outcome.configure(background="#911")
           return
         coloring[idx] = color
-    
+
     for idx, color in coloring.items():
       self.cards[idx].set_style(color=color)
 
