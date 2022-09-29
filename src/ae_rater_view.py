@@ -174,10 +174,11 @@ class Leaderboard(tk.Text):
       displayed_rows.setdefault(i, self.FeatureType.NONE)
 
     feature_type_seq = [self.FeatureType.LEFT, self.FeatureType.RIGHT] * (len(feature)//2)
-    for featured,feature_type in zip(feature, feature_type_seq):
-      rank = next(i for i,p in enumerate(leaderboard) if p.fullname==featured.fullname)
-      for i in range(max(0,rank-context), min(len(leaderboard),rank+context+1)):
-        displayed_rows.setdefault(i, self.FeatureType.NONE)
+    for i, (featured,feature_type) in enumerate(zip(feature, feature_type_seq)):
+      letter = chr(ord('a')+i)
+      rank = next(j for j,p in enumerate(leaderboard) if p.fullname==featured.fullname)
+      for j in range(max(0,rank-context), min(len(leaderboard),rank+context+1)):
+        displayed_rows.setdefault(j, self.FeatureType.NONE)
       displayed_rows[rank] = feature_type
 
     prev = -1
@@ -288,8 +289,8 @@ class RaterGui:
     self.content_outcome = tk.StringVar()
     self.label_outcome = ttk.Label(self.root, anchor="center", text="enter outcome string:")
     self.input_outcome = tk.Entry(self.root, fg="#ddd", insertbackground="#ddd", insertwidth=4,
-                                  font=("Arial", 12, "bold"), justify="center",
-                                  textvariable=self.content_outcome)
+                                  font=("Arial", 14, "bold"), justify="center",
+                                  textvariable=self.content_outcome, border=0)
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
@@ -340,14 +341,14 @@ class RaterGui:
       COLS = (n+ROWS-1)//ROWS
       LDBRD_W = 0.24
       SINGLE_W = (1-LDBRD_W)/COLS
-      INP_H = 0.06
-      INP_LBL_H = INP_H*0.3
+      INP_H = 0.055
+      INP_LBL_H = INP_H*0.35
       for i in range(n):
         self.cards.append(ProfileCard(i, n, self.root))
         self.cards[i].place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
-      self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H, relwidth=LDBRD_W)
+      self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H-INP_LBL_H, relwidth=LDBRD_W)
       self.input_outcome.focus()
       self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
     else:
@@ -357,17 +358,22 @@ class RaterGui:
     for card in self.cards:
       card.set_style(None)
 
+    coloring = {}
     tiers = self.content_outcome.get().split()
     self.input_outcome.configure(background="#444")
     MAXCOLOR = 0x99
-    for tier, x in zip(tiers, linspace(0, MAXCOLOR, len(tiers))):
+    color_intensities = linspace(0, MAXCOLOR, len(tiers))
+    for tier, x in zip(tiers, color_intensities):
       color = f"#{int(x):02x}{MAXCOLOR-int(x):02x}00"
       for letter in tier:
         idx = ord(letter)-ord('a')
-        if idx<0 or idx>=n:
+        if idx<0 or idx>=n or idx in coloring:
           self.input_outcome.configure(background="#911")
           return
-        self.cards[idx].set_style(color=color)
+        coloring[idx] = color
+    
+    for idx, color in coloring.items():
+      self.cards[idx].set_style(color=color)
 
   def _enable_arrows(self, enable:bool, callback:Callable=None):
     for key in '<Left>', '<Right>', '<Up>':
@@ -402,7 +408,6 @@ class RaterGui:
       self.input_outcome.unbind('<Return>')
 
   def _on_input_received(self, event, n, callback):
-    # TODO: beautiful style gradient to show winners/losers
     outcome = Outcome(self.input_outcome.get())
     if outcome.is_valid(n):
       self._enable_input(False)
