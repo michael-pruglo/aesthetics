@@ -12,7 +12,7 @@ import helpers as hlp
 from ae_rater_types import *
 
 
-CHANGE_MATCH_DELAY = 5000
+CHANGE_MATCH_DELAY = 2500
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -283,8 +283,11 @@ class RaterGui:
                           justify="center", padding=(10,10),
                           text="<-/-> to choose winner\n^ to draw\nCtrl+ <-/-> to give boost")
 
+    self.content_outcome = tk.StringVar()
+    self.label_outcome = ttk.Label(self.root, anchor="center", text="enter outcome string:")
     self.input_outcome = tk.Entry(self.root, fg="#ddd", font=("Arial", 12, "bold"),
-                                  justify="center", )
+                                  justify="center", textvariable=self.content_outcome)
+    self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome())
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
@@ -327,20 +330,33 @@ class RaterGui:
         self.cards[i].place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
       self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
       self.help.place(relx=0.5-LDBRD_W/2, rely=1-HELP_H, relwidth=LDBRD_W, relheight=HELP_H)
+      self.label_outcome.place_forget()
+      self.input_outcome.place_forget()
     elif 2 < n <= 12:
       self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
       ROWS = 1 if n<6 else 2
       COLS = (n+ROWS-1)//ROWS
       LDBRD_W = 0.24
       SINGLE_W = (1-LDBRD_W)/COLS
-      INP_H = 0.04
+      INP_H = 0.06
+      INP_LBL_H = INP_H*0.3
       for i in range(n):
         self.cards.append(ProfileCard(i, n, self.root))
         self.cards[i].place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
-      self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_H, relwidth=LDBRD_W)
+      self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
+      self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H, relwidth=LDBRD_W)
+      self.input_outcome.focus()
     else:
       raise NotImplementedError(f"cannot show gui for {n} cards")
+
+  def _highlight_curr_outcome(self):
+    tiers = self.content_outcome.get().split()
+    colors = ["#0f0","#0c0", "#090", "#900", "#c00", "#f00"]
+    for tier, color in zip(tiers, colors):
+      for letter in tier:
+        idx = ord(letter)-ord('a')
+        self.cards[idx].tags.configure(background=color)
 
   def _enable_arrows(self, enable:bool, callback:Callable=None):
     for key in '<Left>', '<Right>', '<Up>':
@@ -368,16 +384,11 @@ class RaterGui:
   def _enable_input(self, enable:bool, n:int=0, callback:Callable=None):
     if enable:
       self.input_outcome.config(state=tk.NORMAL, background="#444")
-      self._clear_input_outcome()
-      self.input_outcome.insert(tk.END, "Enter outcome string")
-      self.input_outcome.bind('<Button-1>', self._clear_input_outcome)
+      self.input_outcome.delete(0, tk.END)
       self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n, callback=callback))
     else:
       self.input_outcome.config(state=tk.DISABLED)
       self.input_outcome.unbind('<Return>')
-
-  def _clear_input_outcome(self, event=None):
-    self.input_outcome.delete(0, tk.END)
 
   def _on_input_received(self, event, n, callback):
     # TODO: beautiful style gradient to show winners/losers
