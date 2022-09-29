@@ -287,8 +287,9 @@ class RaterGui:
 
     self.content_outcome = tk.StringVar()
     self.label_outcome = ttk.Label(self.root, anchor="center", text="enter outcome string:")
-    self.input_outcome = tk.Entry(self.root, fg="#ddd", font=("Arial", 12, "bold"),
-                                  justify="center", textvariable=self.content_outcome)
+    self.input_outcome = tk.Entry(self.root, fg="#ddd", insertbackground="#ddd", insertwidth=4,
+                                  font=("Arial", 12, "bold"), justify="center",
+                                  textvariable=self.content_outcome)
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
