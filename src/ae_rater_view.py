@@ -283,7 +283,7 @@ class RaterGui:
                           justify="center", padding=(10,10),
                           text="<-/-> to choose winner\n^ to draw\nCtrl+ <-/-> to give boost")
 
-    self.input_outcome = tk.Entry(self.root, bg="#444", fg="#ddd", font=("Arial", 12, "bold"),
+    self.input_outcome = tk.Entry(self.root, fg="#ddd", font=("Arial", 12, "bold"),
                                   justify="center", )
     self.input_outcome.insert(tk.END, "Enter outcome string")
     self.give_boost_cb = give_boost_cb
@@ -368,18 +368,20 @@ class RaterGui:
 
   def _enable_input(self, enable:bool, n:int=0, callback:Callable=None):
     if enable:
-      self.input_outcome.config(state=tk.NORMAL)
+      self.input_outcome.config(state=tk.NORMAL, background="#444")
       self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n, callback=callback))
     else:
       self.input_outcome.config(state=tk.DISABLED)
       self.input_outcome.unbind('<Return>')
 
   def _on_input_received(self, event, n, callback):
-    self._enable_input(False)
     # TODO: beautiful style gradient to show winners/losers
     outcome = Outcome(self.input_outcome.get())
-    assert outcome.is_valid(n)
-    callback(outcome)
+    if outcome.is_valid(n):
+      self._enable_input(False)
+      callback(outcome)
+    else:
+      self.input_outcome.config(background="red")
 
   def _on_give_boost(self, event):
     assert self.curr_prof_shnames

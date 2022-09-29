@@ -100,12 +100,12 @@ RatingOpinions = dict[RatSystemName, list[RatChange]]
 class Outcome:
   def __init__(self, tiers:str):
     self.tiers = tiers
-    assert self.is_valid()
 
   def as_dict(self) -> dict[str, list[tuple[str,float]]]:
     def idx(letter):
       return ord(letter)-ord('a')
 
+    assert self.is_valid()
     matches = {}
     li_tiers = self.tiers.split()
     for i, tier in enumerate(li_tiers):
