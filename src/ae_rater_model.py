@@ -20,7 +20,8 @@ class RatingCompetition:
       for s in self.rat_systems:
         default_values.update(s.get_default_values(stars))
       return default_values
-    self.db = DBAccess(img_dir, refresh, default_values_getter)
+    self.db = DBAccess(img_dir, refresh, default_values_getter,
+                       [s.name() for s in self.rat_systems])
 
   def get_curr_match(self) -> list[ProfileInfo]:
     return self.curr_match
@@ -75,10 +76,12 @@ class RatingCompetition:
 
 
 class DBAccess:
-  def __init__(self, img_dir:str, refresh:bool, default_values_getter:Callable[[int],dict]) -> None:
+  def __init__(self, img_dir:str, refresh:bool, default_values_getter:Callable[[int],dict],
+               sysnames:list[str]) -> None:
     self.img_dir = img_dir
     self.meta_mgr = MetadataManager(img_dir, refresh, default_values_getter)
     self.history_mgr = HistoryManager(img_dir)
+    self.sysnames = sysnames
 
   def save_match(self, profiles:list[ProfileInfo], outcome:Outcome) -> None:
     self.history_mgr.save_match(
@@ -125,15 +128,13 @@ class DBAccess:
       'tags': str,
       'stars': np.float64,
       'nmatches': np.int64,
-
-      # TODO: generalize
-      'ELO_pts': np.int64,
-      'ELO_rd': np.int64,
-      'ELO_time': np.float64,
-      'Glicko_pts': np.int64,
-      'Glicko_rd': np.int64,
-      'Glicko_time': np.float64,
     }
+    for sname in self.sysnames:
+      expected_dtypes |= {
+        sname+'_pts': np.int64,
+        sname+'_rd': np.int64,
+        sname+'_time': np.float64,
+      }
     assert all(col in info.index for col in expected_dtypes.keys()), str(info)
     assert 0 <= info['stars']
     for col,t in expected_dtypes.items():
@@ -143,10 +144,8 @@ class DBAccess:
       tags=info['tags'],
       fullname=os.path.join(self.img_dir, short_name),
       stars=info['stars'],
-      ratings={
-        'Glicko': Rating(info['Glicko_pts'], info['Glicko_rd'], info['Glicko_time']),
-        'ELO': Rating(info['ELO_pts'], info['ELO_rd'], info['ELO_time']),
-      },
+      ratings={sname:Rating(info[sname+'_pts'], info[sname+'_rd'], info[sname+'_time'])
+               for sname in self.sysnames},
       nmatches=int(info['nmatches']),
     )
 
