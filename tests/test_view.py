@@ -4,7 +4,7 @@ import unittest
 
 from ae_rater_types import ProfileInfo, RatChange, Rating
 from ae_rater_view import RaterGui
-from tests.helpers import MEDIA_FOLDER, get_initial_mediafiles
+from tests.helpers import MEDIA_FOLDER, SKIPLONG, get_initial_mediafiles
 
 
 def generate_profiles(n:int) -> list[ProfileInfo]:
@@ -42,6 +42,7 @@ def can_create_window() -> bool:
     return False
 
 
+@unittest.skipIf(*SKIPLONG)
 @unittest.skipUnless(can_create_window(), "cannot create tk interface")
 class TestView(unittest.TestCase):
   def _test_competition_window(self, n:int):
@@ -58,5 +59,5 @@ class TestView(unittest.TestCase):
     gui.root.destroy()
 
   def test_gui(self):
-    for n in 2,10:
+    for n in [2,10] + random.sample(range(3,13),2):
       self._test_competition_window(n)

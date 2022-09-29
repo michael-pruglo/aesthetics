@@ -11,6 +11,15 @@ Run gui app with
 ```bash
 python src/ae_rater.py [path/to/media] [n_cards=2]
 ```
+Where `n_cards` is the number of participants in one match (increase efficiency of rating). <br>
+If `n_cards > 2` then you have to supply results in a string form. Each participant has it's own id letter (a,b,c,...). The result string consists of words separated by whitespace. Each word represents a tier, starting from the winners. For example:
+
+```
+f ea cb d
+```
+means that the media with id `f` is the strongest, `e` and `a` tie for the second place, `c` and `b` tie for the third place, and `d` is the weakest.
+
+
 
 Run tests with
 ```bash

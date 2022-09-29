@@ -282,6 +282,7 @@ class RaterGui:
                           justify="center", padding=(10,10),
                           text="<-/-> to choose winner\n^ to draw\nCtrl+ <-/-> to give boost")
 
+    self.input_outcome = tk.Text(self.root,background="#444")
     self.report_outcome_cb = None
     self.give_boost_cb = give_boost_cb
 
@@ -323,14 +324,18 @@ class RaterGui:
         self.cards[i].place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
       self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
       self.help.place(relx=0.5-LDBRD_W/2, rely=1-HELP_H, relwidth=LDBRD_W, relheight=HELP_H)
-    elif n==10:
+    elif 2 < n <= 12:
       self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
+      ROWS = 1 if n<6 else 2
+      COLS = (n+ROWS-1)//ROWS
       LDBRD_W = 0.24
-      SINGLE_W = (1-LDBRD_W)/5
+      SINGLE_W = (1-LDBRD_W)/COLS
+      INP_H = 0.04
       for i in range(n):
         self.cards.append(ProfileCard(i, n, self.root))
-        self.cards[i].place(relx=i%5*SINGLE_W, rely=i//5*0.5, relwidth=SINGLE_W, relheight=0.5)
-      self.leaderboard.place(relx=1-LDBRD_W, relheight=1, relwidth=LDBRD_W)
+        self.cards[i].place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
+      self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
+      self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_H, relwidth=LDBRD_W)
     else:
       raise NotImplementedError(f"cannot show gui for {n} cards")
 
