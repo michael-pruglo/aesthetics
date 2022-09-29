@@ -116,7 +116,7 @@ class TestCompetition(unittest.TestCase):
     hlp.backup_files(all_files)
 
     losses = LongTermTester(self.model, num_participants=n, verbosity=1).run()
-    self.assertLess(losses[-1], 0.9)
+    self.assertLess(losses[-1], 0.9, f"num_participants={n}")
     self.assertLess(losses[-1]/losses[0], 10)
 
   @unittest.skipIf(*SKIPLONG)
@@ -125,7 +125,11 @@ class TestCompetition(unittest.TestCase):
 
   @unittest.skipIf(*SKIPLONG)
   def test_long_term_3plus(self):
-    self._long_term(random.randint(3, max(3,self.N-3)))
+    hi = min(12, self.N-3)
+    if hi<3:
+      self.fail(f"{self.N} images is not enough")
+    else:
+      self._long_term(random.randint(3, hi))
 
 
 class LongTermTester:
@@ -138,7 +142,7 @@ class LongTermTester:
     random.shuffle(ranks)
     self.true_leaderboard = {p.fullname:rank for p,rank in zip(ldbrd,ranks)}
 
-  def run(self, epochs=10, matches_each=20) -> list[float]:
+  def run(self, epochs=15, matches_each=20) -> list[float]:
     if self.verbosity: print()
     losses = []
     for epoch in range(epochs):
@@ -151,7 +155,7 @@ class LongTermTester:
       losses.append(self._loss())
       if self.verbosity: print(f"{epoch}: loss = {losses[-1]}")
       if self.verbosity>1: print("\n\n\n")
-      if losses[-1] == 0:
+      if losses[-1] < 0.1:
         return losses
 
     return losses
