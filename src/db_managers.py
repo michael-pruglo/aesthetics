@@ -131,8 +131,7 @@ class HistoryManager:
     self.matches_fname = os.path.join(img_dir, 'match_history.csv')
     match_history_dtypes = {
       "timestamp": float,
-      "name1": str,
-      "name2": str,
+      "names": str,
       "outcome": str,
     }
     if os.path.exists(self.matches_fname):
@@ -155,8 +154,8 @@ class HistoryManager:
       logging.info("boosts csv does not exist, create")
       self.boosts_df = pd.DataFrame(columns=boosts_dtypes.keys())
 
-  def save_match(self, timestamp:float, name1:str, name2:str, outcome:str) -> None:
-    self.matches_df.loc[len(self.matches_df)] = [timestamp, name1, name2, outcome]
+  def save_match(self, timestamp:float, names:list[str], outcome:str) -> None:
+    self.matches_df.loc[len(self.matches_df)] = [timestamp, names, outcome]
     self.matches_df.to_csv(self.matches_fname, index=False)
 
   def save_boost(self, timestamp:float, name:str) -> None:

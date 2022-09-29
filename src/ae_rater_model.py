@@ -83,8 +83,7 @@ class DBAccess:
   def save_match(self, profiles:list[ProfileInfo], outcome:Outcome) -> None:
     self.history_mgr.save_match(
       time.time(),
-      short_fname(profiles[0].fullname),
-      short_fname(profiles[1].fullname),
+      [short_fname(p.fullname) for p in profiles],
       outcome.tiers
     )
 
