@@ -371,6 +371,8 @@ class RaterGui:
     for tier, x in zip(tiers, color_intensities):
       color = f"#{int(x):02x}{MAXCOLOR-int(x):02x}00"
       for letter in tier:
+        if letter == '+':
+          continue
         idx = ord(letter)-ord('a')
         if idx<0 or idx>=n or idx in coloring:
           self.input_outcome.configure(background="#911")
@@ -413,7 +415,18 @@ class RaterGui:
       self.input_outcome.unbind('<Return>')
 
   def _on_input_received(self, event, n, callback):
-    outcome = Outcome(self.input_outcome.get())
+    given_str = self.input_outcome.get()
+    while True:
+      pos = given_str.find('+')
+      if pos==-1:
+        break
+      else:
+        letter_boost = given_str[pos-1]
+        idx_boost = ord(letter_boost)-ord('a')
+        self.give_boost_cb(self.curr_prof_shnames[idx_boost])
+        given_str = given_str[:pos]+given_str[pos+1:]
+
+    outcome = Outcome(given_str)
     if outcome.is_valid(n):
       self._enable_input(False)
       callback(outcome)
