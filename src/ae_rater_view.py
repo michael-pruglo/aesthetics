@@ -285,7 +285,6 @@ class RaterGui:
 
     self.input_outcome = tk.Entry(self.root, fg="#ddd", font=("Arial", 12, "bold"),
                                   justify="center", )
-    self.input_outcome.insert(tk.END, "Enter outcome string")
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
@@ -369,10 +368,16 @@ class RaterGui:
   def _enable_input(self, enable:bool, n:int=0, callback:Callable=None):
     if enable:
       self.input_outcome.config(state=tk.NORMAL, background="#444")
+      self._clear_input_outcome()
+      self.input_outcome.insert(tk.END, "Enter outcome string")
+      self.input_outcome.bind('<Button-1>', self._clear_input_outcome)
       self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n, callback=callback))
     else:
       self.input_outcome.config(state=tk.DISABLED)
       self.input_outcome.unbind('<Return>')
+
+  def _clear_input_outcome(self, event=None):
+    self.input_outcome.delete(0, tk.END)
 
   def _on_input_received(self, event, n, callback):
     # TODO: beautiful style gradient to show winners/losers
