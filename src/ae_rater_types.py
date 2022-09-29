@@ -27,7 +27,7 @@ class Rating:
       or (self.points == other.points and self.rd > other.rd)
     )
 
-  def __str__(self):
+  def __repr__(self):
     return f"{self.points}`{self.rd}`"
 
 
@@ -99,8 +99,8 @@ RatingOpinions = dict[RatSystemName, list[RatChange]]
 
 class Outcome:
   def __init__(self, tiers:str):
-    self._validate_str(tiers)
     self.tiers = tiers
+    assert self.is_valid()
 
   def as_dict(self) -> dict[str, list[tuple[str,float]]]:
     def idx(letter):
@@ -121,7 +121,8 @@ class Outcome:
         matches[idx(curr)] = currmatches
     return matches
 
-  @staticmethod
-  def _validate_str(s):
-    s = ''.join(sorted(s.lower())).strip()
-    assert s==string.ascii_lowercase[:len(s)]
+  def is_valid(self, n=None):
+    s = ''.join(sorted(self.tiers.lower())).strip()
+    if n is None:
+      n = len(s)
+    return len(s)==n and s==string.ascii_lowercase[:n]

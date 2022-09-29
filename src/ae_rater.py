@@ -25,10 +25,12 @@ class App:
   def __init__(self, media_dir:str):
     self.model = RatingCompetition(media_dir, refresh=False)
     self.gui = RaterGui(give_boost_cb=self._give_boost)
+    self.num_participants = 2
 
   def run(self, num_participants:int) -> None:
+    self.num_participants = num_participants
     try:
-      self._start_next_match(num_participants)
+      self._start_next_match()
       self.gui.mainloop()
     except Exception:
       logging.exception("")
@@ -41,8 +43,8 @@ class App:
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants, outcome)
     self.gui.conclude_match(rating_opinions, self._start_next_match)
 
-  def _start_next_match(self, num_participants:int) -> None:
-    participants = self.model.generate_match(num_participants)
+  def _start_next_match(self) -> None:
+    participants = self.model.generate_match(self.num_participants)
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
     self.gui.display_match(participants, self._consume_result)
 

@@ -1,3 +1,4 @@
+from functools import partial
 from numpy import interp
 from enum import Enum, auto
 import tkinter as tk
@@ -11,7 +12,7 @@ import helpers as hlp
 from ae_rater_types import *
 
 
-CHANGE_MATCH_DELAY = 90
+CHANGE_MATCH_DELAY = 5000
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -259,7 +260,7 @@ class Leaderboard(tk.Text):
       ('tag_stars', BTFL_DARK_GRANOLA, f"{f'★{prof.stars:.2f}':>5} "),
     ] + [
       (f'tag_rating{sysname}', rat_color, f"{str(rat):>9} ")
-      for sysname,rat in reversed(prof.ratings.items())
+      for sysname,rat in prof.ratings.items()
     ] + [
       ('tag_nmatches', "#"+f"{nmatches_color:02x}"*3, f"{f'({prof.nmatches})':<5}"),
     ]
@@ -282,21 +283,24 @@ class RaterGui:
                           justify="center", padding=(10,10),
                           text="<-/-> to choose winner\n^ to draw\nCtrl+ <-/-> to give boost")
 
-    self.input_outcome = tk.Text(self.root,background="#444")
-    self.report_outcome_cb = None
+    self.input_outcome = tk.Entry(self.root, bg="#444", fg="#ddd", font=("Arial", 12, "bold"),
+                                  justify="center", )
+    self.input_outcome.insert(tk.END, "Enter outcome string")
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
-    if not self.cards:
-      self._prepare_layout(len(profiles))
+    n = len(profiles)
+    if len(self.cards) != n:
+      self._prepare_layout(n)
     self.root.update()
     for card,profile in zip(self.cards, profiles):
       card.show_profile(profile)
       card.set_style(None)
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
-    self.report_outcome_cb = callback
-    if len(profiles) == 2:
-      self._enable_arrows(True)
+    if n == 2:
+      self._enable_arrows(True, callback)
+    else:
+      self._enable_input(True, n, callback)
 
   def conclude_match(self, opinions:RatingOpinions,
                      initiate_next_match_cb:Callable=None) -> None:
@@ -339,17 +343,17 @@ class RaterGui:
     else:
       raise NotImplementedError(f"cannot show gui for {n} cards")
 
-  def _enable_arrows(self, enable:bool):
+  def _enable_arrows(self, enable:bool, callback:Callable=None):
     for key in '<Left>', '<Right>', '<Up>':
       boost_seq = f'<Control-{key[1:-1]}>'
       if enable:
-        self.root.bind(key, self._on_arrow_press)
+        self.root.bind(key, partial(self._on_arrow_press, callback=callback))
         self.root.bind(boost_seq, self._on_give_boost)
       else:
         self.root.unbind(key)
         self.root.unbind(boost_seq)
 
-  def _on_arrow_press(self, event):
+  def _on_arrow_press(self, event, callback):
     self._enable_arrows(False)
 
     outcome = {
@@ -360,7 +364,22 @@ class RaterGui:
     self.cards[0].set_style(-outcome[1])
     self.cards[1].set_style( outcome[1])
     self.root.update()
-    self.report_outcome_cb(outcome[0])
+    callback(outcome[0])
+
+  def _enable_input(self, enable:bool, n:int=0, callback:Callable=None):
+    if enable:
+      self.input_outcome.config(state=tk.NORMAL)
+      self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n, callback=callback))
+    else:
+      self.input_outcome.config(state=tk.DISABLED)
+      self.input_outcome.unbind('<Return>')
+
+  def _on_input_received(self, event, n, callback):
+    self._enable_input(False)
+    # TODO: beautiful style gradient to show winners/losers
+    outcome = Outcome(self.input_outcome.get())
+    assert outcome.is_valid(n)
+    callback(outcome)
 
   def _on_give_boost(self, event):
     assert self.curr_prof_shnames

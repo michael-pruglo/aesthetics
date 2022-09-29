@@ -33,13 +33,13 @@ class RatingCompetition:
     return self.db.get_leaderboard(sortpriority=[s.name()+"_pts" for s in self.rat_systems])
 
   def consume_result(self, outcome:Outcome) -> RatingOpinions:
-    logging.info("%s: %s", *self.curr_match, outcome.tiers)
+    logging.info("consume_result outcome = %s", outcome.tiers)
     self.db.save_match(self.curr_match, outcome)
 
     opinions = {s.name(): s.process_match(self.curr_match, outcome)
                 for s in self.rat_systems}
-    logging.info("opinions: %s", opinions)
-    self.db.apply_opinions(self.curr_match, opinions, is_match=True)
+    logging.info("opinions:\n%s", self._pretty_opinions(opinions, outcome))
+    self.db.apply_opinions(self.curr_match, opinions)
 
     self.curr_match = []
     return opinions
@@ -52,7 +52,6 @@ class RatingCompetition:
     self.db.apply_opinions(
       [profile],
       {s.name(): [s.get_boost(profile)] for s in self.rat_systems},
-      is_match=False,
     )
 
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
@@ -60,6 +59,19 @@ class RatingCompetition:
 
   def on_exit(self):
     self.db.on_exit()
+
+  def _pretty_opinions(self, opinions:RatingOpinions, outcome:Outcome) -> str:
+    s = ""
+    for letter in outcome.tiers:
+      if letter.isspace():
+        s += "\n\n"
+      else:
+        idx = ord(letter)-ord('a')
+        s += f"\t{letter} {self.curr_match[idx]}  "
+        for system, changes in opinions.items():
+          s += f"{system}: {changes[idx]} "
+        s += "\n"
+    return s
 
 
 class DBAccess:
@@ -79,7 +91,7 @@ class DBAccess:
   def save_boost(self, profile:ProfileInfo) -> None:
     self.history_mgr.save_boost(time.time(), short_fname(profile.fullname))
 
-  def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions, is_match:bool) -> None:
+  def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions) -> None:
     for i,prof in enumerate(profiles):
       new_ratings = {}
       proposed_stars = []
@@ -91,7 +103,7 @@ class DBAccess:
           sysname+'_time': changes[i].new_rating.timestamp,
         })
 
-      self.meta_mgr.update(prof.fullname, new_ratings, is_match, statistics.mean(proposed_stars))
+      self.meta_mgr.update(prof.fullname, new_ratings, len(profiles)-1, statistics.mean(proposed_stars))
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()
@@ -133,8 +145,8 @@ class DBAccess:
       fullname=os.path.join(self.img_dir, short_name),
       stars=info['stars'],
       ratings={
-        'ELO': Rating(info['ELO_pts'], info['ELO_rd'], info['ELO_time']),
         'Glicko': Rating(info['Glicko_pts'], info['Glicko_rd'], info['Glicko_time']),
+        'ELO': Rating(info['ELO_pts'], info['ELO_rd'], info['ELO_time']),
       },
       nmatches=int(info['nmatches']),
     )

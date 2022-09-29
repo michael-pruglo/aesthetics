@@ -99,7 +99,7 @@ class TestCompetition(unittest.TestCase):
 
       for old_p, old_meta, new_p, new_meta in zip(participants, metadata, news, new_metadata):
         dbg_info = '\n'.join(map(str, [old_p, old_meta, new_p, new_meta]))
-        self.assertEqual(new_p.nmatches, old_p.nmatches+1, dbg_info)
+        self.assertEqual(new_p.nmatches, old_p.nmatches+len(participants)-1, dbg_info)
         disk_tags_old, disk_tags_new = old_meta[0], new_meta[0]
         disk_stars_old, disk_stars_new = old_meta[1], new_meta[1]
         self.assertSetEqual(disk_tags_old, disk_tags_new)
