@@ -33,7 +33,16 @@ def generate_ratchange(n:int) -> list[RatChange]:
           )
           for _ in range(n)]
 
+def can_create_window() -> bool:
+  try:
+    gui = RaterGui()
+    gui.root.destroy()
+    return True
+  except:
+    return False
 
+
+@unittest.skipUnless(can_create_window(), "cannot create tk interface")
 class TestView(unittest.TestCase):
   def _test_competition_window(self, n:int):
     gui = RaterGui()
