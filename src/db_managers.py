@@ -36,6 +36,7 @@ def _default_init(row, default_values_getter):
 class MetadataManager:
   def __init__(self, img_dir:str, refresh:bool=False, defaults_getter:Callable[[int], dict]=None):
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
+    self.matches_since_last_save = 0
     metadata_dtypes = {
       'name': str,
       'tags': str,
@@ -112,6 +113,11 @@ class MetadataManager:
 
     self.df.loc[short_name] = row
     logging.debug("updated db: %s", row)
+
+    self.matches_since_last_save += 1
+    if self.matches_since_last_save > 7:
+      self._commit()
+      self.matches_since_last_save = 0
 
   def on_exit(self):
     self._commit()
