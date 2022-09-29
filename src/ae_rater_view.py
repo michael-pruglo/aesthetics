@@ -295,7 +295,9 @@ class RaterGui:
     self.label_outcome = ttk.Label(self.root, anchor="center", text="enter outcome string:")
     self.input_outcome = tk.Entry(self.root, fg="#ddd", insertbackground="#ddd", insertwidth=4,
                                   font=("Arial", 14, "bold"), justify="center",
-                                  textvariable=self.content_outcome, border=0)
+                                  textvariable=self.content_outcome, border=0,
+                                  disabledbackground=BTFL_DARK_BG)
+    self.input_outcome.configure(highlightthickness=0)
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
@@ -379,6 +381,8 @@ class RaterGui:
           return
         coloring[idx] = color
 
+    if len(coloring.keys()) == n:
+      self.input_outcome.configure(background="#141")
     for idx, color in coloring.items():
       self.cards[idx].set_style(color=color)
 
