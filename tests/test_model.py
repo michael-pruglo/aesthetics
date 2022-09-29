@@ -111,21 +111,29 @@ class TestCompetition(unittest.TestCase):
           self.assertLessEqual(new_rating.rd, old_rating.rd)
           self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
 
-  @unittest.skipIf(*SKIPLONG)
-  def test_long_term(self):
+  def _long_term(self, n):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
     hlp.backup_files(all_files)
 
-    losses = LongTermTester(self.model, verbosity=1).run()
+    losses = LongTermTester(self.model, num_participants=n, verbosity=1).run()
     self.assertLess(losses[-1], 0.9)
     self.assertLess(losses[-1]/losses[0], 10)
 
+  @unittest.skipIf(*SKIPLONG)
+  def test_long_term_2(self):
+    self._long_term(2)
+
+  @unittest.skipIf(*SKIPLONG)
+  def test_long_term_3plus(self):
+    self._long_term(random.randint(3,12))
+
 
 class LongTermTester:
-  def __init__(self, model:RatingCompetition, verbosity=0):
+  def __init__(self, model:RatingCompetition, num_participants:int, verbosity=0):
     self.model = model
     self.verbosity = verbosity
     ldbrd = model.get_leaderboard()
+    self.num_participants = min(num_participants, len(ldbrd))
     ranks = list(range(len(ldbrd)))
     random.shuffle(ranks)
     self.true_leaderboard = {p.fullname:rank for p,rank in zip(ldbrd,ranks)}
@@ -134,9 +142,12 @@ class LongTermTester:
     if self.verbosity: print()
     losses = []
     for epoch in range(epochs):
-      for _ in range(matches_each//2*len(self.true_leaderboard)):
-        l, r = self.model.generate_match()
-        self.model.consume_result(self._simulate_outcome(l,r))
+      matches_in_epoch = matches_each*len(self.true_leaderboard)
+      matches_in_iter = (self.num_participants-1) * self.num_participants
+      num_of_iters = (matches_in_epoch+matches_in_iter-1)//matches_in_iter
+      for _ in range(num_of_iters):
+        participants = self.model.generate_match(self.num_participants)
+        self.model.consume_result(self._simulate_outcome(participants))
       losses.append(self._loss())
       if self.verbosity: print(f"{epoch}: loss = {losses[-1]}")
       if self.verbosity>1: print("\n\n\n")
@@ -145,14 +156,17 @@ class LongTermTester:
 
     return losses
 
-  def _simulate_outcome(self, l:ProfileInfo, r:ProfileInfo) -> Outcome:
-      lrank = self.true_leaderboard[l.fullname]
-      rrank = self.true_leaderboard[r.fullname]
-      if lrank - rrank > 2:
-        return Outcome("b a")
-      if lrank - rrank < -2:
-        return Outcome("a b")
-      return Outcome("ab")
+  def _simulate_outcome(self, participants:list[ProfileInfo]) -> Outcome:
+    li = [(self.true_leaderboard[p.fullname], chr(ord('a')+i)) for i,p in enumerate(participants)]
+    li.sort(key=lambda tup:tup[0])
+    tiers = li[0][1]
+    for i in range(1,len(li)):
+      prev_rank, curr_rank = li[i-1][0], li[i][0]
+      tiers += " "*(prev_rank < curr_rank-2)
+      tiers += li[i][1]
+    outcome = Outcome(tiers)
+    assert outcome.is_valid(len(participants))
+    return outcome
 
   def _loss(self) -> float:
     sq_err = 0
