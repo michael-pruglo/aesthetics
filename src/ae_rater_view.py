@@ -1,5 +1,5 @@
 from functools import partial
-from numpy import interp
+from numpy import interp, linspace
 from enum import Enum, auto
 import tkinter as tk
 from tkinter import ttk
@@ -116,11 +116,13 @@ class ProfileCard(tk.Frame):
     self._show_rating(profile.stars, profile.ratings, profile.nmatches)
     self.media.show_media(profile.fullname)
 
-  def set_style(self, outcome:int=None) -> None:
-    if outcome is None:
-      color = self.bg
-    else:
-      color = [self.bg, self.drawcolor, self.wincolor][outcome+1]
+  def set_style(self, outcome:int=None, color:str=None) -> None:
+    if color is None:
+      if outcome is None:
+        color = self.bg
+      else:
+        color = [self.bg, self.drawcolor, self.wincolor][outcome+1]
+
     for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
@@ -287,7 +289,6 @@ class RaterGui:
     self.label_outcome = ttk.Label(self.root, anchor="center", text="enter outcome string:")
     self.input_outcome = tk.Entry(self.root, fg="#ddd", font=("Arial", 12, "bold"),
                                   justify="center", textvariable=self.content_outcome)
-    self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome())
     self.give_boost_cb = give_boost_cb
 
   def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
@@ -347,16 +348,25 @@ class RaterGui:
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
       self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H, relwidth=LDBRD_W)
       self.input_outcome.focus()
+      self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
     else:
       raise NotImplementedError(f"cannot show gui for {n} cards")
 
-  def _highlight_curr_outcome(self):
+  def _highlight_curr_outcome(self, n:int):
+    for card in self.cards:
+      card.set_style(None)
+
     tiers = self.content_outcome.get().split()
-    colors = ["#0f0","#0c0", "#090", "#900", "#c00", "#f00"]
-    for tier, color in zip(tiers, colors):
+    self.input_outcome.configure(background="#444")
+    MAXCOLOR = 0x99
+    for tier, x in zip(tiers, linspace(0, MAXCOLOR, len(tiers))):
+      color = f"#{int(x):02x}{MAXCOLOR-int(x):02x}00"
       for letter in tier:
         idx = ord(letter)-ord('a')
-        self.cards[idx].tags.configure(background=color)
+        if idx<0 or idx>=n:
+          self.input_outcome.configure(background="#911")
+          return
+        self.cards[idx].set_style(color=color)
 
   def _enable_arrows(self, enable:bool, callback:Callable=None):
     for key in '<Left>', '<Right>', '<Up>':
@@ -376,8 +386,8 @@ class RaterGui:
       "Up":   (Outcome("ab"),   0),
       "Right":(Outcome("b a"),  1),
     }[event.keysym]
-    self.cards[0].set_style(-outcome[1])
-    self.cards[1].set_style( outcome[1])
+    self.cards[0].set_style(outcome=-outcome[1])
+    self.cards[1].set_style(outcome= outcome[1])
     self.root.update()
     callback(outcome[0])
 
@@ -397,7 +407,7 @@ class RaterGui:
       self._enable_input(False)
       callback(outcome)
     else:
-      self.input_outcome.config(background="red")
+      self.input_outcome.config(background="#911")
 
   def _on_give_boost(self, event):
     assert self.curr_prof_shnames
