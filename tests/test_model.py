@@ -125,15 +125,15 @@ class TestCompetition(unittest.TestCase):
 
   @unittest.skipIf(*SKIPLONG)
   def test_long_term_3plus(self):
-    self._long_term(random.randint(3,12))
+    self._long_term(random.randint(3, max(3,self.N-3)))
 
 
 class LongTermTester:
   def __init__(self, model:RatingCompetition, num_participants:int, verbosity=0):
     self.model = model
+    self.num_participants = num_participants
     self.verbosity = verbosity
     ldbrd = model.get_leaderboard()
-    self.num_participants = min(num_participants, len(ldbrd))
     ranks = list(range(len(ldbrd)))
     random.shuffle(ranks)
     self.true_leaderboard = {p.fullname:rank for p,rank in zip(ldbrd,ranks)}
