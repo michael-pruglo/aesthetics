@@ -86,8 +86,6 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     if self.vid_frame:
       self.vid_frame.unbind("<<Ended>>")
       self.vid_frame = None  # slower, but stop+reuse the existing causes bugs
-    if self.img:
-      self.img.close()
     self.update()
 
   def _open_media_in_new_window(self, event):
