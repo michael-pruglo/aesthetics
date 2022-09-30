@@ -73,7 +73,7 @@ class MetadataManager:
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
     if min_tag_freq:
       freq_tags = self._get_frequent_tags(min_tag_freq)
-      logging.info("frequency of tags (threshold %d):\n%s", freq_tags, min_tag_freq)
+      print("frequency of tags (threshold %d):\n%s", min_tag_freq, freq_tags)
       dfc = self.df.copy()
       def remove_infrequent(s):
         return ' '.join([tag for tag in s.split(' ') if tag in freq_tags])

@@ -1,6 +1,5 @@
 from functools import partial
 from numpy import interp, linspace
-from enum import Enum, auto
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
@@ -37,8 +36,10 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     self.img_frame = None
     self.vid_frame = None
     self.err_label = None
+    self.media_fname = ""
 
   def show_media(self, fname):
+    self.media_fname = fname
     ext = hlp.file_extension(fname)
     if ext in ['jpg', 'jpeg', 'png', 'jfif']:
       self.show_img(fname)
@@ -51,6 +52,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     self.unpack()
     if self.img_frame is None:
       self.img_frame = ttk.Label(self)
+      self.img_frame.bind('<Button-1>', self._open_media_in_new_window)
     self.img = Image.open(fname)
     selfsize = (self.winfo_width(), self.winfo_height())
     assert selfsize > (10,10)
@@ -64,6 +66,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     if self.vid_frame is None:
       self.vid_frame = TkinterVideo(self, keep_aspect=True)
       self.vid_frame.configure(background=BTFL_DARK_BG)
+      self.vid_frame.bind('<Button-1>', self._open_media_in_new_window)
     self.vid_frame.load(fname)
     self.vid_frame.pack(expand=True, fill="both")
     self.vid_frame.bind("<<Ended>>", lambda _: self.vid_frame.play())
@@ -83,7 +86,14 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     if self.vid_frame:
       self.vid_frame.unbind("<<Ended>>")
       self.vid_frame = None  # slower, but stop+reuse the existing causes bugs
+    if self.img:
+      self.img.close()
     self.update()
+
+  def _open_media_in_new_window(self, event):
+    if not self.media_fname:
+      print(f"Gui error on click media: cannot open {event}")
+    hlp.start_file(self.media_fname)
 
 
 class ProfileCard(tk.Frame):
@@ -175,6 +185,8 @@ class Leaderboard(tk.Text):
         displayed_rows.setdefault(j, "")
       displayed_rows[rank] = letter
 
+    self.tag_configure('total_matches', foreground=BTFL_LIGHT_GRAY, justify="center", spacing3=10)
+    self.insert(tk.END, f"total matches: {sum([p.nmatches for p in leaderboard])//2}\n", 'total_matches')
     prev = -1
     for i in sorted(displayed_rows.keys()):
       if i-prev != 1:

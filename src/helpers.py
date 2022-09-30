@@ -1,4 +1,7 @@
 from typing import Callable
+import os
+import sys
+import subprocess
 
 
 def truncate(s:str, lim:int, suffix:str='…') -> str:
@@ -11,6 +14,16 @@ def short_fname(fullname:str) -> str:
 
 def file_extension(name:str) -> str:
   return name.rsplit('.', maxsplit=1)[-1].lower()
+
+
+def start_file(fname:str) -> None:
+  if sys.platform == "win32":
+    os.startfile(fname)
+  elif sys.platform == "darwin":
+    subprocess.call(["open", fname])
+  else:
+    subprocess.call(["xdg-open", fname])
+
 
 # https://www.rapidtables.com/convert/color/rgb-to-hsl.html
 def rgb_to_hsl(r, g, b) -> tuple:
