@@ -51,7 +51,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
   def show_img(self, fname):
     self.unpack()
     if self.img_frame is None:
-      self.img_frame = ttk.Label(self)
+      self.img_frame = ttk.Label(self, cursor="hand2")
       self.img_frame.bind('<Button-1>', self._open_media_in_new_window)
     self.img = Image.open(fname)
     selfsize = (self.winfo_width(), self.winfo_height())
@@ -65,7 +65,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
     self.unpack()
     if self.vid_frame is None:
       self.vid_frame = TkinterVideo(self, keep_aspect=True)
-      self.vid_frame.configure(background=BTFL_DARK_BG)
+      self.vid_frame.configure(background=BTFL_DARK_BG, cursor="hand2")
       self.vid_frame.bind('<Button-1>', self._open_media_in_new_window)
     self.vid_frame.load(fname)
     self.vid_frame.pack(expand=True, fill="both")
@@ -274,9 +274,9 @@ class Leaderboard(tk.Text):
     rat_color = ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][min(5, int(prof.stars))]
     nmatches_color = int(interp(prof.nmatches, [0,100], [0x70,255]))
     return [
-      ('tag_idx', "#aaa", f"{idx+1:>3} "),
+      ('tag_idx', "#aaa", f"{idx+1:>4} "),
       ('tag_name', "#ddd", f"{hlp.truncate(hlp.short_fname(prof.fullname), 15, '..'):<15} "),
-      ('tag_stars', BTFL_DARK_GRANOLA, f"{f'★{prof.stars:.2f}':>5} "),
+      ('tag_stars', BTFL_DARK_GRANOLA, str('*'*int(prof.stars)+'\''*(prof.stars%1>=.5)).ljust(6)),
     ] + [
       (f'tag_rating{sysname}', rat_color, f"{str(rat):>9} ")
       for sysname,rat in prof.ratings.items()
