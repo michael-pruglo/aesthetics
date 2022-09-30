@@ -93,7 +93,8 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
   def _open_media_in_new_window(self, event):
     if not self.media_fname:
       print(f"Gui error on click media: cannot open {event}")
-    hlp.start_file(self.media_fname)
+    else:
+      hlp.start_file(self.media_fname)
 
 
 class ProfileCard(tk.Frame):
