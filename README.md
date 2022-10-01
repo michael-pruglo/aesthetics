@@ -20,13 +20,13 @@ f ea cb d
 ```
 means that the media with id `f` is the strongest, `e` and `a` tie for the second place, `c` and `b` tie for the third place, and `d` is the weakest.
 
-This language also allows for boosts. Follow the letter with `+` n times to give that profile n boosts.<br>
+This language also allows for manual change of rating, independent of matches. Follow the letter with `+` n times to give that profile n boosts, and use `-` n times to decrease the rating. If you're feeling adventurous you can even mix the two!<br>
 For example:
 
 ```
-d++c a+ b
+d++c a- b
 ```
-Will give 2 boosts to `d`, one boost to `a`, and then processed as `dc a b`
+Will give 2 boosts to `d`, one decrease to `a`, and then process `dc a b`
 
 
 
