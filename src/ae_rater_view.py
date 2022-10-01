@@ -376,27 +376,22 @@ class RaterGui:
     for card in self.cards:
       card.set_style(None)
 
-    coloring = {}
-    tiers = self.content_outcome.get().split()
-    self.input_outcome.configure(background="#444")
-    MAXCOLOR = 0x99
-    color_intensities = np.linspace(0, MAXCOLOR, n*5//6)
-    color_intensities = np.pad(color_intensities, (0,n//3), constant_values=MAXCOLOR)
-    for tier, x in zip(tiers, color_intensities):
-      color = f"#{int(x):02x}{MAXCOLOR-int(x):02x}00"
-      for letter in tier:
-        if letter in "+-":
-          continue
-        idx = ord(letter)-ord('a')
-        if idx<0 or idx>=n or idx in coloring:
-          self.input_outcome.configure(background="#911")
-          return
-        coloring[idx] = color
+    input_so_far = self.content_outcome.get()
+    bgcolor = "#444"
+    if not Outcome.is_valid(input_so_far, n, intermediate=True):
+      bgcolor = "#911"
+    else:
+      if Outcome.is_valid(input_so_far, n):
+        bgcolor = "#141"
+      tiers, max_tier = Outcome.predict_tiers_intermediate(input_so_far, n)
+      MAXCOLOR = 0x99
+      color_intensities = np.linspace(0, MAXCOLOR, max_tier)
+      for idx, tier in tiers.items():
+        x = color_intensities[tier]
+        tier_color = f"#{int(x):02x}{MAXCOLOR-int(x):02x}00"
+        self.cards[idx].set_style(color=tier_color)
 
-    if len(coloring.keys()) == n:
-      self.input_outcome.configure(background="#141")
-    for idx, color in coloring.items():
-      self.cards[idx].set_style(color=color)
+    self.input_outcome.configure(background=bgcolor)
 
   def _enable_arrows(self, enable:bool, callback:Callable=None):
     for key in '<Left>', '<Right>', '<Up>':

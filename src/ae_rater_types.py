@@ -1,5 +1,6 @@
 import string
 import time
+from enum import Enum, auto
 from dataclasses import dataclass, field
 from functools import total_ordering
 from numpy import interp
@@ -106,7 +107,7 @@ class Outcome:
     self.tiers = s.translate({ord(i):None for i in "+-"})
 
   @staticmethod
-  def is_valid(outcome:str, n:int=None) -> bool:
+  def is_valid(outcome:str, n:int=None, intermediate=False) -> bool:
     # validate +-
     for i in range(len(outcome)):
       if outcome[i] in "+-":
@@ -116,12 +117,48 @@ class Outcome:
           return False
     s = outcome.translate({ord(i):None for i in "+-"})
 
-    # validate letters
+    # validate other symbols
     s = ''.join(sorted(s.lower())).strip()
+    biggest_idx = ord(s[-1])-ord('a')
     if n is None:
-      n = len(s)
-    return len(s)==n and s==string.ascii_lowercase[:n]
-  
+      n = biggest_idx+1
+    if not intermediate:
+      return len(s)==n and s==string.ascii_lowercase[:n]
+    else:
+      return len(s)<=n and biggest_idx<n and len(set(s))==len(s)
+
+  @staticmethod
+  def predict_tiers_intermediate(outcome:str, n:int) -> tuple[dict,int]:
+    assert Outcome.is_valid(outcome, n, intermediate=True)
+
+    s = outcome.translate({ord(i):None for i in "+-"})
+
+    class Mode(Enum):
+      LEADERS = auto()
+      MID = auto()
+      LOSERS = auto()
+    mode = Mode.LEADERS
+    if outcome[0].isspace():
+      mode = Mode.MID if outcome[-1].isspace() else Mode.LOSERS
+
+    pred_tiers = {}
+    tiers = s.split()
+    letters_remaining = n
+    for i, tier in enumerate(tiers):
+      for letter in tier:
+        idx = ord(letter)-ord('a')
+        pred_tiers[idx] = i
+        letters_remaining -= 1
+
+    pred_max_tiers = len(tiers) + letters_remaining
+
+    if mode != Mode.LEADERS:
+      for key in pred_tiers:
+        coef = 1 if mode == Mode.LOSERS else 2
+        pred_tiers[key] += (pred_max_tiers-len(tiers))//coef
+
+    return pred_tiers, pred_max_tiers
+
   def get_boosts(self) -> dict[int,int]:
     """parse + and -, return dict idx->boost_multiplier"""
     return self.boosts
