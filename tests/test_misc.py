@@ -24,7 +24,9 @@ class TestTypes(unittest.TestCase):
     self.assertTrue(Rating(999, 100, 0) < Rating(1000, 100, 0))
     self.assertTrue(Rating(333, 40, 0) > Rating(216, 100, 0))
 
-  def test_outcomes(self):
+
+class TestOucome(unittest.TestCase):
+  def test_1v1(self):
     self.assertDictEqual(
       Outcome("a b").as_dict(),
       {
@@ -47,8 +49,21 @@ class TestTypes(unittest.TestCase):
       }
     )
     self.assertDictEqual(Outcome("ab").as_dict(), Outcome("ba").as_dict())
+
+  def test_multimatch(self):
+    s = "a++b- c+-++-+ de-f+ g h i"
+
+    self.assertTrue(Outcome.is_valid(s))
+    for i in range(12):
+      self.assertEqual(Outcome.is_valid(s,i), i==9)
+
+    outcome = Outcome(s)
+    self.assertDictEqual(outcome.get_boosts(), {
+      0:2, 1:-1, 2:2, 4:-1, 5:1,
+    })
+
     self.assertDictEqual(
-      Outcome("ab c def g h i").as_dict(),
+      outcome.as_dict(),
       {
         0: [         (1,0.5), (2,1.0), (3,1.0), (4,1.0), (5,1.0), (6,1.0), (7,1.0), (8,1.0)],
         1: [(0,0.5),          (2,1.0), (3,1.0), (4,1.0), (5,1.0), (6,1.0), (7,1.0), (8,1.0)],
@@ -61,3 +76,38 @@ class TestTypes(unittest.TestCase):
         8: [(0,0.0), (1,0.0), (2,0.0), (3,0.0), (4,0.0), (5,0.0), (6,0.0), (7,0.0),        ],
       }
     )
+
+  def test_invalid(self):
+    valid = {
+      "b+a-  ":2,
+      "  d a-b-c+":4,
+      "a+++++++++++++++++ b":2,
+      "c+-++++-+-+----- b a":3,
+      "b--------------- a":2,
+      "de---+-+ abc":5,
+    }
+    for s, n in valid.items():
+      self.assertTrue(Outcome.is_valid(s), s)
+      for i in range(12):
+        self.assertEqual(Outcome.is_valid(s,i), i==n, s)
+
+    invalid = {
+      "dc": "lacks 'a' and 'b'",
+      "+ab": "'+' to no one",
+      "-ab": "'-' to no one",
+      "b + ca": "no spaces before '+' allowed",
+      "b - ca": "no spaces before '-' allowed",
+    }
+    for s, reason in invalid.items():
+      self.assertFalse(Outcome.is_valid(s), reason)
+
+  def test_boosts(self):
+    boosts = {
+      "c a d b": {},
+      "a efd b- c": {1:-1},
+      "c++-ab": {2:1},
+      "a+-": {},
+      "e++-b+c d-- a+-++ f-g+": {0:2, 1:1, 3:-2, 4:1, 5:-1, 6:1},
+    }
+    for s, expected in boosts.items():
+      self.assertDictEqual(Outcome(s).get_boosts(), expected, s)

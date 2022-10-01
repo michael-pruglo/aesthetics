@@ -11,7 +11,7 @@ def make_testcase(system:RatingBackend):
   sname = system.name()
 
 
-  def construct_profile(rating:Rating=None, stars:int=None, matches:int=None):
+  def construct_profile(rating:Rating=None, stars:float=None, matches:int=None):
     if rating is None:
       rating = Rating(random.randint(0,3000), random.randint(30,300))
     if stars is None:
@@ -44,6 +44,10 @@ def make_testcase(system:RatingBackend):
         self.assertGreaterEqual(change.new_stars, prof.stars)
         self.assertEqual(change.new_stars, system.rating_to_stars(change.new_rating))
 
+        mult = random.randint(-15, 15)
+        change_mult = system.get_boost(prof, mult)
+        self.assertEqual(change.delta_rating*mult, change_mult.delta_rating)
+
     def test_boost_updates_stars(self):
       for s in range(1,6):
         rating = Rating(system.stars_to_rating(s).points-1, random.randint(30,300))
@@ -72,7 +76,8 @@ def make_testcase(system:RatingBackend):
       self._assertRatChange(changes[1], b, self.assertGreater)
 
     def test_matches_many(self):
-      participants = [construct_profile() for _ in range(10)]
+      participants = sorted([construct_profile() for _ in range(10)],
+                            key=lambda p:p.stars, reverse=True)
       changes = system.process_match(participants, Outcome("f gc bdi h aj e"))
       fidx = ord('f')-ord('a')
       eidx = ord('e')-ord('a')

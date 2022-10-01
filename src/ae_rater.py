@@ -48,8 +48,8 @@ class App:
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
     self.gui.display_match(participants, self._consume_result)
 
-  def _give_boost(self, short_name:str) -> None:
-    self.model.give_boost(short_name)
+  def _give_boost(self, short_name:str, mult:int=1) -> None:
+    self.model.give_boost(short_name, mult)
     updated_prof = self.model.get_curr_match()
     self.gui.display_leaderboard(self.model.get_leaderboard(), updated_prof)
     self.gui.display_match(updated_prof, self._consume_result)

@@ -66,6 +66,5 @@ python -m unittests
 ## TODO
 
 - improve performance
-- add megaboosts
 
 

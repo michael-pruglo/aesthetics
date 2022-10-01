@@ -98,22 +98,40 @@ RatingOpinions = dict[RatSystemName, list[RatChange]]
 
 
 class Outcome:
-  def __init__(self, tiers:str):
-    self.tiers = ' '.join(tiers.split())
+  def __init__(self, s:str):
+    if not self.is_valid(s):
+      raise ValueError(f"cannot parse outcome from '{s}'")
 
-  def __eq__(self, other):
-    if not isinstance(other, type(self)):
-      return False
-    return self.tiers == other.tiers
+    self.boosts = self._parse_boosts(s)
+    self.tiers = s.translate({ord(i):None for i in "+-"})
 
-  def __hash__(self) -> int:
-    return hash(self.tiers)
+  @staticmethod
+  def is_valid(outcome:str, n:int=None) -> bool:
+    # validate +-
+    for i in range(len(outcome)):
+      if outcome[i] in "+-":
+        if i==0:
+          return False
+        if not (outcome[i-1].isalpha() or outcome[i-1] in "+-"):
+          return False
+    s = outcome.translate({ord(i):None for i in "+-"})
 
-  def as_dict(self) -> dict[str, list[tuple[str,float]]]:
+    # validate letters
+    s = ''.join(sorted(s.lower())).strip()
+    if n is None:
+      n = len(s)
+    return len(s)==n and s==string.ascii_lowercase[:n]
+  
+  def get_boosts(self) -> dict[int,int]:
+    """parse + and -, return dict idx->boost_multiplier"""
+    return self.boosts
+
+  def as_dict(self) -> dict[int,list[tuple[int,float]]]:
+    """return dict of results idx->list of matches (opponent_idx,points)"""
+
     def idx(letter):
       return ord(letter)-ord('a')
 
-    assert self.is_valid()
     matches = {}
     li_tiers = self.tiers.split()
     for i, tier in enumerate(li_tiers):
@@ -129,8 +147,29 @@ class Outcome:
         matches[idx(curr)] = currmatches
     return matches
 
-  def is_valid(self, n=None):
-    s = ''.join(sorted(self.tiers.lower())).strip()
-    if n is None:
-      n = len(s)
-    return len(s)==n and s==string.ascii_lowercase[:n]
+  def _parse_boosts(self, s):
+    boosts = {}
+    mult = 0
+    curr_let = ''
+    for c in s+' ':  # to seamlessly handle +- at end
+      if c == '+':
+        mult += 1
+      elif c == '-':
+        mult -= 1
+      else:
+        if mult:
+          assert curr_let
+          idx = ord(curr_let)-ord('a')
+          boosts[idx] = mult
+          mult = 0
+        if not c.isspace():
+          curr_let = c
+    return boosts
+
+  def __eq__(self, other):
+    if not isinstance(other, type(self)):
+      return False
+    return self.tiers == other.tiers
+
+  def __hash__(self) -> int:
+    return hash(self.tiers)

@@ -286,7 +286,7 @@ class Leaderboard(tk.Text):
 
 
 class RaterGui:
-  def __init__(self, give_boost_cb:Callable[[str],None]=None):
+  def __init__(self, give_boost_cb:Callable[[str,int],None]=None):
     self.root = tk.Tk()
     self.root.geometry("1766x878+77+77")
     self.root.title("aesthetics")
@@ -311,7 +311,7 @@ class RaterGui:
     self.input_outcome.configure(highlightthickness=0)
     self.give_boost_cb = give_boost_cb
 
-  def display_match(self, profiles:list[ProfileInfo], callback:Callable[[Outcome],None]) -> None:
+  def display_match(self, profiles:list[ProfileInfo], outcome_cb:Callable[[Outcome],None]) -> None:
     n = len(profiles)
     if len(self.cards) != n:
       self._prepare_layout(n)
@@ -321,9 +321,9 @@ class RaterGui:
       card.set_style(None)
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
     if n == 2:
-      self._enable_arrows(True, callback)
+      self._enable_arrows(True, outcome_cb)
     else:
-      self._enable_input(True, n, callback)
+      self._enable_input(True, n, outcome_cb)
 
   def conclude_match(self, opinions:RatingOpinions,
                      initiate_next_match_cb:Callable=None) -> None:
@@ -420,35 +420,30 @@ class RaterGui:
     self.root.update()
     callback(outcome[0])
 
-  def _enable_input(self, enable:bool, n:int=0, callback:Callable=None):
+  def _enable_input(self, enable:bool, n:int=0, outcome_cb:Callable=None):
     if enable:
       self.input_outcome.config(state=tk.NORMAL, background="#444")
       self.input_outcome.delete(0, tk.END)
-      self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n, callback=callback))
+      self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n, outcome_cb=outcome_cb))
     else:
       self.input_outcome.config(state=tk.DISABLED)
       self.input_outcome.unbind('<Return>')
 
-  def _on_input_received(self, event, n, callback):
-    given_str = self.input_outcome.get()
-    while True:
-      pos = given_str.find('+')
-      if pos==-1:
-        break
-      else:
-        letter_boost = given_str[pos-1]
-        idx_boost = ord(letter_boost)-ord('a')
-        self.give_boost_cb(self.curr_prof_shnames[idx_boost])
-        given_str = given_str[:pos]+given_str[pos+1:]
+  def _on_input_received(self, event, n, outcome_cb):
+    s = self.input_outcome.get()
+    if Outcome.is_valid(s, n):
+      outcome = Outcome(s)
 
-    outcome = Outcome(given_str)
-    if outcome.is_valid(n):
+      assert self.give_boost_cb
+      for idx, mult in outcome.get_boosts().items():
+        self.give_boost_cb(self.curr_prof_shnames[idx], mult)
+
       self._enable_input(False)
-      callback(outcome)
+      outcome_cb(outcome)
     else:
       self.input_outcome.config(background="#911")
 
   def _on_give_boost(self, event):
-    assert self.curr_prof_shnames
+    assert len(self.curr_prof_shnames) == 2
     is_right = (event.keysym=="Right")
-    self.give_boost_cb(self.curr_prof_shnames[is_right])
+    self.give_boost_cb(self.curr_prof_shnames[is_right], 1)

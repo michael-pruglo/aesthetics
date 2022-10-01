@@ -45,14 +45,13 @@ class RatingCompetition:
     self.curr_match = []
     return opinions
 
-  def give_boost(self, short_name:str) -> None:
+  def give_boost(self, short_name:str, mult:int) -> None:
     profile = self.db.retreive_profile(short_name)
-    self.db.save_boost(profile)
-    logging.info("boost %s", profile)
+    logging.info("boost %+dx %s", mult, profile)
 
     self.db.apply_opinions(
       [profile],
-      {s.name(): [s.get_boost(profile)] for s in self.rat_systems},
+      {s.name(): [s.get_boost(profile, mult)] for s in self.rat_systems},
     )
 
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
@@ -89,9 +88,6 @@ class DBAccess:
       [short_fname(p.fullname) for p in profiles],
       outcome.tiers
     )
-
-  def save_boost(self, profile:ProfileInfo) -> None:
-    self.history_mgr.save_boost(time.time(), short_fname(profile.fullname))
 
   def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions) -> None:
     for i,prof in enumerate(profiles):

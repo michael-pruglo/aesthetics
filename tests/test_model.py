@@ -1,3 +1,4 @@
+import operator
 import statistics
 import unittest
 import os
@@ -55,12 +56,21 @@ class TestCompetition(unittest.TestCase):
     profile_before = self._get_leaderboard_line(p.fullname)
     self.assertEqual(p, profile_before)
     hlp.backup_files([p.fullname])
-    self.model.give_boost(short_fname(p.fullname))
+    mult = 0
+    while mult ==0: mult = random.randint(-7, 7)
+    self.model.give_boost(short_fname(p.fullname), mult)
     profile_after = self._get_leaderboard_line(p.fullname)
     self.assertEqual(profile_after.tags, profile_after.tags)
     self.assertEqual(profile_before.nmatches, profile_after.nmatches)
-    self.assertLessEqual(profile_before.stars, profile_after.stars)
-    self.assertTrue(all(profile_before.ratings[s].points < profile_after.ratings[s].points
+    if mult > 0:
+      self.assertLessEqual(profile_before.stars, profile_after.stars)
+      ratop = operator.lt
+    else:
+      self.assertGreaterEqual(profile_before.stars, profile_after.stars)
+      ratop = operator.gt
+
+    self.assertTrue(all(ratop(profile_before.ratings[s].points,
+                              profile_after.ratings[s].points)
                         for s in profile_before.ratings.keys()))
 
   def test_boost_starchange(self):
@@ -69,8 +79,8 @@ class TestCompetition(unittest.TestCase):
       prof = self.model.generate_match()[0]
       stars_before = prof.stars
       for iter in range(25):
-        self.model.give_boost(short_fname(prof.fullname))
-        curr_stars_opinions = [s.get_boost(prof).new_stars for s in self.model.rat_systems]
+        self.model.give_boost(short_fname(prof.fullname), 1)
+        curr_stars_opinions = [s.get_boost(prof, 1).new_stars for s in self.model.rat_systems]
         consensus_stars = statistics.mean(curr_stars_opinions)
         self.assertGreater(consensus_stars, stars_before)
         profile_after = self._get_leaderboard_line(prof.fullname)
@@ -103,8 +113,8 @@ class TestCompetition(unittest.TestCase):
         disk_tags_old, disk_tags_new = old_meta[0], new_meta[0]
         disk_stars_old, disk_stars_new = old_meta[1], new_meta[1]
         self.assertSetEqual(disk_tags_old, disk_tags_new)
-        self.assertEqual(int(old_p.stars), disk_stars_old)
-        self.assertEqual(int(new_p.stars), disk_stars_new)
+        self.assertEqual(min(5, int(old_p.stars)), disk_stars_old)
+        self.assertEqual(min(5, int(new_p.stars)), disk_stars_new)
         for ratsys in old_p.ratings.keys():
           old_rating = old_p.ratings[ratsys]
           new_rating = new_p.ratings[ratsys]
@@ -168,9 +178,8 @@ class LongTermTester:
       prev_rank, curr_rank = li[i-1][0], li[i][0]
       tiers += " "*(prev_rank < curr_rank-2)
       tiers += li[i][1]
-    outcome = Outcome(tiers)
-    assert outcome.is_valid(len(participants))
-    return outcome
+    assert Outcome.is_valid(tiers, len(participants))
+    return Outcome(tiers)
 
   def _loss(self) -> float:
     sq_err = 0

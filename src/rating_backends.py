@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import math
 import time
-import numpy as np
 from ae_rater_types import *
 
 
@@ -30,8 +29,8 @@ class RatingBackend(ABC):
       self.name()+"_time": def_rat.timestamp,
     }
 
-  def get_boost(self, profile:ProfileInfo) -> RatChange:
-    delta = 10
+  def get_boost(self, profile:ProfileInfo, mult:int=1) -> RatChange:
+    delta = 10 * mult
     rating = profile.ratings[self.name()]
     new_pts = rating.points + delta
     new_rat = Rating(new_pts, rating.rd)
