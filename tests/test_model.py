@@ -171,7 +171,7 @@ class LongTermTester:
     return losses
 
   def _simulate_outcome(self, participants:list[ProfileInfo]) -> Outcome:
-    li = [(self.true_leaderboard[p.fullname], chr(ord('a')+i)) for i,p in enumerate(participants)]
+    li = [(self.true_leaderboard[p.fullname], Outcome.idx_to_let(i)) for i,p in enumerate(participants)]
     li.sort(key=lambda tup:tup[0])
     tiers = li[0][1]
     for i in range(1,len(li)):

@@ -104,7 +104,7 @@ class ProfileCard(tk.Frame):
     self.wincolor = RIGHT_COLORWIN if is_right else LEFT_COLORWIN
     self.drawcolor = COLORDRAW
     self.mode = mode
-    self.letter = chr(ord('a')+idx)
+    self.letter = Outcome.idx_to_let(idx)
 
     self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)
@@ -178,7 +178,7 @@ class Leaderboard(tk.Text):
       displayed_rows.setdefault(i, "")
 
     for i, featured in enumerate(feature):
-      letter = chr(ord('a')+i)
+      letter = Outcome.idx_to_let(i)
       rank = next(j for j,p in enumerate(leaderboard) if p.fullname==featured.fullname)
       for j in range(max(0,rank-context), min(len(leaderboard),rank+context+1)):
         displayed_rows.setdefault(j, "")

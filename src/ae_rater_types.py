@@ -107,6 +107,14 @@ class Outcome:
     self.tiers = s.translate({ord(i):None for i in "+-"})
 
   @staticmethod
+  def idx_to_let(idx:int) -> str:
+    return chr(ord('a') + idx)
+
+  @staticmethod
+  def let_to_idx(letter:str) -> int:
+    return ord(letter) - ord('a')
+
+  @staticmethod
   def is_valid(outcome:str, n:int=None, intermediate=False) -> bool:
     # validate +-
     for i in range(len(outcome)):
@@ -119,7 +127,7 @@ class Outcome:
 
     # validate other symbols
     s = ''.join(sorted(s.lower())).strip()
-    biggest_idx = ord(s[-1])-ord('a')
+    biggest_idx = Outcome.let_to_idx(s[-1])
     if n is None:
       n = biggest_idx+1
     if not intermediate:
@@ -146,8 +154,7 @@ class Outcome:
     letters_remaining = n
     for i, tier in enumerate(tiers):
       for letter in tier:
-        idx = ord(letter)-ord('a')
-        pred_tiers[idx] = i
+        pred_tiers[Outcome.let_to_idx(letter)] = i
         letters_remaining -= 1
 
     pred_max_tiers = len(tiers) + letters_remaining
@@ -165,23 +172,19 @@ class Outcome:
 
   def as_dict(self) -> dict[int,list[tuple[int,float]]]:
     """return dict of results idx->list of matches (opponent_idx,points)"""
-
-    def idx(letter):
-      return ord(letter)-ord('a')
-
     matches = {}
     li_tiers = self.tiers.split()
     for i, tier in enumerate(li_tiers):
       for curr in tier:
         currmatches = []
         for loss in ''.join(li_tiers[:i]):
-          currmatches.append((idx(loss), 0.0))
+          currmatches.append((self.let_to_idx(loss), 0.0))
         for draw in tier:
           if draw!=curr:
-            currmatches.append((idx(draw), 0.5))
+            currmatches.append((self.let_to_idx(draw), 0.5))
         for win in ''.join(li_tiers[i+1:]):
-          currmatches.append((idx(win), 1.0))
-        matches[idx(curr)] = currmatches
+          currmatches.append((self.let_to_idx(win), 1.0))
+        matches[self.let_to_idx(curr)] = currmatches
     return matches
 
   def _parse_boosts(self, s):
@@ -196,8 +199,7 @@ class Outcome:
       else:
         if mult:
           assert curr_let
-          idx = ord(curr_let)-ord('a')
-          boosts[idx] = mult
+          boosts[self.let_to_idx(curr_let)] = mult
           mult = 0
         if not c.isspace():
           curr_let = c

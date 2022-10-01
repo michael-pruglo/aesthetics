@@ -66,7 +66,7 @@ class RatingCompetition:
       if letter.isspace():
         s += "\n\n"
       else:
-        idx = ord(letter)-ord('a')
+        idx = Outcome.let_to_idx(letter)
         s += f"\t{letter} {self.curr_match[idx]}  "
         for system, changes in opinions.items():
           s += f"{system}: {changes[idx]} "

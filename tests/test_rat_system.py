@@ -79,8 +79,8 @@ def make_testcase(system:RatingBackend):
       participants = sorted([construct_profile() for _ in range(10)],
                             key=lambda p:p.stars, reverse=True)
       changes = system.process_match(participants, Outcome("f gc bdi h aj e"))
-      fidx = ord('f')-ord('a')
-      eidx = ord('e')-ord('a')
+      fidx = Outcome.let_to_idx('f')
+      eidx = Outcome.let_to_idx('e')
       self._assertRatChange(changes[fidx], participants[fidx], self.assertGreater)
       self._assertRatChange(changes[eidx], participants[eidx], self.assertLess)
 
