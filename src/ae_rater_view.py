@@ -1,5 +1,5 @@
 from functools import partial
-from numpy import interp, linspace
+import numpy as np
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
@@ -272,7 +272,7 @@ class Leaderboard(tk.Text):
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple[str,str,str]]:
     rat_color = ["#777", "#9AB4C8", "#62B793", "#C9C062", "#FF8701", "#E0191f"][min(5, int(prof.stars))]
-    nmatches_color = int(interp(prof.nmatches, [0,100], [0x70,255]))
+    nmatches_color = int(np.interp(prof.nmatches, [0,100], [0x70,255]))
     return [
       ('tag_idx', "#aaa", f"{idx+1:>4} "),
       ('tag_name', "#ddd", f"{hlp.truncate(hlp.short_fname(prof.fullname), 15, '..'):<15} "),
@@ -380,11 +380,12 @@ class RaterGui:
     tiers = self.content_outcome.get().split()
     self.input_outcome.configure(background="#444")
     MAXCOLOR = 0x99
-    color_intensities = linspace(0, MAXCOLOR, len(tiers))
+    color_intensities = np.linspace(0, MAXCOLOR, n*5//6)
+    color_intensities = np.pad(color_intensities, (0,n//3), constant_values=MAXCOLOR)
     for tier, x in zip(tiers, color_intensities):
       color = f"#{int(x):02x}{MAXCOLOR-int(x):02x}00"
       for letter in tier:
-        if letter == '+':
+        if letter in "+-":
           continue
         idx = ord(letter)-ord('a')
         if idx<0 or idx>=n or idx in coloring:
