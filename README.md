@@ -29,6 +29,8 @@ d++c a- b
 Will give 2 boosts to `d`, one decrease to `a`, and then process `dc a b`
 
 
+Click on tags to open the Tag Manager and change them on disk.<br>
+Click on any media to open the full version in an external program
 
 ### Run tests with
 ```bash
