@@ -116,6 +116,9 @@ class Outcome:
 
   @staticmethod
   def is_valid(outcome:str, n:int=None, intermediate=False) -> bool:
+    if outcome == "":
+      return intermediate
+
     # validate +-
     for i in range(len(outcome)):
       if outcome[i] in "+-":

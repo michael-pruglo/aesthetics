@@ -110,6 +110,8 @@ class TestOucome(unittest.TestCase):
     self.assertTrue(Outcome.is_valid(" d+c", 5, intermediate=True))
     self.assertFalse(Outcome.is_valid(" dc--", 3, intermediate=True))
     self.assertTrue(Outcome.is_valid("c++d- e f", 10, intermediate=True))
+    self.assertTrue(Outcome.is_valid("", 6, intermediate=True))
+    self.assertFalse(Outcome.is_valid("", 6, intermediate=False))
 
   def test_boosts(self):
     boosts = {
