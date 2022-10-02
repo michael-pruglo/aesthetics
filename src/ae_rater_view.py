@@ -29,6 +29,10 @@ RIGHT_COLORWIN = hlp.spice_up_color(RIGHT_COLORBG,  None, spice_win_hsl)
 COLORDRAW      = hlp.spice_up_color(RIGHT_COLORWIN, None, lambda h,s,l: (60, s, l))
 
 
+def indent_hierarchical(tag:str, indent:int=2) -> str:
+  return " "*tag.count('|')*indent + tag.rsplit('|', maxsplit=1)[-1]
+
+
 class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .configure(background=)
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -111,9 +115,52 @@ class ProfileCard(tk.Frame):
       self.win = tk.Toplevel(self.master)
       self.win.title(f"edit tags {hlp.short_fname(self.curr_prof.fullname)}")
       self.win.geometry("500x800+710+140")
+
+      self.style = ttk.Style(self.win)
+      for elem in ["TButton", "TCheckbutton", "TFrame", "Vertical.TScrollbar"]:
+        self.style.map("IHateTkinter."+elem,
+          foreground = [('active', "#fff"), ('!active', BTFL_LIGHT_GRAY)],
+          background = [('active', "#555"), ('!active', BTFL_DARK_BG)],
+          indicatorcolor = [('selected', "#0f0")],
+        )
+      self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
+
+      commit_button = ttk.Button(self.win, text="COMMIT", command=self._on_commit_pressed, style="IHateTkinter.TButton")
+      vscroll = ttk.Scrollbar(self.win, style="IHateTkinter.Vertical.TScrollbar")
+      tag_container_canvas = tk.Canvas(self.win, yscrollcommand=vscroll.set)
+      vscroll.config(command=tag_container_canvas.yview)
+      tag_frame = ttk.Frame(tag_container_canvas, style="IHateTkinter.TFrame")
+      MAIN_W, MAIN_H = 0.97, 0.95
+      tag_container_canvas.place(relwidth=MAIN_W, relheight=MAIN_H)
+      vscroll.place(relwidth=1-MAIN_W, relheight=MAIN_H, relx=MAIN_W)
+      commit_button.place(relwidth=1, relheight=1-MAIN_H, rely=MAIN_H)
+      self.win.update()
+      tag_container_canvas.create_window(0, 0, window=tag_frame, anchor="nw", width=MAIN_W*self.win.winfo_width())
+
       self.states = {tag:tk.IntVar(self.win, tag in self.curr_prof.tags) for tag in self.vocab}
       for tag in self.states:
-        tk.Checkbutton(self.win, text=tag, variable=self.states[tag], onvalue=1, offvalue=0).pack()
+        chk_btn = ttk.Checkbutton(tag_frame, text=indent_hierarchical(tag, 6), variable=self.states[tag], style="IHateTkinter.TCheckbutton")
+        chk_btn.pack(expand=True, fill=tk.X, padx=20)
+
+      self.win.update()
+      self._enable_mousewheel_scroll_you_stupid_tkinter(tag_container_canvas)
+      tag_container_canvas.config(scrollregion=tag_container_canvas.bbox(tk.ALL))
+
+    def _enable_mousewheel_scroll_you_stupid_tkinter(self, scrollable):
+      def _on_mousewheel(event):
+        dir = 0
+        if event.num == 5 or event.delta == -120:
+          dir = 1
+        if event.num == 4 or event.delta == 120:
+          dir = -1
+        scrollable.yview_scroll(dir*2, "units")
+      self.win.bind_all("<MouseWheel>", _on_mousewheel)
+      self.win.bind_all("<Button-4>", _on_mousewheel)
+      self.win.bind_all("<Button-5>", _on_mousewheel)
+
+    def _on_commit_pressed(self):
+      selected = [tag for tag, var in self.states.items() if var.get()]
+      print("commit", selected)
 
   def __init__(self, idx:int, mode:int, tags_vocab:list[str], *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -166,8 +213,6 @@ class ProfileCard(tk.Frame):
 
   def _show_tags(self, tags):
     tags = sorted(tags.split(' '))
-    def indent_hierarchical(t):
-      return "  "*t.count('|') + t.split('|')[-1]
     taglist = "\n".join(map(indent_hierarchical, tags))
     self.tags.configure(text=taglist or "-")
 
