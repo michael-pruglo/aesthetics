@@ -2,7 +2,7 @@ import os
 import random
 import unittest
 
-from ae_rater_types import ProfileInfo, RatChange, Rating
+from ae_rater_types import ProfileInfo, RatChange, Rating, UserListener
 from ae_rater_view import RaterGui
 from tests.helpers import MEDIA_FOLDER, SKIPLONG, get_initial_mediafiles
 
@@ -33,9 +33,17 @@ def generate_ratchange(n:int) -> list[RatChange]:
           )
           for _ in range(n)]
 
+
+class MockListener(UserListener):
+  def consume_result(self, *args, **kwargs): pass
+  def give_boost(self, *args, **kwargs): pass
+  def start_next_match(self): print("hello")
+  def update_tags(self, *args, **kwargs): pass
+
+
 def can_create_window() -> bool:
   try:
-    gui = RaterGui()
+    gui = RaterGui(MockListener(), ["a","b","c"])
     gui.root.destroy()
     return True
   except:
@@ -46,16 +54,18 @@ def can_create_window() -> bool:
 @unittest.skipUnless(can_create_window(), "cannot create tk interface")
 class TestView(unittest.TestCase):
   def _test_competition_window(self, n:int):
-    gui = RaterGui()
+    gui = RaterGui(MockListener(), ["a","b","c"])
     ldbrd = generate_profiles(random.randint(10,6000))
     for _ in range(10):
       participants = random.sample(ldbrd, n)
-      gui.display_match(participants, None)
+      gui.display_match(participants)
       gui.display_leaderboard(ldbrd, participants)
       gui.root.update()
       opinions = {sname:generate_ratchange(n) for sname in ['ELO','Glicko']}
       gui.conclude_match(opinions)
       gui.root.update()
+      for id in gui.scheduled_jobs:
+        gui.root.after_cancel(id)
     gui.root.destroy()
 
   def test_gui(self):

@@ -101,9 +101,10 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
 
 class ProfileCard(tk.Frame):
   class TagEditor:
-    def __init__(self, master, vocab:list[str]):
+    def __init__(self, master, vocab:list[str], update_tags_cb:Callable[[str,list],None]):
       self.master = master
       self.vocab = vocab
+      self.update_tags_cb = update_tags_cb
       self.curr_prof = None
       self.win = None
 
@@ -160,9 +161,9 @@ class ProfileCard(tk.Frame):
 
     def _on_commit_pressed(self):
       selected = [tag for tag, var in self.states.items() if var.get()]
-      print("commit", selected)
+      self.update_tags_cb(self.curr_prof.fullname, selected)
 
-  def __init__(self, idx:int, mode:int, tags_vocab:list[str], *args, **kwargs):
+  def __init__(self, idx:int, mode:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
     is_right = idx % 2
     self.bg = RIGHT_COLORBG if is_right else LEFT_COLORBG
@@ -177,9 +178,6 @@ class ProfileCard(tk.Frame):
     self.name   = ttk.Label (self, anchor="center", foreground=self.fg, text="filename")
     self.rating = ttk.Label (self, anchor="center", foreground=self.fg, text="rating")
 
-    self.tag_editor = self.TagEditor(self, tags_vocab)
-    self.tags.bind('<Button-1>', self.tag_editor.open)
-
     TW = 0.22
     BRDR = 0.015
     PH = 0.95 if self.mode==2 else 0.8
@@ -187,6 +185,10 @@ class ProfileCard(tk.Frame):
     self.media.place (relwidth=1-TW-BRDR, relheight=PH,       relx=BRDR if is_right else TW)
     self.name.place  (relwidth=1,         relheight=(1-PH)/2, rely=PH)
     self.rating.place(relwidth=1,         relheight=(1-PH)/2, rely=(PH+1)/2)
+
+  def set_tag_editor(self, *args, **kwargs):
+    self.tag_editor = self.TagEditor(self, *args, **kwargs)
+    self.tags.bind('<Button-1>', self.tag_editor.open)
 
   def show_profile(self, profile:ProfileInfo) -> None:
     self.name.configure(text=hlp.short_fname(profile.fullname))
@@ -354,7 +356,8 @@ class Leaderboard(tk.Text):
 
 
 class RaterGui:
-  def __init__(self, tags_vocab:list[str], give_boost_cb:Callable[[str,int],None]=None):
+  def __init__(self, user_listener:UserListener, tags_vocab:list[str]):
+    self.user_listener = user_listener
     self.tags_vocab = tags_vocab
     self.root = tk.Tk()
     self.root.geometry("1766x878+77+77")
@@ -378,9 +381,9 @@ class RaterGui:
                                   textvariable=self.content_outcome, border=0,
                                   disabledbackground=BTFL_DARK_BG)
     self.input_outcome.configure(highlightthickness=0)
-    self.give_boost_cb = give_boost_cb
+    self.scheduled_jobs = []
 
-  def display_match(self, profiles:list[ProfileInfo], outcome_cb:Callable[[Outcome],None]) -> None:
+  def display_match(self, profiles:list[ProfileInfo]) -> None:
     n = len(profiles)
     if len(self.cards) != n:
       self._prepare_layout(n)
@@ -390,18 +393,17 @@ class RaterGui:
       card.set_style(None)
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
     if n == 2:
-      self._enable_arrows(True, outcome_cb)
+      self._enable_arrows(True)
     else:
-      self._enable_input(True, n, outcome_cb)
+      self._enable_input(True, n)
 
-  def conclude_match(self, opinions:RatingOpinions,
-                     initiate_next_match_cb:Callable=None) -> None:
+  def conclude_match(self, opinions:RatingOpinions) -> None:
     for system_name,changes in opinions.items():
       for card,change in zip(self.cards, changes):
         card.show_results(system_name, change)
 
-    if initiate_next_match_cb:
-      self.root.after(CHANGE_MATCH_DELAY, initiate_next_match_cb)
+    job_id = self.root.after(CHANGE_MATCH_DELAY, self.user_listener.start_next_match)
+    self.scheduled_jobs.append(job_id)
 
   def display_leaderboard(self, leaderboard:list[ProfileInfo],
                           feature:list[ProfileInfo]=None, outcome:Outcome=None) -> None:
@@ -409,6 +411,8 @@ class RaterGui:
 
   def mainloop(self):
     self.root.mainloop()
+    for id in self.scheduled_jobs:
+      self.root.after_cancel(id)
 
   def _prepare_layout(self, n:int):
     if n==2:
@@ -416,8 +420,10 @@ class RaterGui:
       LDBRD_W = 0.24  # TODO: fix width
       HELP_H = 0.07
       for i in range(n):
-        self.cards.append(ProfileCard(i, n, self.tags_vocab, self.root))
-        self.cards[i].place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
+        card = ProfileCard(i, n, self.root)
+        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags)
+        card.place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
+        self.cards.append(card)
       self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
       self.help.place(relx=0.5-LDBRD_W/2, rely=1-HELP_H, relwidth=LDBRD_W, relheight=HELP_H)
       self.label_outcome.place_forget()
@@ -431,8 +437,10 @@ class RaterGui:
       INP_H = 0.055
       INP_LBL_H = INP_H*0.35
       for i in range(n):
-        self.cards.append(ProfileCard(i, n, self.tags_vocab, self.root))
-        self.cards[i].place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
+        card = ProfileCard(i, n, self.root)
+        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags)
+        card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
+        self.cards.append(card)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
       self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H-INP_LBL_H, relwidth=LDBRD_W)
@@ -462,17 +470,17 @@ class RaterGui:
 
     self.input_outcome.configure(background=bgcolor)
 
-  def _enable_arrows(self, enable:bool, callback:Callable=None):
+  def _enable_arrows(self, enable:bool):
     for key in '<Left>', '<Right>', '<Up>':
       boost_seq = f'<Control-{key[1:-1]}>'
       if enable:
-        self.root.bind(key, partial(self._on_arrow_press, callback=callback))
+        self.root.bind(key, self._on_arrow_press)
         self.root.bind(boost_seq, self._on_give_boost)
       else:
         self.root.unbind(key)
         self.root.unbind(boost_seq)
 
-  def _on_arrow_press(self, event, callback):
+  def _on_arrow_press(self, event):
     self._enable_arrows(False)
 
     outcome = {
@@ -483,32 +491,29 @@ class RaterGui:
     self.cards[0].set_style(outcome=-outcome[1])
     self.cards[1].set_style(outcome= outcome[1])
     self.root.update()
-    callback(outcome[0])
+    self.user_listener.consume_result(outcome[0])
 
-  def _enable_input(self, enable:bool, n:int=0, outcome_cb:Callable=None):
+  def _enable_input(self, enable:bool, n:int=0):
     if enable:
       self.input_outcome.config(state=tk.NORMAL, background="#444")
       self.input_outcome.delete(0, tk.END)
-      self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n, outcome_cb=outcome_cb))
+      self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n))
     else:
       self.input_outcome.config(state=tk.DISABLED)
       self.input_outcome.unbind('<Return>')
 
-  def _on_input_received(self, event, n, outcome_cb):
+  def _on_input_received(self, event, n):
     s = self.input_outcome.get()
     if Outcome.is_valid(s, n):
       outcome = Outcome(s)
-
-      assert self.give_boost_cb
       for idx, mult in outcome.get_boosts().items():
-        self.give_boost_cb(self.curr_prof_shnames[idx], mult)
-
+        self.user_listener.give_boost(self.curr_prof_shnames[idx], mult)
       self._enable_input(False)
-      outcome_cb(outcome)
+      self.user_listener.consume_result(outcome)
     else:
       self.input_outcome.config(background="#911")
 
   def _on_give_boost(self, event):
     assert len(self.curr_prof_shnames) == 2
     is_right = (event.keysym=="Right")
-    self.give_boost_cb(self.curr_prof_shnames[is_right], 1)
+    self.user_listener.give_boost(self.curr_prof_shnames[is_right], 1)

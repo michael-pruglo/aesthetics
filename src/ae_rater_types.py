@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import string
 import time
 from enum import Enum, auto
@@ -218,3 +219,21 @@ class Outcome:
 
   def __hash__(self) -> int:
     return hash(self.tiers)
+
+
+class UserListener(ABC):
+  @abstractmethod
+  def consume_result(self, outcome:Outcome) -> None:
+    pass
+
+  @abstractmethod
+  def give_boost(self, short_name:str, mult:int=1) -> None:
+    pass
+
+  @abstractmethod
+  def start_next_match(self) -> None:
+    pass
+
+  @abstractmethod
+  def update_tags(self, fullname:str, tags:list[str]) -> None:
+    pass
