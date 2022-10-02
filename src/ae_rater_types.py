@@ -140,6 +140,9 @@ class Outcome:
 
   @staticmethod
   def predict_tiers_intermediate(outcome:str, n:int) -> tuple[dict,int]:
+    if outcome == "":
+      return {}, n
+
     assert Outcome.is_valid(outcome, n, intermediate=True)
 
     s = outcome.translate({ord(i):None for i in "+-"})

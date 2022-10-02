@@ -126,6 +126,7 @@ class TestOucome(unittest.TestCase):
 
   def test_intermediate_predictions(self):
     cases = {
+      "": ({}, 8, "empty"),
       "d+-+ a+": ({3:0, 0:1}, 6, "predict these are leaders"),
       "cb++": ({2:0, 1:0}, 12, "predict these are leaders"),
       "ca+- f++ ": ({2:0, 0:0, 5:1}, 8, "predict these are leaders"),
