@@ -99,6 +99,7 @@ class TestOucome(unittest.TestCase):
       "b + ca": "no spaces before '+' allowed",
       "b - ca": "no spaces before '-' allowed",
       "w a b": "'w' without predecesors",
+      "a_b": "invalid symbol '_'",
     }
     for s, reason in invalid.items():
       self.assertFalse(Outcome.is_valid(s), reason)
@@ -133,3 +134,7 @@ class TestOucome(unittest.TestCase):
       tiers, max_tier = Outcome.predict_tiers_intermediate(s, n)
       self.assertDictEqual(tiers, exp_tiers, reason)
       self.assertTrue(len(exp_tiers) <= max_tier <= n, reason)
+
+
+if __name__ == "__main__":
+  unittest.main()

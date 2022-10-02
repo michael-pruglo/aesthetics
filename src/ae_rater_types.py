@@ -133,7 +133,7 @@ class Outcome:
     if not intermediate:
       return len(s)==n and s==string.ascii_lowercase[:n]
     else:
-      return len(s)<=n and biggest_idx<n and len(set(s))==len(s)
+      return s.isalpha() and len(s)<=n and biggest_idx<n and len(set(s))==len(s)
 
   @staticmethod
   def predict_tiers_intermediate(outcome:str, n:int) -> tuple[dict,int]:
