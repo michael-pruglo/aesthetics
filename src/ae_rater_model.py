@@ -7,6 +7,7 @@ from typing import Callable
 
 from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
+from metadata import write_metadata
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
@@ -60,6 +61,10 @@ class RatingCompetition:
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
                        for prof in self.curr_match]
 
+  def update_tags(self, fullname:str, tags:list[str]) -> None:
+    logging.info("update tags on disk: %s  %s", short_fname(fullname), tags)
+    self.db.update_tags(fullname, tags)
+
   def on_exit(self):
     self.db.on_exit()
 
@@ -105,6 +110,9 @@ class DBAccess:
         })
 
       self.meta_mgr.update(prof.fullname, new_ratings, len(profiles)-1, statistics.mean(proposed_stars))
+
+  def update_tags(self, *args, **kwargs):
+    self.meta_mgr.update_tags(*args, **kwargs)
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()

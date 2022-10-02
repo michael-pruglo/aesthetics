@@ -82,12 +82,13 @@ class MetadataManager:
 
     return self.df
 
+  def update_tags(self, fullname:str, tags:list[str]) -> None:
+    write_metadata(fullname, tags=tags, append=False)
+
   def get_tags_vocab(self) -> list[str]:
     return self._get_frequent_tags(0).sort_index().index.to_list()
 
   def get_file_info(self, short_name:str) -> pd.Series:
-    # if short_name not in self.df.index:
-    #   raise KeyError(f"{short_name} not in database")
     return self.df.loc[short_name]
 
   def get_rand_files_info(self, n:int) -> pd.DataFrame:

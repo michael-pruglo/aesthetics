@@ -121,6 +121,19 @@ class TestCompetition(unittest.TestCase):
           self.assertLessEqual(new_rating.rd, old_rating.rd)
           self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
 
+  def test_tags_update(self):
+    tst_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    tst_files = random.sample(tst_files, min(10, len(tst_files)))
+    hlp.backup_files(tst_files)
+    for f in tst_files:
+      tags_before, stars_before = get_metadata(f)
+      new_tags = {"nonsense", "sks", "u3jm69ak2m6jo"}
+      self.model.update_tags(f, new_tags)
+      tags_after, stars_after = get_metadata(f)
+      self.assertEqual(stars_after, stars_before)
+      self.assertNotEqual(tags_after, tags_before)
+      self.assertSetEqual(tags_after, new_tags)
+
   def _long_term(self, n):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
     hlp.backup_files(all_files)

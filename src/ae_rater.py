@@ -56,7 +56,7 @@ class App(UserListener):
     self.gui.display_match(updated_prof)
 
   def update_tags(self, fullname:str, tags:list[str]) -> None:
-    print(f"UPDATE TAGS {fullname}:\n{tags}")
+    self.model.update_tags(fullname, tags)
 
 
 if __name__ == "__main__":
