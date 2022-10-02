@@ -1,9 +1,9 @@
 from functools import partial
-import numpy as np
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
 from typing import Callable
+import numpy as np
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
 
@@ -96,7 +96,26 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
 
 
 class ProfileCard(tk.Frame):
-  def __init__(self, idx:int, mode:int, *args, **kwargs):
+  class TagEditor:
+    def __init__(self, master, vocab:list[str]):
+      self.master = master
+      self.vocab = vocab
+      self.curr_prof = None
+      self.win = None
+
+    def set_curr_profile(self, prof:ProfileInfo):
+      self.curr_prof = prof
+
+    def open(self, event):
+      assert self.curr_prof
+      self.win = tk.Toplevel(self.master)
+      self.win.title(f"edit tags {hlp.short_fname(self.curr_prof.fullname)}")
+      self.win.geometry("500x800+710+140")
+      self.states = {tag:tk.IntVar(self.win, tag in self.curr_prof.tags) for tag in self.vocab}
+      for tag in self.states:
+        tk.Checkbutton(self.win, text=tag, variable=self.states[tag], onvalue=1, offvalue=0).pack()
+
+  def __init__(self, idx:int, mode:int, tags_vocab:list[str], *args, **kwargs):
     super().__init__(*args, **kwargs)
     is_right = idx % 2
     self.bg = RIGHT_COLORBG if is_right else LEFT_COLORBG
@@ -111,6 +130,9 @@ class ProfileCard(tk.Frame):
     self.name   = ttk.Label (self, anchor="center", foreground=self.fg, text="filename")
     self.rating = ttk.Label (self, anchor="center", foreground=self.fg, text="rating")
 
+    self.tag_editor = self.TagEditor(self, tags_vocab)
+    self.tags.bind('<Button-1>', self.tag_editor.open)
+
     TW = 0.22
     BRDR = 0.015
     PH = 0.95 if self.mode==2 else 0.8
@@ -122,6 +144,7 @@ class ProfileCard(tk.Frame):
   def show_profile(self, profile:ProfileInfo) -> None:
     self.name.configure(text=hlp.short_fname(profile.fullname))
     self._show_tags(profile.tags)
+    self.tag_editor.set_curr_profile(profile)
     self._show_rating(profile.stars, profile.ratings, profile.nmatches)
     self.media.show_media(profile.fullname)
 
@@ -286,7 +309,8 @@ class Leaderboard(tk.Text):
 
 
 class RaterGui:
-  def __init__(self, give_boost_cb:Callable[[str,int],None]=None):
+  def __init__(self, tags_vocab:list[str], give_boost_cb:Callable[[str,int],None]=None):
+    self.tags_vocab = tags_vocab
     self.root = tk.Tk()
     self.root.geometry("1766x878+77+77")
     self.root.title("aesthetics")
@@ -347,7 +371,7 @@ class RaterGui:
       LDBRD_W = 0.24  # TODO: fix width
       HELP_H = 0.07
       for i in range(n):
-        self.cards.append(ProfileCard(i, n, self.root))
+        self.cards.append(ProfileCard(i, n, self.tags_vocab, self.root))
         self.cards[i].place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
       self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
       self.help.place(relx=0.5-LDBRD_W/2, rely=1-HELP_H, relwidth=LDBRD_W, relheight=HELP_H)
@@ -362,7 +386,7 @@ class RaterGui:
       INP_H = 0.055
       INP_LBL_H = INP_H*0.35
       for i in range(n):
-        self.cards.append(ProfileCard(i, n, self.root))
+        self.cards.append(ProfileCard(i, n, self.tags_vocab, self.root))
         self.cards[i].place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)

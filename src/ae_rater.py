@@ -24,7 +24,7 @@ def setup_logger(log_filename):
 class App:
   def __init__(self, media_dir:str):
     self.model = RatingCompetition(media_dir, refresh=False)
-    self.gui = RaterGui(give_boost_cb=self._give_boost)
+    self.gui = RaterGui(self.model.get_tags_vocab(), give_boost_cb=self._give_boost)
     self.num_participants = 2
 
   def run(self, num_participants:int) -> None:

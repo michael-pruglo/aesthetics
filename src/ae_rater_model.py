@@ -33,6 +33,9 @@ class RatingCompetition:
   def get_leaderboard(self) -> list[ProfileInfo]:
     return self.db.get_leaderboard(sortpriority=[s.name()+"_pts" for s in self.rat_systems])
 
+  def get_tags_vocab(self) -> list[str]:
+    return self.db.get_tags_vocab()
+
   def consume_result(self, outcome:Outcome) -> RatingOpinions:
     logging.info("consume_result outcome = %s", outcome.tiers)
     self.db.save_match(self.curr_match, outcome)
@@ -107,6 +110,9 @@ class DBAccess:
     db = self.meta_mgr.get_db()
     db.sort_values(['stars']+sortpriority, ascending=False, inplace=True)
     return [self._validate_and_convert_info(db.iloc[i]) for i in range(len(db))]
+
+  def get_tags_vocab(self) -> list[str]:
+    return self.meta_mgr.get_tags_vocab()
 
   def retreive_profile(self, short_name:str) -> ProfileInfo:
     info = self.meta_mgr.get_file_info(short_name)
