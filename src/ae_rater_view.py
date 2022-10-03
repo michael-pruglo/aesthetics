@@ -100,32 +100,36 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
 
 
 class ProfileCard(tk.Frame):
-  class TagEditor:
-    def __init__(self, master, vocab:list[str], update_tags_cb:Callable[[str,list],None],
+  class MetaEditor:
+    def __init__(self, master, vocab:list[str], update_meta_cb:Callable[[str,list],None],
                  suggest_tags_cb:Callable[[str],list]):
       self.master = master
       self.vocab = vocab if vocab[0] else vocab[1:]
-      self.update_tags_cb = update_tags_cb
+      self.update_meta_cb = update_meta_cb
       self.suggest_tags_cb = suggest_tags_cb
       self.curr_prof = None
+      self.stars:int = None
       self.win = None
 
     def set_curr_profile(self, prof:ProfileInfo):
       self.curr_prof = prof
+      self.stars = int(prof.stars)
 
     def open(self, event):
       assert self.curr_prof
-      try:
-        suggested_tags = self.suggest_tags_cb(self.curr_prof.fullname)
-      except:
-        suggested_tags = []
+      assert self.stars is not None
       print(f"open tag editor for {hlp.short_fname(self.curr_prof.fullname)}")
       print(f"{self.curr_prof.tags.split()}")
       print( "suggested tags:")
-      print('\n'.join([f"{tag:>25} {prob*100:>5.2f} {'#'*int(prob*50)}" for tag,prob in suggested_tags]))
+      try:
+        suggested_tags = self.suggest_tags_cb(self.curr_prof.fullname)
+        print('\n'.join([f"{tag:>37} {prob*100:>5.2f} {'#'*int(prob*50)}" for tag,prob in suggested_tags]))
+      except:
+        suggested_tags = []
+        print("[]")
 
       self.win = tk.Toplevel(self.master)
-      self.win.title(f"edit tags {hlp.short_fname(self.curr_prof.fullname)}")
+      self.win.title(f"edit meta {hlp.short_fname(self.curr_prof.fullname)}")
       self.win.geometry("500x800+710+140")
 
       self.style = ttk.Style(self.win)
@@ -136,6 +140,12 @@ class ProfileCard(tk.Frame):
           indicatorcolor = [('selected', "#0f0")],
         )
       self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
+      self.style.configure("IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA, font=(None, 20))
+
+      self.stars_lbl = ttk.Label(self.win, justify=tk.CENTER, style="IHateTkinter.TLabel")  # just WHY will it not justify?
+      self._update_stars()
+      for i in range(6):
+        self.win.bind(str(i), self._update_stars)
 
       commit_button = ttk.Button(self.win, text="COMMIT", command=self._on_commit_pressed, style="IHateTkinter.TButton")
       vscroll = ttk.Scrollbar(self.win, style="IHateTkinter.Vertical.TScrollbar")
@@ -145,13 +155,14 @@ class ProfileCard(tk.Frame):
       MAIN_W, MAIN_H = 0.97, 0.95
       tag_container_canvas.place(relwidth=MAIN_W, relheight=MAIN_H)
       vscroll.place(relwidth=1-MAIN_W, relheight=MAIN_H, relx=MAIN_W)
-      commit_button.place(relwidth=1, relheight=1-MAIN_H, rely=MAIN_H)
+      self.stars_lbl.place(relwidth=.5, relheight=1-MAIN_H, rely=MAIN_H)
+      commit_button.place(relwidth=.5, relheight=1-MAIN_H, relx=.5, rely=MAIN_H)
       self.win.update()
       tag_container_canvas.create_window(0, 0, window=tag_frame, anchor="nw", width=MAIN_W*self.win.winfo_width())
 
       def should_be_set(tag):
         prob = next((p for t,p in suggested_tags if t==tag), 0)
-        return (tag in self.curr_prof.tags) or (prob > 0.47)
+        return (tag in self.curr_prof.tags) or (self.curr_prof.tags=="" and prob > 0.47)
       self.states = {tag:tk.IntVar(self.win, int(should_be_set(tag))) for tag in self.vocab}
       for tag in self.states:
         stylename = "IHateTkinter.TCheckbutton"
@@ -178,9 +189,14 @@ class ProfileCard(tk.Frame):
       self.win.bind_all("<Button-4>", _on_mousewheel)
       self.win.bind_all("<Button-5>", _on_mousewheel)
 
+    def _update_stars(self, event=None):
+      if event is not None:
+        self.stars = int(event.keysym)
+      self.stars_lbl.configure(text='★'*self.stars+'☆'*(5-self.stars))
+
     def _on_commit_pressed(self):
       selected = [tag for tag, var in self.states.items() if var.get()]
-      self.update_tags_cb(self.curr_prof.fullname, selected)
+      self.update_meta_cb(self.curr_prof.fullname, tags=selected, stars=self.stars)
 
   def __init__(self, idx:int, mode:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -205,8 +221,8 @@ class ProfileCard(tk.Frame):
     self.name.place  (relwidth=1,         relheight=(1-PH)/2, rely=PH)
     self.rating.place(relwidth=1,         relheight=(1-PH)/2, rely=(PH+1)/2)
 
-  def set_tag_editor(self, *args, **kwargs):
-    self.tag_editor = self.TagEditor(self, *args, **kwargs)
+  def set_meta_editor(self, *args, **kwargs):
+    self.tag_editor = self.MetaEditor(self, *args, **kwargs)
     self.tags.bind('<Button-1>', self.tag_editor.open)
 
   def show_profile(self, profile:ProfileInfo) -> None:
@@ -440,7 +456,7 @@ class RaterGui:
       HELP_H = 0.07
       for i in range(n):
         card = ProfileCard(i, n, self.root)
-        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags, self.user_listener.suggest_tags)
+        card.set_meta_editor(self.tags_vocab, self.user_listener.update_meta, self.user_listener.suggest_tags)
         card.place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
         self.cards.append(card)
       self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
@@ -457,7 +473,7 @@ class RaterGui:
       INP_LBL_H = INP_H*0.35
       for i in range(n):
         card = ProfileCard(i, n, self.root)
-        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags, self.user_listener.suggest_tags)
+        card.set_meta_editor(self.tags_vocab, self.user_listener.update_meta, self.user_listener.suggest_tags)
         card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)

@@ -122,17 +122,27 @@ class TestCompetition(unittest.TestCase):
           self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
 
   def test_tags_update(self):
-    tst_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
-    tst_files = random.sample(tst_files, min(10, len(tst_files)))
-    hlp.backup_files(tst_files)
-    for f in tst_files:
-      tags_before, stars_before = get_metadata(f)
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    hlp.backup_files(all_files)
+
+    for prof in self.model.generate_match(6):
+      tags_before, stars_before = get_metadata(prof.fullname)
+      self.assertEqual(stars_before, prof.stars)
+      self.assertSetEqual(tags_before, set(prof.tags.split()))
       new_tags = {"nonsense", "sks", "u3jm69ak2m6jo"}
-      self.model.update_tags(f, new_tags)
-      tags_after, stars_after = get_metadata(f)
-      self.assertEqual(stars_after, stars_before)
-      self.assertNotEqual(tags_after, tags_before)
+      new_stars = random.randint(0, 5)
+      self.model.update_meta(prof.fullname, tags=new_tags, stars=new_stars)
+      tags_after, stars_after = get_metadata(prof.fullname)
+      self.assertEqual(stars_after, new_stars)
+      self.assertNotEqual(tags_after, tags_before, prof.fullname)
       self.assertSetEqual(tags_after, new_tags)
+      new_prof = self._get_leaderboard_line(prof.fullname)
+      self.assertEqual(new_prof.stars, new_stars)
+      self.assertSetEqual(set(new_prof.tags.split()), new_tags)
+      new_in_match = next(p for p in self.model.get_curr_match() if p.fullname==prof.fullname)
+      self.assertEqual(new_in_match.stars, new_stars)
+      self.assertSetEqual(set(new_in_match.tags.split()), new_tags)
+
 
   def _long_term(self, n):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]

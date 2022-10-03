@@ -38,7 +38,8 @@ class MockListener(UserListener):
   def consume_result(self, *args, **kwargs): pass
   def give_boost(self, *args, **kwargs): pass
   def start_next_match(self): print("hello")
-  def update_tags(self, *args, **kwargs): pass
+  def update_meta(self, *args, **kwargs): pass
+  def suggest_tags(self, *args, **kwargs): pass
 
 
 def can_create_window() -> bool:
@@ -46,7 +47,8 @@ def can_create_window() -> bool:
     gui = RaterGui(MockListener(), ["a","b","c"])
     gui.root.destroy()
     return True
-  except:
+  except Exception as e:
+    print("Cannot create gui:", e)
     return False
 
 

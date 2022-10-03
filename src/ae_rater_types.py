@@ -235,7 +235,7 @@ class UserListener(ABC):
     pass
 
   @abstractmethod
-  def update_tags(self, fullname:str, tags:list[str]) -> None:
+  def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
     pass
 
   @abstractmethod

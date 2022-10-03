@@ -57,13 +57,12 @@ class RatingCompetition:
       [profile],
       {s.name(): [s.get_boost(profile, mult)] for s in self.rat_systems},
     )
+    self._refresh_curr_match()
 
-    self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
-                       for prof in self.curr_match]
-
-  def update_tags(self, fullname:str, tags:list[str]) -> None:
-    logging.info("update tags on disk: %s  %s", short_fname(fullname), tags)
-    self.db.update_tags(fullname, tags)
+  def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
+    logging.info("update tags on disk: %s  %s %d", short_fname(fullname), tags, stars)
+    self.db.update_meta(fullname, tags, stars)
+    self._refresh_curr_match()
 
   def on_exit(self):
     self.db.on_exit()
@@ -80,6 +79,10 @@ class RatingCompetition:
           s += f"{system}: {changes[idx]} "
         s += "\n"
     return s
+
+  def _refresh_curr_match(self) -> None:
+    self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))
+                       for prof in self.curr_match]
 
 
 class DBAccess:
@@ -111,8 +114,8 @@ class DBAccess:
 
       self.meta_mgr.update(prof.fullname, new_ratings, len(profiles)-1, statistics.mean(proposed_stars))
 
-  def update_tags(self, *args, **kwargs):
-    self.meta_mgr.update_tags(*args, **kwargs)
+  def update_meta(self, *args, **kwargs):
+    self.meta_mgr.update_meta(*args, **kwargs)
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()

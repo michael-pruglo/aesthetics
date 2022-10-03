@@ -82,8 +82,9 @@ class MetadataManager:
 
     return self.df
 
-  def update_tags(self, fullname:str, tags:list[str]) -> None:
-    write_metadata(fullname, tags=tags, append=False)
+  def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
+    write_metadata(fullname, tags, stars, append=False)
+    self.update(fullname, _db_row(fullname), 0)
 
   def get_tags_vocab(self) -> list[str]:
     return self._get_frequent_tags(0).sort_index().index.to_list()
@@ -94,7 +95,7 @@ class MetadataManager:
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
     return self.df.sample(n)
 
-  def update(self, fullname:str, upd_data:dict, matches_each:int, consensus_stars:float) -> None:
+  def update(self, fullname:str, upd_data:dict, matches_each:int, consensus_stars:float=None) -> None:
     short_name = short_fname(fullname)
     # if short_name not in self.df.index:
     #   raise KeyError(f"{short_name} not in database")
@@ -103,15 +104,16 @@ class MetadataManager:
     if upd_data:
       row.update(upd_data)
 
-    if consensus_stars < 0:
-      raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
-    prev_stars = row['stars']
-    row.loc['stars'] = consensus_stars
-    disk_stars = min(5, int(consensus_stars))
-    if min(5, int(prev_stars)) != disk_stars:
-      write_metadata(fullname, rating=disk_stars)
-      logging.info("file %s updated stars on disk: %f -> %f",
-                    short_name, prev_stars, disk_stars)
+    if consensus_stars is not None:
+      if consensus_stars < 0:
+        raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
+      prev_stars = row['stars']
+      row.loc['stars'] = consensus_stars
+      disk_stars = min(5, int(consensus_stars))
+      if min(5, int(prev_stars)) != disk_stars:
+        write_metadata(fullname, rating=disk_stars)
+        logging.info("file %s updated stars on disk: %f -> %f",
+                      short_name, prev_stars, disk_stars)
 
     row.loc['nmatches'] += matches_each
 

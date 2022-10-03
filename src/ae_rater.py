@@ -53,15 +53,19 @@ class App(UserListener):
 
   def give_boost(self, short_name:str, mult:int=1) -> None:
     self.model.give_boost(short_name, mult)
-    updated_prof = self.model.get_curr_match()
-    self.gui.display_leaderboard(self.model.get_leaderboard(), updated_prof)
-    self.gui.display_match(updated_prof)
+    self._refresh_gui()
 
-  def update_tags(self, fullname:str, tags:list[str]) -> None:
-    self.model.update_tags(fullname, tags)
+  def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
+    self.model.update_meta(fullname, tags, stars)
+    self._refresh_gui()
 
   def suggest_tags(self, fullname: str) -> list:
     return self.ai_assistant.suggest_tags(fullname)
+
+  def _refresh_gui(self):
+      updated_prof = self.model.get_curr_match()
+      self.gui.display_leaderboard(self.model.get_leaderboard(), updated_prof)
+      self.gui.display_match(updated_prof)
 
 
 if __name__ == "__main__":
