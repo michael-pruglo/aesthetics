@@ -45,7 +45,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
   def show_media(self, fname):
     self.media_fname = fname
     ext = hlp.file_extension(fname)
-    if ext in ['jpg', 'jpeg', 'png', 'jfif']:
+    if ext in ['jpg', 'jpeg', 'png', 'jfif', 'webp']:
       self.show_img(fname)
     elif ext in ['mp4', 'mov', 'gif']:
       self.show_vid(fname)
@@ -101,10 +101,12 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
 
 class ProfileCard(tk.Frame):
   class TagEditor:
-    def __init__(self, master, vocab:list[str], update_tags_cb:Callable[[str,list],None]):
+    def __init__(self, master, vocab:list[str], update_tags_cb:Callable[[str,list],None],
+                 suggest_tags_cb:Callable[[str],list]):
       self.master = master
-      self.vocab = vocab
+      self.vocab = vocab if vocab[0] else vocab[1:]
       self.update_tags_cb = update_tags_cb
+      self.suggest_tags_cb = suggest_tags_cb
       self.curr_prof = None
       self.win = None
 
@@ -113,6 +115,15 @@ class ProfileCard(tk.Frame):
 
     def open(self, event):
       assert self.curr_prof
+      try:
+        suggested_tags = self.suggest_tags_cb(self.curr_prof.fullname)
+      except:
+        suggested_tags = []
+      print(f"open tag editor for {hlp.short_fname(self.curr_prof.fullname)}")
+      print(f"{self.curr_prof.tags.split()}")
+      print( "suggested tags:")
+      print('\n'.join([f"{tag:>25} {prob*100:>5.2f} {'#'*int(prob*50)}" for tag,prob in suggested_tags]))
+
       self.win = tk.Toplevel(self.master)
       self.win.title(f"edit tags {hlp.short_fname(self.curr_prof.fullname)}")
       self.win.geometry("500x800+710+140")
@@ -121,7 +132,7 @@ class ProfileCard(tk.Frame):
       for elem in ["TButton", "TCheckbutton", "TFrame", "Vertical.TScrollbar"]:
         self.style.map("IHateTkinter."+elem,
           foreground = [('active', "#fff"), ('!active', BTFL_LIGHT_GRAY)],
-          background = [('active', "#555"), ('!active', BTFL_DARK_BG)],
+          background = [('active', "#555")],
           indicatorcolor = [('selected', "#0f0")],
         )
       self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
@@ -138,9 +149,17 @@ class ProfileCard(tk.Frame):
       self.win.update()
       tag_container_canvas.create_window(0, 0, window=tag_frame, anchor="nw", width=MAIN_W*self.win.winfo_width())
 
-      self.states = {tag:tk.IntVar(self.win, tag in self.curr_prof.tags) for tag in self.vocab}
+      def should_be_set(tag):
+        prob = next((p for t,p in suggested_tags if t==tag), 0)
+        return (tag in self.curr_prof.tags) or (prob > 0.47)
+      self.states = {tag:tk.IntVar(self.win, int(should_be_set(tag))) for tag in self.vocab}
       for tag in self.states:
-        chk_btn = ttk.Checkbutton(tag_frame, text=indent_hierarchical(tag, 6), variable=self.states[tag], style="IHateTkinter.TCheckbutton")
+        stylename = "IHateTkinter.TCheckbutton"
+        prob = next((p for t,p in suggested_tags if t==tag), None)
+        if prob:
+          stylename = f"sugg{int(prob*30)}." + stylename
+          self.style.configure(stylename, background=f"#3{3+int(prob*10):x}3")
+        chk_btn = ttk.Checkbutton(tag_frame, text=indent_hierarchical(tag, 6), variable=self.states[tag], style=stylename)
         chk_btn.pack(expand=True, fill=tk.X, padx=20)
 
       self.win.update()
@@ -421,7 +440,7 @@ class RaterGui:
       HELP_H = 0.07
       for i in range(n):
         card = ProfileCard(i, n, self.root)
-        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags)
+        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags, self.user_listener.suggest_tags)
         card.place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
         self.cards.append(card)
       self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
@@ -438,7 +457,7 @@ class RaterGui:
       INP_LBL_H = INP_H*0.35
       for i in range(n):
         card = ProfileCard(i, n, self.root)
-        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags)
+        card.set_tag_editor(self.tags_vocab, self.user_listener.update_tags, self.user_listener.suggest_tags)
         card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)

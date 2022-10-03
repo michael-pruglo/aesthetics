@@ -237,3 +237,7 @@ class UserListener(ABC):
   @abstractmethod
   def update_tags(self, fullname:str, tags:list[str]) -> None:
     pass
+
+  @abstractmethod
+  def suggest_tags(self, fullname:str) -> list:
+    pass

@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+from ai_assistant import Assistant
 
 from helpers import short_fname
 from ae_rater_types import Outcome, UserListener
@@ -26,6 +27,7 @@ class App(UserListener):
   def __init__(self, media_dir:str):
     self.model = RatingCompetition(media_dir, refresh=False)
     self.gui = RaterGui(self, self.model.get_tags_vocab())
+    self.ai_assistant = Assistant()
     self.num_participants = 2
 
   def run(self, num_participants:int) -> None:
@@ -57,6 +59,9 @@ class App(UserListener):
 
   def update_tags(self, fullname:str, tags:list[str]) -> None:
     self.model.update_tags(fullname, tags)
+
+  def suggest_tags(self, fullname: str) -> list:
+    return self.ai_assistant.suggest_tags(fullname)
 
 
 if __name__ == "__main__":

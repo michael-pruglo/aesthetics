@@ -39,7 +39,7 @@ def get_metadata(fullname:str) -> tuple[set[str],int]:
 def write_metadata(fullname:str, tags:Iterable[str]=None, rating:int=None, append:bool=True) -> None:
   xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
   xmp = xmpfile.get_xmp()
-  if not xmpfile.can_put_xmp(xmp):
+  if not xmp or not xmpfile.can_put_xmp(xmp):
     raise RuntimeError(f"file {fullname}: metadata not writable")
 
   def write_tag(property, tag):
