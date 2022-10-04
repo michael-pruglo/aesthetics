@@ -7,13 +7,19 @@ from metadata import get_metadata, write_metadata
 from helpers import short_fname
 
 
+def get_vocab() -> list[str]:
+  fname = os.path.abspath("./tags_vocab.txt")
+  if not os.path.exists(fname):
+    return None
+  with open(fname, "r") as vocab_file:
+    return vocab_file.read().split()
+
 def _db_row(fname):
   try:
-    tags, stars = get_metadata(fname)
+    tags, stars = get_metadata(fname, get_vocab())
   except:
-    print(f"error reading metadata of {short_fname(fname)}")
     tags, stars = [], 0
-  logging.warning("media without tags %s", short_fname(fname))
+    logging.warning("error reading metadata of %s", short_fname(fname))
 
   return {
     'name': short_fname(fname),
@@ -31,7 +37,7 @@ def _default_init(row, default_values_getter):
       if (column not in row) or pd.isnull(row[column]):
         row[column] = value
       else:
-        msg = f"value {row[column]} already exists for {row.index}, will not be overwritten by {value}"
+        msg = f"value {row[column]} already exists for {row.name}, will not be overwritten by {value}"
         logging.warning(msg)
   else:
     logging.warning("no default_values_getter was supplied. Ratings are not initialized.")
@@ -97,8 +103,7 @@ class MetadataManager:
     self.update(fullname, upd_data, 0)
 
   def get_tags_vocab(self) -> list[str]:
-    with open(os.path.abspath("./tags_vocab.txt"), "r") as vocab_file:
-      return vocab_file.read().split()
+    return get_vocab()
 
   def get_file_info(self, short_name:str) -> pd.Series:
     return self.df.loc[short_name]

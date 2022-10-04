@@ -6,7 +6,7 @@ from PIL import Image
 import helpers as hlp
 
 
-def get_metadata(fullname:str) -> tuple[set[str],int]:
+def get_metadata(fullname:str, vocab:list[str]=None) -> tuple[set[str],int]:
   xmpfile = XMPFiles(file_path=fullname)
   xmp = xmpfile.get_xmp()
   if xmp is None:
@@ -14,17 +14,28 @@ def get_metadata(fullname:str) -> tuple[set[str],int]:
   xmpfile.close_file()
 
   def get_tags():
+    no_hierarchical = False
     propname = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
     if not xmp.does_property_exist(*propname):
       propname = (consts.XMP_NS_DC, "subject")
       if not xmp.does_property_exist(*propname):
         logging.warning("No tags in metadata of %s", hlp.short_fname(fullname))
         return set()
+      no_hierarchical = True
       logging.warning("No hierarchical tags in %s", hlp.short_fname(fullname))
     n = xmp.count_array_items(*propname)
     if n==0:
       logging.warning("ZERO tags in %s", hlp.short_fname(fullname))
-    return {xmp.get_array_item(*propname, i+1) for i in range(n)}
+    ret = set()
+    for i in range(n):
+      tag = xmp.get_array_item(*propname, i+1)
+      if no_hierarchical and vocab is not None:
+        for voc_tag in vocab:
+          if voc_tag.endswith(tag):
+            tag = voc_tag
+            break
+      ret.add(tag)
+    return ret
 
   def get_rating():
     propname = (consts.XMP_NS_XMP, "Rating")
