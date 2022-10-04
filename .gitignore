@@ -5,6 +5,5 @@ logs/
 sample_imgs/
 tests/test_media/
 src/tmp*
-models/tmp*
+models/
 *.ipynb
-

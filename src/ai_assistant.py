@@ -10,10 +10,16 @@ from metadata import get_metadata
 
 class Assistant:
   def __init__(self):
-    self.tags_backend = ConvnextTiny()
+    try:
+      self.tags_backend = ConvnextTiny()
+    except:
+      self.tags_backend = None
     self.stars_backend = StarPredictorBaseline()
 
   def suggest_tags(self, fname:str, visual=False) -> list[str]:
+    if not self.tags_backend:
+      return []
+   
     suggestion = self.tags_backend.suggest_tags(os.path.abspath(fname))[:20]
 
     if visual:
