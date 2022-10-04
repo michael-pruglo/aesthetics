@@ -1,6 +1,6 @@
 import logging
 from typing import Iterable
-from libxmp import XMPFiles, consts
+from libxmp import XMPFiles, consts, XMPError
 from PIL import Image
 
 import helpers as hlp
@@ -48,9 +48,17 @@ def write_metadata(fullname:str, tags:Iterable[str]=None, rating:int=None, appen
   if tags:
     hier_tag_prop = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
     subj_tag_prop = (consts.XMP_NS_DC, "subject")
+    try:
+      xmp.register_namespace(hier_tag_prop[0], "pref1")
+      xmp.register_namespace(subj_tag_prop[1], "pref2")
+    except:
+      logging.warning("problems registering namespace")
     if not append:
-      xmp.delete_property(*hier_tag_prop)
-      xmp.delete_property(*subj_tag_prop)
+      try:
+        xmp.delete_property(*hier_tag_prop)
+        xmp.delete_property(*subj_tag_prop)
+      except XMPError as e:
+        logging.warning("Could not delete property: ^s", e)
     for tag in tags:
       write_tag(hier_tag_prop, tag)
       write_tag(subj_tag_prop, tag.split('|')[-1])

@@ -12,6 +12,7 @@ from ae_rater_types import *
 
 
 CHANGE_MATCH_DELAY = 1500
+ACC_TAG_THRESH = 0.47
 
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
@@ -45,7 +46,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
   def show_media(self, fname):
     self.media_fname = fname
     ext = hlp.file_extension(fname)
-    if ext in ['jpg', 'jpeg', 'png', 'jfif', 'webp']:
+    if ext in ['jpg', 'jpeg', 'png', 'jfif', 'webp', 'heic']:
       self.show_img(fname)
     elif ext in ['mp4', 'mov', 'gif']:
       self.show_vid(fname)
@@ -123,24 +124,17 @@ class ProfileCard(tk.Frame):
       print( "suggested tags:")
       try:
         suggested_tags = self.suggest_tags_cb(self.curr_prof.fullname)
-        print('\n'.join([f"{tag:>37} {prob*100:>5.2f} {'#'*int(prob*50)}" for tag,prob in suggested_tags]))
       except:
         suggested_tags = []
-        print("[]")
 
+      self._create_window(suggested_tags)
+
+    def _create_window(self, suggested_tags):
       self.win = tk.Toplevel(self.master)
       self.win.title(f"edit meta {hlp.short_fname(self.curr_prof.fullname)}")
-      self.win.geometry("500x800+710+140")
+      self.win.geometry("1500x800+210+140")
 
-      self.style = ttk.Style(self.win)
-      for elem in ["TButton", "TCheckbutton", "TFrame", "Vertical.TScrollbar"]:
-        self.style.map("IHateTkinter."+elem,
-          foreground = [('active', "#fff"), ('!active', BTFL_LIGHT_GRAY)],
-          background = [('active', "#555")],
-          indicatorcolor = [('selected', "#0f0")],
-        )
-      self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
-      self.style.configure("IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA, font=(None, 20))
+      self._configure_style()
 
       self.stars_lbl = ttk.Label(self.win, justify=tk.CENTER, style="IHateTkinter.TLabel")  # just WHY will it not justify?
       self._update_stars()
@@ -152,30 +146,77 @@ class ProfileCard(tk.Frame):
       tag_container_canvas = tk.Canvas(self.win, yscrollcommand=vscroll.set)
       vscroll.config(command=tag_container_canvas.yview)
       tag_frame = ttk.Frame(tag_container_canvas, style="IHateTkinter.TFrame")
-      MAIN_W, MAIN_H = 0.97, 0.95
-      tag_container_canvas.place(relwidth=MAIN_W, relheight=MAIN_H)
-      vscroll.place(relwidth=1-MAIN_W, relheight=MAIN_H, relx=MAIN_W)
-      self.stars_lbl.place(relwidth=.5, relheight=1-MAIN_H, rely=MAIN_H)
-      commit_button.place(relwidth=.5, relheight=1-MAIN_H, relx=.5, rely=MAIN_H)
-      self.win.update()
-      tag_container_canvas.create_window(0, 0, window=tag_frame, anchor="nw", width=MAIN_W*self.win.winfo_width())
+      media_panel = MediaFrame(self.win)
+      sugg_panel = tk.Text(self.win, padx=0, pady=10, bd=0, cursor="arrow", spacing1=8,
+                            foreground=BTFL_LIGHT_GRAY, background=BTFL_DARK_BG,
+                            font=tk.font.Font(family='courier 10 pitch', size=9))
+      self._display_suggestions(suggested_tags, sugg_panel)
 
+      LW, MW = .5, .22
+      RW = 1 - (LW + MW)
+      TH = .95
+      CHBXW = .95
+      media_panel.place(relwidth=LW, relheight=1)
+      tag_container_canvas.place(relwidth=MW*CHBXW, relheight=TH, relx=LW)
+      vscroll.place(relwidth=MW*(1-CHBXW), relheight=TH, relx=LW+MW*CHBXW)
+      self.stars_lbl.place(relwidth=MW*.5, relheight=1-TH, relx=LW, rely=TH)
+      commit_button.place(relwidth=MW*.5, relheight=1-TH, relx=LW+MW*.5, rely=TH)
+      sugg_panel.place(relwidth=RW, relheight=1, relx=LW+MW)
+      self.win.update()
+      tag_container_canvas.create_window(LW, 0, window=tag_frame, anchor="nw", width=MW*CHBXW*self.win.winfo_width())
+
+      media_panel.show_media(self.curr_prof.fullname)
+      self._populate_checkboxes(tag_frame, suggested_tags)
+      self.win.update()
+      self._enable_mousewheel_scroll_you_stupid_tkinter(tag_container_canvas)
+      tag_container_canvas.config(scrollregion=tag_container_canvas.bbox(tk.ALL))
+
+    def _display_suggestions(self, suggested_tags, sugg_panel:tk.Text):
+      sugg_panel.configure(state=tk.NORMAL)
+      sugg_panel.delete("1.0", tk.END)
+      sugg_panel.tag_configure('heading', justify="center")
+      sugg_panel.insert(tk.END, "SUGGESTED TAGS:\n", 'heading')
+      for tag, prob in suggested_tags:
+        sugg_panel.tag_configure('acc_line', foreground="#383")
+        sugg_panel.insert(tk.END, f"\n{tag:>20} {prob*100:>5.2f} {'#'*int(prob*30)}", 'acc_line' if prob>ACC_TAG_THRESH else '')
+      sugg_panel.configure(state=tk.DISABLED)
+
+    def _configure_style(self):
+      self.style = ttk.Style(self.win)
+      for elem in ["TButton", "TCheckbutton", "TFrame", "Vertical.TScrollbar"]:
+        self.style.map("IHateTkinter."+elem,
+        foreground = [('active', "#fff"), ('!active', BTFL_LIGHT_GRAY)],
+        background = [('active', "#555")],
+        indicatorcolor = [('selected', "#0f0")],
+      )
+      self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
+      self.style.configure("IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA, font=(None, 20))
+
+    def _populate_checkboxes(self, master, suggested_tags):
       def should_be_set(tag):
         prob = next((p for t,p in suggested_tags if t==tag), 0)
-        return (tag in self.curr_prof.tags) or (self.curr_prof.tags=="" and prob > 0.47)
+        return (tag in self.curr_prof.tags) or (self.curr_prof.tags=="" and prob > ACC_TAG_THRESH)
+
       self.states = {tag:tk.IntVar(self.win, int(should_be_set(tag))) for tag in self.vocab}
+
+      def check_parent_as_well():
+        for tag,var in self.states.items():
+          if var.get():
+            par = tag.split('|')
+            for i in range(1, len(par)):
+              parent = '|'.join(par[:i])
+              self.states[parent].set(1)
+
       for tag in self.states:
         stylename = "IHateTkinter.TCheckbutton"
         prob = next((p for t,p in suggested_tags if t==tag), None)
         if prob:
           stylename = f"sugg{int(prob*30)}." + stylename
           self.style.configure(stylename, background=f"#3{3+int(prob*10):x}3")
-        chk_btn = ttk.Checkbutton(tag_frame, text=indent_hierarchical(tag, 6), variable=self.states[tag], style=stylename)
+        chk_btn = ttk.Checkbutton(master, text=indent_hierarchical(tag, 6),
+                                  command=check_parent_as_well, variable=self.states[tag],
+                                  style=stylename)
         chk_btn.pack(expand=True, fill=tk.X, padx=20)
-
-      self.win.update()
-      self._enable_mousewheel_scroll_you_stupid_tkinter(tag_container_canvas)
-      tag_container_canvas.config(scrollregion=tag_container_canvas.bbox(tk.ALL))
 
     def _enable_mousewheel_scroll_you_stupid_tkinter(self, scrollable):
       def _on_mousewheel(event):
@@ -197,6 +238,7 @@ class ProfileCard(tk.Frame):
     def _on_commit_pressed(self):
       selected = [tag for tag, var in self.states.items() if var.get()]
       self.update_meta_cb(self.curr_prof.fullname, tags=selected, stars=self.stars)
+      self.win.destroy()
 
   def __init__(self, idx:int, mode:int, *args, **kwargs):
     super().__init__(*args, **kwargs)

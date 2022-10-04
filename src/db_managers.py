@@ -8,8 +8,13 @@ from helpers import short_fname
 
 
 def _db_row(fname):
-  tags, stars = get_metadata(fname)
-  assert tags, f"media without tags not allowed: {short_fname(fname)}"
+  try:
+    tags, stars = get_metadata(fname)
+  except:
+    print(f"error reading metadata of {short_fname(fname)}")
+    tags, stars = [], 0
+  logging.warning("media without tags %s", short_fname(fname))
+
   return {
     'name': short_fname(fname),
     'tags': ' '.join(sorted(tags)).lower(),
@@ -35,6 +40,7 @@ def _default_init(row, default_values_getter):
 
 class MetadataManager:
   def __init__(self, img_dir:str, refresh:bool=False, defaults_getter:Callable[[int], dict]=None):
+    self.defaults_getter = defaults_getter
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
     self.matches_since_last_save = 0
     metadata_dtypes = {
@@ -84,10 +90,15 @@ class MetadataManager:
 
   def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
     write_metadata(fullname, tags, stars, append=False)
-    self.update(fullname, _db_row(fullname), 0)
+    upd_data = _db_row(fullname)
+    if stars is not None:
+      assert self.defaults_getter is not None
+      upd_data |= self.defaults_getter(stars)
+    self.update(fullname, upd_data, 0)
 
   def get_tags_vocab(self) -> list[str]:
-    return self._get_frequent_tags(0).sort_index().index.to_list()
+    with open(os.path.abspath("./tags_vocab.txt"), "r") as vocab_file:
+      return vocab_file.read().split()
 
   def get_file_info(self, short_name:str) -> pd.Series:
     return self.df.loc[short_name]
