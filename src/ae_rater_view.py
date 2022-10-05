@@ -121,7 +121,6 @@ class ProfileCard(tk.Frame):
       assert self.stars is not None
       print(f"open tag editor for {hlp.short_fname(self.curr_prof.fullname)}")
       print(f"{self.curr_prof.tags.split()}")
-      print( "suggested tags:")
       try:
         suggested_tags = self.suggest_tags_cb(self.curr_prof.fullname)
       except:
