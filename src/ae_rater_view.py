@@ -93,6 +93,14 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
       self.vid_frame = None  # slower, but stop+reuse the existing causes bugs
     self.update()
 
+  def pause(self):
+    if self.vid_frame:
+      self.vid_frame.pause()
+
+  def unpause(self):
+    if self.vid_frame:
+      self.vid_frame.play()
+
   def _open_media_in_new_window(self, event):
     if not self.media_fname:
       print(f"Gui error on click media: cannot open {event}")
@@ -289,6 +297,12 @@ class ProfileCard(tk.Frame):
       f"{system_name}: {res.new_rating}({res.delta_rating:+})",
     ]))
 
+  def pause(self):
+    self.media.pause()
+
+  def unpause(self):
+    self.media.unpause()
+
   def _show_tags(self, tags):
     tags = sorted(tags.split(' '))
     taglist = "\n".join(map(indent_hierarchical, tags))
@@ -439,6 +453,8 @@ class RaterGui:
     self.root.geometry("1766x878+77+77")
     self.root.title("aesthetics")
     self.root.update()
+    self.root.bind('<FocusOut>', self._on_focus_event)
+    self.root.bind('<FocusIn>', self._on_focus_event)
 
     self.style = ttk.Style(self.root)
     self.style.configure('.', background=BTFL_DARK_BG)
@@ -524,6 +540,14 @@ class RaterGui:
       self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
     else:
       raise NotImplementedError(f"cannot show gui for {n} cards")
+
+  def _on_focus_event(self, event):
+    if str(event.widget) == ".":
+      for card in self.cards:
+        if "out" in str(event).lower():
+          card.pause()
+        else:
+          card.unpause()
 
   def _highlight_curr_outcome(self, n:int):
     for card in self.cards:
