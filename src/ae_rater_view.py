@@ -90,7 +90,8 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
         elem.pack_forget()
     if self.vid_frame:
       self.vid_frame.unbind("<<Ended>>")
-      self.vid_frame = None  # slower, but stop+reuse the existing causes bugs
+      self.vid_frame.stop()
+      self.vid_frame = None  # slower, but reusng the existing causes bugs
     self.update()
 
   def pause(self):
