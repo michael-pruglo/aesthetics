@@ -46,7 +46,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
   def show_media(self, fname):
     self.media_fname = fname
     ext = hlp.file_extension(fname)
-    if ext in ['jpg', 'jpeg', 'png', 'jfif', 'webp', 'heic']:
+    if ext in ['jpg', 'jpeg', 'png', 'jfif', 'webp']:
       self.show_img(fname)
     elif ext in ['mp4', 'mov', 'gif']:
       self.show_vid(fname)
