@@ -109,7 +109,7 @@ class MetadataManager:
     return self.df.loc[short_name]
 
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
-    return self.df.sample(n)
+    return self.df.sample(n, weights='stars')
 
   def update(self, fullname:str, upd_data:dict, matches_each:int, consensus_stars:float=None) -> None:
     short_name = short_fname(fullname)
