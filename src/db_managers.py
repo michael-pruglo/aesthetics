@@ -32,6 +32,8 @@ def _default_init(row, default_values_getter):
   assert 0 <= row['stars'], row
   if row.isna()['nmatches']:
     row['nmatches'] = 0
+  if row.isna()['priority']:
+    row['priority'] = 0.8 if row['tags'] else 1
   if default_values_getter:
     for column, value in default_values_getter(row['stars']).items():
       if (column not in row) or pd.isnull(row[column]):
@@ -54,6 +56,7 @@ class MetadataManager:
       'tags': str,
       'stars': float,
       'nmatches': int,
+      'priority': float,
     }
     if os.path.exists(self.db_fname):
       logging.info(f"{self.db_fname} exists, read")
@@ -109,12 +112,10 @@ class MetadataManager:
     return self.df.loc[short_name]
 
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
-    return self.df.sample(n, weights='stars')
+    return self.df.sample(n, weights='priority')
 
   def update(self, fullname:str, upd_data:dict, matches_each:int, consensus_stars:float=None) -> None:
     short_name = short_fname(fullname)
-    # if short_name not in self.df.index:
-    #   raise KeyError(f"{short_name} not in database")
 
     row = self.df.loc[short_name].copy()
     if upd_data:
@@ -132,6 +133,10 @@ class MetadataManager:
                       short_name, prev_stars, disk_stars)
 
     row.loc['nmatches'] += matches_each
+
+    def calc_priority():
+      return 0.7 + (row['stars'] + .1)/20
+    row.loc['priority'] = calc_priority()
 
     self.df.loc[short_name] = row
     logging.debug("updated db: %s", row)
