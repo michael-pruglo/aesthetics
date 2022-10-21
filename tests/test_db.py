@@ -156,7 +156,8 @@ class TestMetadataManager(unittest.TestCase):
         expected_val = val_updates[col] if col in val_updates else row_before[col]
         if col=='nmatches':
           expected_val += matches_each
-        self.assertEqual(given_val, expected_val, f"for column '{col}'")
+        if col!='priority':
+          self.assertEqual(given_val, expected_val, f"for column '{col}'")
       tst_updates.append((short_name, row_after))
     mm.on_exit()
 
