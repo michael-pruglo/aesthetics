@@ -4,3 +4,4 @@ python-xmp-toolkit
 pandas
 numpy
 pillow
+screeninfo

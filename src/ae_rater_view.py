@@ -6,6 +6,7 @@ from typing import Callable
 import numpy as np
 from PIL import ImageTk, Image, ImageOps
 from tkVideoPlayer import TkinterVideo
+from screeninfo import get_monitors
 
 import helpers as hlp
 from ae_rater_types import *
@@ -29,6 +30,15 @@ LEFT_COLORWIN  = hlp.spice_up_color(LEFT_COLORBG,   None, spice_win_hsl)
 RIGHT_COLORWIN = hlp.spice_up_color(RIGHT_COLORBG,  None, spice_win_hsl)
 COLORDRAW      = hlp.spice_up_color(RIGHT_COLORWIN, None, lambda h,s,l: (60, s, l))
 
+
+def build_geometry(screen_portion) -> str:
+  primary_monitor = next(m for m in get_monitors() if m.is_primary)
+  sz = (primary_monitor.width, primary_monitor.height) if primary_monitor else (1920,1080)
+  if isinstance(screen_portion, (int,float)):
+    screen_portion = tuple(screen_portion for _ in range(2))
+  w, h = (int(sz[i]*screen_portion[i]) for i in range(2))
+  x, y = ((scr-win)//2 for scr,win in zip(sz, (w,h)))
+  return f"{w}x{h}+{x}+{y}"
 
 def indent_hierarchical(tag:str, indent:int=2) -> str:
   return " "*tag.count('|')*indent + tag.rsplit('|', maxsplit=1)[-1]
@@ -140,7 +150,7 @@ class ProfileCard(tk.Frame):
     def _create_window(self, suggested_tags):
       self.win = tk.Toplevel(self.master)
       self.win.title(f"edit meta {hlp.short_fname(self.curr_prof.fullname)}")
-      self.win.geometry("1500x800+210+140")
+      self.win.geometry(build_geometry((0.6, 0.8)))
 
       self._configure_style()
 
@@ -451,7 +461,7 @@ class RaterGui:
     self.user_listener = user_listener
     self.tags_vocab = tags_vocab
     self.root = tk.Tk()
-    self.root.geometry("1766x878+77+77")
+    self.root.geometry(build_geometry(.87))
     self.root.title("aesthetics")
     self.root.update()
     self.root.bind('<FocusOut>', self._on_focus_event)
@@ -474,7 +484,7 @@ class RaterGui:
                                   textvariable=self.content_outcome, border=0,
                                   disabledbackground=BTFL_DARK_BG)
     self.input_outcome.configure(highlightthickness=0)
-    self.scheduled_jobs = []
+    self.scheduled_jobs:list[str] = []
 
   def display_match(self, profiles:list[ProfileInfo]) -> None:
     n = len(profiles)
