@@ -135,7 +135,9 @@ class MetadataManager:
     row.loc['nmatches'] += matches_each
 
     def calc_priority():
-      return 0.7 + (row['stars'] + .1)/20
+      st = 0.4 + (row['stars'] + .1)/10
+      mt = max(0.0, (50-row['nmatches'])/50)
+      return (st+mt)/2
     row.loc['priority'] = calc_priority()
 
     self.df.loc[short_name] = row
