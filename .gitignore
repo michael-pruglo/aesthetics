@@ -7,3 +7,4 @@ tests/test_media/
 src/tmp*
 models/
 *.ipynb
+!src/folder_stats.ipynb

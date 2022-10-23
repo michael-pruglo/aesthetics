@@ -65,6 +65,11 @@ python -m unittests
 |-------------|
 ```
 
+## Note
+
+simple CNN didn't learn rating from tags
+Tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
+
 ## TODO
 
 - improve performance
@@ -73,4 +78,3 @@ python -m unittests
 - scrape web for new media, predict ratings and show the most promising candidates
 - improve tag suggestions and auto-label lower priority media
 - learn the overall/specific styles and generate new media with smth like stable diffusion
-- use nearest neighbor search to find similar already rated items, and derive rating/tags from that
