@@ -79,7 +79,14 @@ class MetadataManager:
         backup_initial_metadata = os.path.join(img_dir, 'backup_initial_metadata.csv')
         fresh_tagrat.to_csv(backup_initial_metadata)
       original_dtypes = self.df.dtypes
-      self.df = self.df.combine(fresh_tagrat, lambda old,new: new.fillna(old), overwrite=False)[self.df.columns]
+      joined = self.df.join(fresh_tagrat, how='right', lsuffix='_old')
+
+      def refresh_row(row):
+        if not row.isna()['stars_old']:
+          if int(row['stars']) == int(row['stars_old']):
+            row['stars'] = row['stars_old']
+        return row
+      self.df = joined.apply(refresh_row, axis=1)[self.df.columns]
       self.df = self.df.apply(_default_init, axis=1, args=(defaults_getter,))
       self.df = self.df.astype(original_dtypes)
       self.df.sort_values('stars', ascending=False, inplace=True)

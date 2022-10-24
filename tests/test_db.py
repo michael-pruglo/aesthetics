@@ -2,6 +2,7 @@ import unittest
 import os
 import random
 import pandas as pd
+from pandas import testing as tm
 
 from src.metadata import get_metadata
 from src.db_managers import MetadataManager
@@ -49,29 +50,40 @@ class TestMetadataManager(unittest.TestCase):
       self._check_row(short_name, row)
 
   def _test_external_change(self, update_existing=False, add_new=False,
-                            refresh=False, defgettr=None) -> None:
-    db0 = self._create_mgr(defaults_getter=defgettr).get_db()
+                            refresh=False, remove_some=False, defgettr=None) -> None:
+    mm0 = self._create_mgr(defaults_getter=defgettr)
+    db0 = mm0.get_db()
+    rm_amount = 0
+    if remove_some:
+      rm_amount = hlp.remove_some_files()
     if update_existing:
-      changed_amount = hlp.immitate_external_metadata_change()
+      for f in db0.index:
+        fullname = os.path.join(MEDIA_FOLDER, f)
+        mm0.update(fullname, {}, 0, consensus_stars=db0.loc[f, 'stars']+.6)
+      mm0._commit()
+      db0 = mm0.get_db()
+      tags_changed, stars_changed = hlp.immitate_external_metadata_change()
     if add_new:
       extra_amount = hlp.inject_extra_files()
     db1 = self._create_mgr(refresh=refresh, defaults_getter=defgettr).get_db()
 
     self.assertTrue(db1.notna().all(axis=None))
     if not refresh:
-      self.assertTrue(db1.equals(db0))
+      self.assertTrue(db1.drop('priority',axis=1).equals(db0.drop('priority',axis=1)))
     else:
       old_rows = db1.index.isin(db0.index)
       old_portion, new_portion = db1.loc[old_rows], db1.loc[~old_rows]
+      self.assertEqual(len(old_portion), len(db0)-rm_amount)
       if update_existing:
         diff = (old_portion.sort_index().compare(db0.sort_index()))
-        err_msg = f"should update only tags and rating, leaving others untouched:\n{diff}"
-        self.assertTupleEqual(diff.shape, (changed_amount,2*2), err_msg)
+        err_msg = f"db0:\n{db0}\n\ndb1\n{db1}\n\ndiff\n{diff}"
+        self.assertEqual(len(diff['tags'].dropna()), tags_changed, err_msg)
+        self.assertEqual(len(diff['stars'].dropna()), stars_changed, diff['stars'])
       else:
-        self.assertTrue(old_portion.sort_index().equals(db0.sort_index()))
+        diffset = set(db0.index) - set(old_portion.index)
+        self.assertEqual(len(diffset), rm_amount)
       if add_new:
         self._check_db(new_portion, extra_amount)
-
 
   def test_init_fresh(self):
     mm = self._create_mgr()
@@ -92,10 +104,11 @@ class TestMetadataManager(unittest.TestCase):
   def test_init_updated_files(self):         self._test_external_change(True, False, True)
   def test_init_extra_files(self):           self._test_external_change(False, True, True)
   def test_init_updated_and_extra(self):     self._test_external_change(True, True, True)
-  def test_defgettr_no_refresh(self):        self._test_external_change(True, True, False, defgettr)
-  def test_defgettr_updated_files(self):     self._test_external_change(True, False, True, defgettr)
-  def test_defgettr_extra_files(self):       self._test_external_change(False, True, True, defgettr)
-  def test_defgettr_updated_and_extra(self): self._test_external_change(True, True, True, defgettr)
+  def test_deletions(self):                  self._test_external_change(False, False, True, True)
+  def test_defgettr_no_refresh(self):        self._test_external_change(True, True, False, False, defgettr)
+  def test_defgettr_updated_files(self):     self._test_external_change(True, False, True, False, defgettr)
+  def test_defgettr_extra_files(self):       self._test_external_change(False, True, True, False, defgettr)
+  def test_defgettr_updated_and_extra(self): self._test_external_change(True, True, True, False, defgettr)
 
   def test_get_info(self):
     mm = self._create_mgr(defaults_getter=defgettr)
@@ -164,7 +177,7 @@ class TestMetadataManager(unittest.TestCase):
     mm1 = self._create_mgr(defaults_getter=defgettr)
     for short_name, row_after in tst_updates:
       row_next_run = mm1.get_file_info(short_name)
-      self.assertTrue(row_next_run.equals(row_after))
+      tm.assert_series_equal(row_next_run, row_after)
 
 
 if __name__ == '__main__':

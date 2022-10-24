@@ -35,19 +35,29 @@ def inject_extra_files() -> int:
     shutil.copy(fullname, MEDIA_FOLDER)
   return len(os.listdir(EXTRA_FOLDER))
 
-def immitate_external_metadata_change() -> int:
+def remove_some_files() -> int:
+  n = random.randint(1,4)
+  for f in random.sample(get_initial_mediafiles(), n):
+    fullname = os.path.join(MEDIA_FOLDER, f)
+    backup_files([fullname])
+    os.remove(fullname)
+  return n
+
+def immitate_external_metadata_change() -> tuple:
   num_files = 3
   files = [os.path.join(MEDIA_FOLDER, f)
             for f in random.sample(get_initial_mediafiles(), num_files)]
   backup_files(files)
-  stars1 = get_metadata(files[1])[1]
-  stars2 = get_metadata(files[2])[1]
+  tags0, stars0 = get_metadata(files[0])
+  tags1, stars1 = get_metadata(files[1])
+  tags2, stars2 = get_metadata(files[2])
+  assert not any(t in tags0|tags2 for t in ["canary", "finch"]), str(files)
   assert 0 <= stars1 <= 5, files[1]
   assert 0 <= stars2 <= 5, files[2]
   write_metadata(files[0], tags=["canary", "canary|tagcanary"])
   write_metadata(files[1], rating=5-stars1)
   write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-stars2)
-  return num_files
+  return 2, 2
 
 def disk_cleanup() -> None:
   for f in os.listdir(MEDIA_FOLDER):
