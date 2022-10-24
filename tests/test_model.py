@@ -86,7 +86,7 @@ class TestCompetition(unittest.TestCase):
         profile_after = self._get_leaderboard_line(prof.fullname)
         dbg_info = f"curr profile: {prof},  profile_aftter: {profile_after}, opinions:{curr_stars_opinions}"
         self.assertEqual(profile_after.stars, consensus_stars, dbg_info)
-        if int(consensus_stars) != int(stars_before):
+        if consensus_stars<=5 and int(consensus_stars)!=int(stars_before):
           self.assertEqual(int(consensus_stars), int(stars_before)+1, dbg_info)
           _, disk_stars = get_metadata(prof.fullname)
           self.assertEqual(disk_stars, int(consensus_stars), dbg_info)
