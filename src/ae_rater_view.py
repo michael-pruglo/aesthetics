@@ -160,6 +160,7 @@ class ProfileCard(tk.Frame):
         self.win.bind(str(i), self._update_stars)
 
       commit_button = ttk.Button(self.win, text="COMMIT", command=self._on_commit_pressed, style="IHateTkinter.TButton")
+      self.win.bind("<Return>", lambda e: self._on_commit_pressed())
       vscroll = ttk.Scrollbar(self.win, style="IHateTkinter.Vertical.TScrollbar")
       tag_container_canvas = tk.Canvas(self.win, yscrollcommand=vscroll.set)
       vscroll.config(command=tag_container_canvas.yview)
