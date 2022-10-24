@@ -18,6 +18,7 @@ ACC_TAG_THRESH = 0.47
 BTFL_DARK_BG = "#222"
 BTFL_DARK_GRANOLA = "#D6B85A"
 BTFL_LIGHT_GRAY = "#ccc"
+RED_ERR = "#911"
 
 LEFT_COLORBG = "#353935"
 RIGHT_COLORBG = "#353539"
@@ -242,8 +243,10 @@ class ProfileCard(tk.Frame):
           curr_val = self.states[tag].get()
           self.states[tag].set(1-curr_val)
           check_parent_as_well()
+          self.tag_entry.delete(0, tk.END)
+          self.tag_entry.configure(background=BTFL_DARK_BG)
         else:
-          print("error: cannot find tag", tag)
+          self.tag_entry.configure(background=RED_ERR)
       self.tag_entry.bind("<Return>", on_tag_entered)
 
       for tag in self.states:
@@ -588,7 +591,7 @@ class RaterGui:
     input_so_far = self.content_outcome.get()
     bgcolor = "#444"
     if not Outcome.is_valid(input_so_far, n, intermediate=True):
-      bgcolor = "#911"
+      bgcolor = RED_ERR
     else:
       if Outcome.is_valid(input_so_far, n):
         bgcolor = "#141"
@@ -643,7 +646,7 @@ class RaterGui:
       self._enable_input(False)
       self.user_listener.consume_result(outcome)
     else:
-      self.input_outcome.config(background="#911")
+      self.input_outcome.config(background=RED_ERR)
 
   def _on_give_boost(self, event):
     assert len(self.curr_prof_shnames) == 2
