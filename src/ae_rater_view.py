@@ -129,6 +129,7 @@ class ProfileCard(tk.Frame):
       self.suggest_tags_cb = suggest_tags_cb
       self.curr_prof = None
       self.stars:int = None
+      self.content_tag_entry = tk.StringVar()
       self.win = None
 
     def set_curr_profile(self, prof:ProfileInfo):
@@ -160,12 +161,18 @@ class ProfileCard(tk.Frame):
         self.win.bind(str(i), self._update_stars)
 
       commit_button = ttk.Button(self.win, text="COMMIT", command=self._on_commit_pressed, style="IHateTkinter.TButton")
-      self.win.bind("<Return>", lambda e: self._on_commit_pressed())
+      self.win.bind("<Control-Return>", lambda e: self._on_commit_pressed())
       vscroll = ttk.Scrollbar(self.win, style="IHateTkinter.Vertical.TScrollbar")
       tag_container_canvas = tk.Canvas(self.win, yscrollcommand=vscroll.set)
       vscroll.config(command=tag_container_canvas.yview)
       tag_frame = ttk.Frame(tag_container_canvas, style="IHateTkinter.TFrame")
       media_panel = MediaFrame(self.win)
+      self.tag_entry = tk.Entry(self.win, fg="#ddd", bg=BTFL_DARK_BG,
+                                insertbackground="#ddd", insertwidth=4,
+                                font=("Arial", 14, "bold"), justify="center",
+                                textvariable=self.content_tag_entry,
+                                disabledbackground=BTFL_DARK_BG)
+      self.tag_entry.focus()
       sugg_panel = tk.Text(self.win, padx=0, pady=10, bd=0, cursor="arrow", spacing1=8,
                             foreground=BTFL_LIGHT_GRAY, background=BTFL_DARK_BG,
                             font=tk.font.Font(family='courier 10 pitch', size=9))
@@ -173,13 +180,15 @@ class ProfileCard(tk.Frame):
 
       LW, MW = .5, .22
       RW = 1 - (LW + MW)
-      TH = .95
+      TH = .9
+      ENTH = .05
       CHBXW = .95
       media_panel.place(relwidth=LW, relheight=1)
       tag_container_canvas.place(relwidth=MW*CHBXW, relheight=TH, relx=LW)
       vscroll.place(relwidth=MW*(1-CHBXW), relheight=TH, relx=LW+MW*CHBXW)
-      self.stars_lbl.place(relwidth=MW*.5, relheight=1-TH, relx=LW, rely=TH)
-      commit_button.place(relwidth=MW*.5, relheight=1-TH, relx=LW+MW*.5, rely=TH)
+      self.stars_lbl.place(relwidth=MW*.5, relheight=1-TH-ENTH, relx=LW, rely=TH+ENTH)
+      commit_button.place(relwidth=MW*.5, relheight=1-TH-ENTH, relx=LW+MW*.5, rely=TH+ENTH)
+      self.tag_entry.place(relwidth=MW, relheight=ENTH, relx=LW, rely=TH)
       sugg_panel.place(relwidth=RW, relheight=1, relx=LW+MW)
       self.win.update()
       tag_container_canvas.create_window(LW, 0, window=tag_frame, anchor="nw", width=MW*CHBXW*self.win.winfo_width())
@@ -225,6 +234,17 @@ class ProfileCard(tk.Frame):
             for i in range(1, len(par)):
               parent = '|'.join(par[:i])
               self.states[parent].set(1)
+
+      def on_tag_entered(e):
+        tag = self.content_tag_entry.get()
+        print("tag entered:", tag)
+        if tag in self.states:
+          curr_val = self.states[tag].get()
+          self.states[tag].set(1-curr_val)
+          check_parent_as_well()
+        else:
+          print("error: cannot find tag", tag)
+      self.tag_entry.bind("<Return>", on_tag_entered)
 
       for tag in self.states:
         stylename = "IHateTkinter.TCheckbutton"
