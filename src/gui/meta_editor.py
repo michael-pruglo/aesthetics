@@ -15,11 +15,16 @@ class TagEditor(ttk.Frame):
     super().__init__(*args, **kwargs)
     self.style = style
     self.vocab = vocab
+    self.states = {}
+    self.chk_btns = {}
     self.curr_prof = curr_prof
     self.stars = int(curr_prof.stars)
     self.suggested_tags = suggested_tags
     self.on_commit_cb = on_commit_cb
     self.content_tag_entry = tk.StringVar()
+
+    self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
+    self.style.configure("Entered.IHateTkinter.TCheckbutton", background="#991")
 
   def create_children(self):
     self.stars_lbl = ttk.Label(self, justify=tk.CENTER, style="IHateTkinter.TLabel")  # just WHY will it not justify?
@@ -30,9 +35,9 @@ class TagEditor(ttk.Frame):
     commit_button = ttk.Button(self, text="COMMIT", command=self._on_commit_pressed, style="IHateTkinter.TButton")
     self.bind("<Control-Return>", lambda e: self._on_commit_pressed())
     vscroll = ttk.Scrollbar(self, style="IHateTkinter.Vertical.TScrollbar")
-    tag_container_canvas = tk.Canvas(self, yscrollcommand=vscroll.set)
-    vscroll.config(command=tag_container_canvas.yview)
-    tag_frame = ttk.Frame(tag_container_canvas, style="IHateTkinter.TFrame")
+    self.tag_container_canvas = tk.Canvas(self, yscrollcommand=vscroll.set)
+    vscroll.config(command=self.tag_container_canvas.yview)
+    tag_frame = ttk.Frame(self.tag_container_canvas, style="IHateTkinter.TFrame")
 
     self.tag_entry = tk.Entry(self, fg="#ddd", bg=BTFL_DARK_BG,
                               insertbackground="#ddd", insertwidth=4,
@@ -45,65 +50,71 @@ class TagEditor(ttk.Frame):
     ENTH = .05
     CHBXW = .95
 
-    tag_container_canvas.place(relwidth=CHBXW, relheight=TH)
+    self.tag_container_canvas.place(relwidth=CHBXW, relheight=TH)
     vscroll.place(relwidth=1-CHBXW, relheight=TH, relx=CHBXW)
     self.stars_lbl.place(relwidth=.5, relheight=1-TH-ENTH, rely=TH+ENTH)
     commit_button.place(relwidth=.5, relheight=1-TH-ENTH, relx=.5, rely=TH+ENTH)
     self.tag_entry.place(relwidth=1, relheight=ENTH, rely=TH)
 
-    tag_container_canvas.create_window(0, 0, window=tag_frame, anchor="nw", width=CHBXW*self.winfo_width())
-    self._populate_checkboxes(tag_frame, self.suggested_tags)
+    self.tag_container_canvas.create_window(0, 0, window=tag_frame, anchor="nw", width=CHBXW*self.winfo_width())
+    self._populate_checkboxes(tag_frame)
     self.update()
-    self._enable_mousewheel_scroll_you_stupid_tkinter(tag_container_canvas)
-    tag_container_canvas.config(scrollregion=tag_container_canvas.bbox(tk.ALL))
+    self._enable_mousewheel_scroll_you_stupid_tkinter()
+    self.tag_container_canvas.config(scrollregion=self.tag_container_canvas.bbox(tk.ALL))
 
-  def _populate_checkboxes(self, master, suggested_tags):
-    def should_be_set(tag):
-      prob = next((p for t,p in suggested_tags if t==tag), 0)
-      return (tag in self.curr_prof.tags) or (self.curr_prof.tags=="" and prob > ACC_TAG_THRESH)
-
-    self.states = {tag:tk.IntVar(self, int(should_be_set(tag))) for tag in self.vocab}
-
-    def check_parent_as_well():
-      for tag,var in self.states.items():
-        if var.get():
-          par = tag.split('|')
-          for i in range(1, len(par)):
-            parent = '|'.join(par[:i])
-            self.states[parent].set(1)
+  def _populate_checkboxes(self, master):
+    self.states = {tag:tk.IntVar(self, int(self._should_be_set(tag))) for tag in self.vocab}
 
     def on_tag_entered(e):
-      tag = self.content_tag_entry.get()
-      print("tag entered:", tag)
-      if tag in self.states:
-        curr_val = self.states[tag].get()
-        self.states[tag].set(1-curr_val)
-        check_parent_as_well()
-        self.tag_entry.delete(0, tk.END)
-        self.tag_entry.configure(background=BTFL_DARK_BG)
-      else:
-        self.tag_entry.configure(background=RED_ERR)
+      entered = self.content_tag_entry.get()
+      print("tag entered:", entered)
+      for i, tag in enumerate(self.vocab):
+        if entered in tag:
+          curr_val = self.states[tag].get()
+          self.states[tag].set(1-curr_val)
+          self._check_parent_as_well()
+          self.tag_entry.delete(0, tk.END)
+          self.tag_entry.configure(background=BTFL_DARK_BG)
+          self.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
+          percent = i/len(self.states)
+          print(f"i={i}, len={len(self.states)}, percent={percent}")
+          self.tag_container_canvas.yview_moveto(percent-.1)
+          break
+        else:
+          self.tag_entry.configure(background=RED_ERR)
     self.tag_entry.bind("<Return>", on_tag_entered)
 
     for tag in self.states:
       stylename = "IHateTkinter.TCheckbutton"
-      prob = next((p for t,p in suggested_tags if t==tag), None)
+      prob = next((p for t,p in self.suggested_tags if t==tag), None)
       if prob:
         stylename = f"sugg{int(prob*30)}." + stylename
         self.style.configure(stylename, background=f"#3{3+int(prob*10):x}3")
-      chk_btn = ttk.Checkbutton(master, text=indent_hierarchical(tag, 6),
-                                command=check_parent_as_well, variable=self.states[tag],
+      self.chk_btns[tag] = ttk.Checkbutton(master, text=indent_hierarchical(tag, 6),
+                                command=self._check_parent_as_well, variable=self.states[tag],
                                 style=stylename)
-      chk_btn.pack(expand=True, fill=tk.X, padx=20)
+      self.chk_btns[tag].pack(expand=True, fill=tk.X, padx=20)
 
-  def _enable_mousewheel_scroll_you_stupid_tkinter(self, scrollable):
+  def _should_be_set(self, tag):
+    prob = next((p for t,p in self.suggested_tags if t==tag), 0)
+    return (tag in self.curr_prof.tags) or (self.curr_prof.tags=="" and prob > ACC_TAG_THRESH)
+
+  def _check_parent_as_well(self):
+    for tag,var in self.states.items():
+      if var.get():
+        par = tag.split('|')
+        for i in range(1, len(par)):
+          parent = '|'.join(par[:i])
+          self.states[parent].set(1)
+
+  def _enable_mousewheel_scroll_you_stupid_tkinter(self):
     def _on_mousewheel(event):
       dir = 0
       if event.num == 5 or event.delta == -120:
         dir = 1
       if event.num == 4 or event.delta == 120:
         dir = -1
-      scrollable.yview_scroll(dir*2, "units")
+      self.tag_container_canvas.yview_scroll(dir*2, "units")
     self.bind_all("<MouseWheel>", _on_mousewheel)
     self.bind_all("<Button-4>", _on_mousewheel)
     self.bind_all("<Button-5>", _on_mousewheel)
@@ -183,7 +194,6 @@ class MetaEditor:
       background = [('active', "#555")],
       indicatorcolor = [('selected', "#0f0")],
     )
-    self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
     self.style.configure("IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA, font=(None, 20))
 
   def _on_commit_pressed(self, selected, stars):
