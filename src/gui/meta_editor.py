@@ -21,8 +21,6 @@ class TagEditor(ttk.Frame):
       if e.state & CTRL:
         return
 
-      print("on entered", self.hits)
-
       if self.hits:
         curr_val = self.parent.states[self.hits[0]].get()
         self.parent.states[self.hits[0]].set(1-curr_val)
@@ -63,7 +61,6 @@ class TagEditor(ttk.Frame):
 
       if entered and not self.hits:
         self.parent.tag_entry.configure(background=RED_ERR)
-      print("highlight ", self.hits)
 
     def next_hit(self, e):
       if len(self.hits)<2:
@@ -71,8 +68,7 @@ class TagEditor(ttk.Frame):
       self.dehighlight_prev()
       self.hits = self.hits[1:] + self.hits[:1]
       self.highlight(self.hits[0])
-      # self.parent.tag_entry.focus()
-      print("next hit: ", self.hits)
+      return "break"
 
 
   def __init__(self, vocab:list[str], curr_prof:ProfileInfo, suggested_tags:list[str],
