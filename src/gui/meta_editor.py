@@ -30,10 +30,10 @@ class TagEditor(ttk.Frame):
     self.stars_lbl = ttk.Label(self, justify=tk.CENTER, style="IHateTkinter.TLabel")  # just WHY will it not justify?
     self._update_stars()
     for i in range(6):
-      self.bind(str(i), self._update_stars)
+      self.bind_all(str(i), self._update_stars)
 
     commit_button = ttk.Button(self, text="COMMIT", command=self._on_commit_pressed, style="IHateTkinter.TButton")
-    self.bind("<Control-Return>", lambda e: self._on_commit_pressed())
+    self.bind_all("<Control-Return>", lambda e: self._on_commit_pressed())
     vscroll = ttk.Scrollbar(self, style="IHateTkinter.Vertical.TScrollbar")
     self.tag_container_canvas = tk.Canvas(self, yscrollcommand=vscroll.set)
     vscroll.config(command=self.tag_container_canvas.yview)
@@ -63,26 +63,7 @@ class TagEditor(ttk.Frame):
     self.tag_container_canvas.config(scrollregion=self.tag_container_canvas.bbox(tk.ALL))
 
   def _populate_checkboxes(self, master):
-    self.states = {tag:tk.IntVar(self, int(self._should_be_set(tag))) for tag in self.vocab}
-
-    def on_tag_entered(e):
-      entered = self.content_tag_entry.get()
-      print("tag entered:", entered)
-      for i, tag in enumerate(self.vocab):
-        if entered in tag:
-          curr_val = self.states[tag].get()
-          self.states[tag].set(1-curr_val)
-          self._check_parent_as_well()
-          self.tag_entry.delete(0, tk.END)
-          self.tag_entry.configure(background=BTFL_DARK_BG)
-          self.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
-          percent = i/len(self.states)
-          print(f"i={i}, len={len(self.states)}, percent={percent}")
-          self.tag_container_canvas.yview_moveto(percent-.1)
-          break
-        else:
-          self.tag_entry.configure(background=RED_ERR)
-    self.tag_entry.bind("<Return>", on_tag_entered)
+    self.states = {tag:tk.IntVar(self, int(self._should_be_set(tag))) for tag in sorted(self.vocab)}
 
     for tag in self.states:
       stylename = "IHateTkinter.TCheckbutton"
@@ -91,9 +72,59 @@ class TagEditor(ttk.Frame):
         stylename = f"sugg{int(prob*30)}." + stylename
         self.style.configure(stylename, background=f"#3{3+int(prob*10):x}3")
       self.chk_btns[tag] = ttk.Checkbutton(master, text=indent_hierarchical(tag, 6),
-                                command=self._check_parent_as_well, variable=self.states[tag],
-                                style=stylename)
+                                           command=self._check_parent_as_well, variable=self.states[tag],
+                                           style=stylename)
       self.chk_btns[tag].pack(expand=True, fill=tk.X, padx=20)
+
+    self._bind_tag_entry()
+
+  def _bind_tag_entry(self):
+    self.highlighted_tag = ""
+    self.prev_style = ""
+
+    def on_tag_entered(e):
+      CTRL = 4
+      if e.state & CTRL:
+        return
+
+      entered = self.content_tag_entry.get()
+      print("tag entered:", entered)
+      if self.highlighted_tag:
+        curr_val = self.states[self.highlighted_tag].get()
+        self.states[self.highlighted_tag].set(1-curr_val)
+        self._check_parent_as_well()
+        self.tag_entry.delete(0, tk.END)
+        self.tag_entry.configure(background=BTFL_DARK_BG)
+      else:
+        self.tag_entry.configure(background=RED_ERR)
+
+    def highlight_autocomplete(a,b,c):
+      if self.highlighted_tag:
+        assert self.prev_style
+        self.chk_btns[self.highlighted_tag].configure(style=self.prev_style)
+
+      entered = self.content_tag_entry.get()
+      if entered and not (entered[-1].isalpha() or entered[-1] in "_|2"):
+        entered = entered[:-1]
+        self.content_tag_entry.set(entered)
+      if entered=="":
+        self.highlighted_tag = ""
+        return
+
+      for i, tag in enumerate(self.vocab):
+        if entered in tag:
+          self.highlighted_tag = tag
+          self.prev_style = self.chk_btns[tag].cget('style')
+          print(self.prev_style)
+          self.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
+          percent = i/len(self.states)
+          print("highlight ", entered, tag, percent)
+          self.tag_container_canvas.yview_moveto(percent-.1)
+          break
+
+    self.content_tag_entry.trace_add("write", highlight_autocomplete)
+    self.tag_entry.bind("<Return>", on_tag_entered)
+
 
   def _should_be_set(self, tag):
     prob = next((p for t,p in self.suggested_tags if t==tag), 0)
