@@ -107,20 +107,24 @@ class TagEditor(ttk.Frame):
       if entered and not (entered[-1].isalpha() or entered[-1] in "_|2"):
         entered = entered[:-1]
         self.content_tag_entry.set(entered)
-      if entered=="":
-        self.highlighted_tag = ""
-        return
 
-      for i, tag in enumerate(self.vocab):
-        if entered in tag:
-          self.highlighted_tag = tag
-          self.prev_style = self.chk_btns[tag].cget('style')
-          print(self.prev_style)
-          self.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
-          percent = i/len(self.states)
-          print("highlight ", entered, tag, percent)
-          self.tag_container_canvas.yview_moveto(percent-.1)
-          break
+      if entered:
+        for tag in self.vocab:
+          if entered in tag:
+            self.highlighted_tag = tag
+            self.prev_style = self.chk_btns[tag].cget('style')
+            print(self.prev_style)
+            self.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
+            self.tag_entry.configure(background=BTFL_DARK_BG)
+            i = sorted(self.vocab).index(tag)
+            percent = i/len(self.states)
+            print("highlight ", entered, tag, percent)
+            self.tag_container_canvas.yview_moveto(percent-.1)
+            return
+
+      self.highlighted_tag = ""
+      if entered:
+        self.tag_entry.configure(background=RED_ERR)
 
     self.content_tag_entry.trace_add("write", highlight_autocomplete)
     self.tag_entry.bind("<Return>", on_tag_entered)
@@ -137,6 +141,7 @@ class TagEditor(ttk.Frame):
         for i in range(1, len(par)):
           parent = '|'.join(par[:i])
           self.states[parent].set(1)
+    self.tag_entry.focus()
 
   def _enable_mousewheel_scroll_you_stupid_tkinter(self):
     def _on_mousewheel(event):
