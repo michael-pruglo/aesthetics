@@ -88,7 +88,6 @@ class TagEditor(ttk.Frame):
         return
 
       entered = self.content_tag_entry.get()
-      print("tag entered:", entered)
       if self.highlighted_tag:
         curr_val = self.states[self.highlighted_tag].get()
         self.states[self.highlighted_tag].set(1-curr_val)
@@ -113,12 +112,10 @@ class TagEditor(ttk.Frame):
           if entered in tag:
             self.highlighted_tag = tag
             self.prev_style = self.chk_btns[tag].cget('style')
-            print(self.prev_style)
             self.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
             self.tag_entry.configure(background=BTFL_DARK_BG)
             i = sorted(self.vocab).index(tag)
             percent = i/len(self.states)
-            print("highlight ", entered, tag, percent)
             self.tag_container_canvas.yview_moveto(percent-.1)
             return
 

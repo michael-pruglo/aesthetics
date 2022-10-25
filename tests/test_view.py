@@ -37,7 +37,7 @@ def generate_ratchange(n:int) -> list[RatChange]:
 class MockListener(UserListener):
   def consume_result(self, *args, **kwargs): pass
   def give_boost(self, *args, **kwargs): pass
-  def start_next_match(self): print("hello")
+  def start_next_match(self): pass
   def update_meta(self, *args, **kwargs): pass
   def suggest_tags(self, *args, **kwargs): pass
 
