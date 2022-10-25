@@ -10,6 +10,71 @@ import helpers as hlp
 
 
 class TagEditor(ttk.Frame):
+  class Autocomplete:
+    def __init__(self, parent) -> None:
+      self.parent:TagEditor = parent
+      self.hits = []
+      self.prev_style = ""
+
+    def on_tag_entered(self, e):
+      CTRL = 4
+      if e.state & CTRL:
+        return
+
+      print("on entered", self.hits)
+
+      if self.hits:
+        curr_val = self.parent.states[self.hits[0]].get()
+        self.parent.states[self.hits[0]].set(1-curr_val)
+        self.parent._check_parent_as_well()
+        self.parent.tag_entry.delete(0, tk.END)
+        self.parent.tag_entry.configure(background=BTFL_DARK_BG)
+      else:
+        self.parent.tag_entry.configure(background=RED_ERR)
+
+    def dehighlight_prev(self):
+      assert self.prev_style
+      self.parent.chk_btns[self.hits[0]].configure(style=self.prev_style)
+
+    def highlight(self, tag):
+        self.prev_style = self.parent.chk_btns[tag].cget('style')
+        self.parent.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
+        self.parent.tag_entry.configure(background=BTFL_DARK_BG)
+        i = sorted(self.parent.vocab).index(tag)
+        percent = i/len(self.parent.states)
+        self.parent.tag_container_canvas.yview_moveto(percent-.1)
+
+    def refresh(self, a,b,c):
+      if self.hits:
+        self.dehighlight_prev()
+
+      entered = self.parent.content_tag_entry.get()
+      if entered and not (entered[-1].isalpha() or entered[-1] in "_|2"):
+        entered = entered[:-1]
+        self.parent.content_tag_entry.set(entered)
+
+      self.hits = []
+      if entered:
+        for tag in self.parent.vocab:
+          if entered in tag.rsplit('|', maxsplit=1)[-1]:
+            if not self.hits:
+              self.highlight(tag)
+            self.hits.append(tag)
+
+      if entered and not self.hits:
+        self.parent.tag_entry.configure(background=RED_ERR)
+      print("highlight ", self.hits)
+
+    def next_hit(self, e):
+      if len(self.hits)<2:
+        return
+      self.dehighlight_prev()
+      self.hits = self.hits[1:] + self.hits[:1]
+      self.highlight(self.hits[0])
+      # self.parent.tag_entry.focus()
+      print("next hit: ", self.hits)
+
+
   def __init__(self, vocab:list[str], curr_prof:ProfileInfo, suggested_tags:list[str],
                on_commit_cb:Callable[[list,int],None], style, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -22,6 +87,7 @@ class TagEditor(ttk.Frame):
     self.suggested_tags = suggested_tags
     self.on_commit_cb = on_commit_cb
     self.content_tag_entry = tk.StringVar()
+    self.autocomplete = TagEditor.Autocomplete(self)
 
     self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
     self.style.configure("Entered.IHateTkinter.TCheckbutton", background="#991")
@@ -45,6 +111,9 @@ class TagEditor(ttk.Frame):
                               textvariable=self.content_tag_entry,
                               disabledbackground=BTFL_DARK_BG)
     self.tag_entry.focus()
+    self.content_tag_entry.trace_add("write", self.autocomplete.refresh)
+    self.tag_entry.bind("<Tab>", self.autocomplete.next_hit)
+    self.tag_entry.bind("<Return>", self.autocomplete.on_tag_entered)
 
     TH = .9
     ENTH = .05
@@ -75,57 +144,6 @@ class TagEditor(ttk.Frame):
                                            command=self._check_parent_as_well, variable=self.states[tag],
                                            style=stylename)
       self.chk_btns[tag].pack(expand=True, fill=tk.X, padx=20)
-
-    self._bind_tag_entry()
-
-  def _bind_tag_entry(self):
-    self.highlighted_tag = ""
-    self.prev_style = ""
-
-    def on_tag_entered(e):
-      CTRL = 4
-      if e.state & CTRL:
-        return
-
-      entered = self.content_tag_entry.get()
-      if self.highlighted_tag:
-        curr_val = self.states[self.highlighted_tag].get()
-        self.states[self.highlighted_tag].set(1-curr_val)
-        self._check_parent_as_well()
-        self.tag_entry.delete(0, tk.END)
-        self.tag_entry.configure(background=BTFL_DARK_BG)
-      else:
-        self.tag_entry.configure(background=RED_ERR)
-
-    def highlight_autocomplete(a,b,c):
-      if self.highlighted_tag:
-        assert self.prev_style
-        self.chk_btns[self.highlighted_tag].configure(style=self.prev_style)
-
-      entered = self.content_tag_entry.get()
-      if entered and not (entered[-1].isalpha() or entered[-1] in "_|2"):
-        entered = entered[:-1]
-        self.content_tag_entry.set(entered)
-
-      if entered:
-        for tag in self.vocab:
-          if entered in tag:
-            self.highlighted_tag = tag
-            self.prev_style = self.chk_btns[tag].cget('style')
-            self.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
-            self.tag_entry.configure(background=BTFL_DARK_BG)
-            i = sorted(self.vocab).index(tag)
-            percent = i/len(self.states)
-            self.tag_container_canvas.yview_moveto(percent-.1)
-            return
-
-      self.highlighted_tag = ""
-      if entered:
-        self.tag_entry.configure(background=RED_ERR)
-
-    self.content_tag_entry.trace_add("write", highlight_autocomplete)
-    self.tag_entry.bind("<Return>", on_tag_entered)
-
 
   def _should_be_set(self, tag):
     prob = next((p for t,p in self.suggested_tags if t==tag), 0)
