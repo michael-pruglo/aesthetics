@@ -34,13 +34,13 @@ class ProfileCard(tk.Frame):
     self.rating.place(relwidth=1,         relheight=(1-PH)/2, rely=(PH+1)/2)
 
   def set_meta_editor(self, *args, **kwargs):
-    self.tag_editor = MetaEditor(self, *args, **kwargs)
-    self.tags.bind('<Button-1>', self.tag_editor.open)
+    self.meta_editor = MetaEditor(self, *args, **kwargs)
+    self.tags.bind('<Button-1>', self.meta_editor.open)
 
   def show_profile(self, profile:ProfileInfo) -> None:
     self.name.configure(text=hlp.short_fname(profile.fullname))
     self._show_tags(profile.tags)
-    self.tag_editor.set_curr_profile(profile)
+    self.meta_editor.set_curr_profile(profile)
     self._show_rating(profile.stars, profile.ratings, profile.nmatches)
     self.media.show_media(profile.fullname)
 
