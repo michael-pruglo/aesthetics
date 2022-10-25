@@ -12,13 +12,13 @@ class ProfileCard(tk.Frame):
 
   def __init__(self, idx:int, mode:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
+    self.idx = idx
     is_right = idx % 2
     self.bg = RIGHT_COLORBG if is_right else LEFT_COLORBG
     self.fg = RIGHT_COLORFG if is_right else LEFT_COLORFG
     self.wincolor = RIGHT_COLORWIN if is_right else LEFT_COLORWIN
     self.drawcolor = COLORDRAW
     self.mode = mode
-    self.letter = Outcome.idx_to_let(idx)
 
     self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)
@@ -36,6 +36,7 @@ class ProfileCard(tk.Frame):
   def set_meta_editor(self, *args, **kwargs):
     self.meta_editor = MetaEditor(self, *args, **kwargs)
     self.tags.bind('<Button-1>', self.meta_editor.open)
+    self.master.bind(str(self.idx+1), self.meta_editor.open)
 
   def show_profile(self, profile:ProfileInfo) -> None:
     self.name.configure(text=hlp.short_fname(profile.fullname))
@@ -72,5 +73,5 @@ class ProfileCard(tk.Frame):
     self.tags.configure(text=taglist or "-")
 
   def _show_rating(self, stars, ratings, nmatches):
-    txt = self.letter + "  " + '★'*int(stars) + u"\u2BE8"*(stars-int(stars)>.5)
+    txt = Outcome.idx_to_let(self.idx) + "  " + '★'*int(stars) + u"\u2BE8"*(stars-int(stars)>.5)
     self.rating.configure(text=txt)

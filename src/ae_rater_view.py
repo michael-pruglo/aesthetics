@@ -1,4 +1,5 @@
 from functools import partial
+from itertools import filterfalse
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
@@ -120,6 +121,9 @@ class RaterGui:
       card.set_style(None)
 
     input_so_far = self.content_outcome.get()
+    input_so_far = ''.join(filterfalse(str.isdigit, input_so_far))
+    self.content_outcome.set(input_so_far)
+
     bgcolor = "#444"
     if not Outcome.is_valid(input_so_far, n, intermediate=True):
       bgcolor = RED_ERR

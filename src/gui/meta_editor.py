@@ -164,6 +164,10 @@ class TagEditor(ttk.Frame):
     selected = [tag for tag, var in self.states.items() if var.get()]
     self.on_commit_cb(selected, self.stars)
 
+  def cleanup(self):
+    for i in range(6):
+      self.unbind_all(str(i))
+
 
 class MetaEditor:
   def __init__(self, master, vocab:list[str], update_meta_cb:Callable[[str,list],None],
@@ -189,6 +193,7 @@ class MetaEditor:
 
   def _create_window(self, suggested_tags):
     self.win = tk.Toplevel(self.master)
+    self.win.protocol("WM_DELETE_WINDOW", self._cleanup)
     self.win.title(f"edit meta {hlp.short_fname(self.curr_prof.fullname)}")
     self.win.geometry(build_geometry((0.6, 0.8)))
 
@@ -234,4 +239,8 @@ class MetaEditor:
 
   def _on_commit_pressed(self, selected, stars):
     self.update_meta_cb(self.curr_prof.fullname, tags=selected, stars=stars)
+    self._cleanup()
+
+  def _cleanup(self):
+    self.tag_editor.cleanup()
     self.win.destroy()
