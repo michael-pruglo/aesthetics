@@ -71,7 +71,7 @@ class App(UserListener):
 if __name__ == "__main__":
   given_dir = sys.argv[1] if len(sys.argv)>1 else "./sample_imgs/"
   given_dir = os.path.abspath(given_dir)
-  assert os.path.exists(given_dir), f"path {given_dir} doesn't exist"
+  assert os.path.exists(given_dir), f"path {given_dir} doesn't exist, maybe not mounted?"
 
   num_participants = int(sys.argv[2]) if len(sys.argv)>2 else 2
 
