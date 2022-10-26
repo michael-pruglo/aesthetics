@@ -3,7 +3,7 @@ from tkinter import ttk
 import tkinter.font
 from typing import Callable
 
-from ae_rater_types import ProfileInfo
+from ae_rater_types import ProfileInfo, UserListener
 from gui.media_frame import MediaFrame
 from gui.guicfg import *
 import helpers as hlp
@@ -82,8 +82,9 @@ class TagEditor(ttk.Frame):
     self.stars = int(curr_prof.stars)
     self.suggested_tags = suggested_tags
     self.on_commit_cb = on_commit_cb
-    self.content_tag_entry = tk.StringVar()
     self.autocomplete = TagEditor.Autocomplete(self)
+    self.content_tag_entry = tk.StringVar()
+    self.content_award_entry = tk.StringVar()
 
     self.style.configure("IHateTkinter.TCheckbutton", indicatorcolor="#444", padding=2)
     self.style.configure("Entered.IHateTkinter.TCheckbutton", background="#991")
@@ -111,6 +112,13 @@ class TagEditor(ttk.Frame):
     self.tag_entry.bind("<Tab>", self.autocomplete.next_hit)
     self.tag_entry.bind("<Return>", self.autocomplete.on_tag_entered)
 
+    self.award_entry = tk.Entry(self, fg="#ddd", bg=BTFL_DARK_BG,
+                              insertbackground="#ddd", insertwidth=4,
+                              font=("Arial", 14, "bold"), justify="left",
+                              textvariable=self.content_award_entry,
+                              disabledbackground=BTFL_DARK_BG)
+    self.content_award_entry.set(' '.join(self.curr_prof.awards))
+
     TH = .9
     ENTH = .05
     CHBXW = .95
@@ -119,7 +127,8 @@ class TagEditor(ttk.Frame):
     vscroll.place(relwidth=1-CHBXW, relheight=TH, relx=CHBXW)
     self.stars_lbl.place(relwidth=.5, relheight=1-TH-ENTH, rely=TH+ENTH)
     commit_button.place(relwidth=.5, relheight=1-TH-ENTH, relx=.5, rely=TH+ENTH)
-    self.tag_entry.place(relwidth=1, relheight=ENTH, rely=TH)
+    self.tag_entry.place(relwidth=1, relheight=ENTH/2, rely=TH)
+    self.award_entry.place(relwidth=1, relheigh=ENTH/2, rely=TH+ENTH/2)
 
     self.tag_container_canvas.create_window(0, 0, window=tag_frame, anchor="nw", width=CHBXW*self.winfo_width())
     self._populate_checkboxes(tag_frame)
@@ -173,7 +182,8 @@ class TagEditor(ttk.Frame):
 
   def _on_commit_pressed(self):
     selected = [tag for tag, var in self.states.items() if var.get()]
-    self.on_commit_cb(selected, self.stars)
+    awards = self.content_award_entry.get()
+    self.on_commit_cb(selected, self.stars, awards)
 
   def cleanup(self):
     for i in range(6):
@@ -181,12 +191,10 @@ class TagEditor(ttk.Frame):
 
 
 class MetaEditor:
-  def __init__(self, master, vocab:list[str], update_meta_cb:Callable[[str,list],None],
-                suggest_tags_cb:Callable[[str],list]):
+  def __init__(self, master, vocab:list[str], user_listener:UserListener):
     self.master = master
     self.vocab = vocab if vocab[0] else vocab[1:]  # TODO: fix
-    self.update_meta_cb = update_meta_cb
-    self.suggest_tags_cb = suggest_tags_cb
+    self.user_listener = user_listener
     self.curr_prof = None
     self.win = None
     self.tag_editor:TagEditor = None
@@ -197,7 +205,7 @@ class MetaEditor:
   def open(self, event):
     assert self.curr_prof
     try:
-      suggested_tags = self.suggest_tags_cb(self.curr_prof.fullname)
+      suggested_tags = self.user_listener.suggest_tags(self.curr_prof.fullname)
     except:
       suggested_tags = []
     self._create_window(suggested_tags)
@@ -248,8 +256,9 @@ class MetaEditor:
     )
     self.style.configure("IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA, font=(None, 20))
 
-  def _on_commit_pressed(self, selected, stars):
-    self.update_meta_cb(self.curr_prof.fullname, tags=selected, stars=stars)
+  def _on_commit_pressed(self, selected, stars, awards):
+    self.user_listener.give_awards(self.curr_prof.fullname, awards)
+    self.user_listener.update_meta(self.curr_prof.fullname, tags=selected, stars=stars)
     self._cleanup()
 
   def _cleanup(self):

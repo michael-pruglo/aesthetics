@@ -42,7 +42,7 @@ class ProfileCard(tk.Frame):
     self.name.configure(text=hlp.short_fname(profile.fullname))
     self._show_tags(profile.tags)
     self.meta_editor.set_curr_profile(profile)
-    self._show_rating(profile.stars, profile.ratings, profile.nmatches)
+    self._show_rating(profile)
     self.media.show_media(profile.fullname)
 
   def set_style(self, outcome:int=None, color:str=None) -> None:
@@ -72,6 +72,8 @@ class ProfileCard(tk.Frame):
     taglist = "\n".join(map(indent_hierarchical, tags))
     self.tags.configure(text=taglist or "-")
 
-  def _show_rating(self, stars, ratings, nmatches):
-    txt = Outcome.idx_to_let(self.idx) + "  " + '★'*int(stars) + u"\u2BE8"*(stars-int(stars)>.5)
+  def _show_rating(self, p:ProfileInfo):
+    txt = Outcome.idx_to_let(self.idx)
+    txt += "  " + '★'*int(p.stars) + u"\u2BE8"*(p.stars-int(p.stars)>.5)
+    txt += f"  aw:'{p.awards}'"
     self.rating.configure(text=txt)

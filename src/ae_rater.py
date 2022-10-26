@@ -41,7 +41,7 @@ class App(UserListener):
       self.model.on_exit()
 
   def consume_result(self, outcome:Outcome) -> None:
-    participants = self.model.get_curr_match() #needs to be before model.consume_result()
+    participants = self.model.get_curr_match()  # needs to be before model.consume_result()
     rating_opinions = self.model.consume_result(outcome)
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants, outcome)
     self.gui.conclude_match(rating_opinions)
@@ -58,6 +58,9 @@ class App(UserListener):
   def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
     self.model.update_meta(fullname, tags, stars)
     self._refresh_gui()
+
+  def give_awards(self, fullname:str, awards:list[str]) -> None:
+    self.model.give_awards(fullname, awards)
 
   def suggest_tags(self, fullname: str) -> list:
     return self.ai_assistant.suggest_tags(fullname)

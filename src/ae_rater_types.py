@@ -40,6 +40,7 @@ class ProfileInfo:
   stars : float
   ratings : dict[str,Rating]
   nmatches : int
+  awards: list[str]
 
   def stronger_than(self, other):
     if not isinstance(other, self.__class__):
@@ -64,7 +65,8 @@ class ProfileInfo:
       FG_WHITE,   f"{truncate(short_fname(self.fullname), 15):<15} ",
       FG_YELLOW,  f"{f'★{self.stars:.2f}':>5} ",
       FG_ELO,     f"{self.ratings} ",
-      FG_MATCHES, f"{f'({self.nmatches})':<5}",
+      FG_MATCHES, f"{f'({self.nmatches})':<5} ",
+      FG_WHITE,   f"aw:{len(self.awards)}",
       COLOR_RESET
     ])
 
@@ -236,6 +238,10 @@ class UserListener(ABC):
 
   @abstractmethod
   def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
+    pass
+
+  @abstractmethod
+  def give_awards(self, fullname:str, awards:list[str]) -> None:
     pass
 
   @abstractmethod

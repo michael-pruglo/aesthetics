@@ -80,7 +80,7 @@ class RaterGui:
       HELP_H = 0.07
       for i in range(n):
         card = ProfileCard(i, n, self.root)
-        card.set_meta_editor(self.tags_vocab, self.user_listener.update_meta, self.user_listener.suggest_tags)
+        card.set_meta_editor(self.tags_vocab, self.user_listener)
         card.place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
         self.cards.append(card)
       self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
@@ -97,7 +97,7 @@ class RaterGui:
       INP_LBL_H = INP_H*0.35
       for i in range(n):
         card = ProfileCard(i, n, self.root)
-        card.set_meta_editor(self.tags_vocab, self.user_listener.update_meta, self.user_listener.suggest_tags)
+        card.set_meta_editor(self.tags_vocab, self.user_listener)
         card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)

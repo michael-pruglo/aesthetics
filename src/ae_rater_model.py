@@ -64,6 +64,10 @@ class RatingCompetition:
     self.db.update_meta(fullname, tags, stars)
     self._refresh_curr_match()
 
+  def give_awards(self, fullname:str, awards:list[str]) -> None:
+    logging.info(f"award {short_fname(fullname)} with '{awards}'")
+    self.db.give_awards(fullname, awards)
+
   def on_exit(self):
     self.db.on_exit()
 
@@ -117,6 +121,9 @@ class DBAccess:
   def update_meta(self, *args, **kwargs):
     self.meta_mgr.update_meta(*args, **kwargs)
 
+  def give_awards(self, fullname, awards):
+    self.meta_mgr.update(fullname, {'awards':awards})
+
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()
     db.sort_values(['stars']+sortpriority, ascending=False, inplace=True)
@@ -141,6 +148,8 @@ class DBAccess:
       'tags': str,
       'stars': np.float64,
       'nmatches': np.int64,
+      'priority': np.float64,
+      'awards': str,
     }
     for sname in self.sysnames:
       expected_dtypes |= {
@@ -160,6 +169,7 @@ class DBAccess:
       ratings={sname:Rating(info[sname+'_pts'], info[sname+'_rd'], info[sname+'_time'])
                for sname in self.sysnames},
       nmatches=int(info['nmatches']),
+      awards=info['awards'].split(),
     )
 
   def on_exit(self):

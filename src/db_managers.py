@@ -34,6 +34,8 @@ def _default_init(row, default_values_getter):
     row['nmatches'] = 0
   if row.isna()['priority']:
     row['priority'] = 0.8 if row['tags'] else 1
+  if row.isna()['awards']:
+    row['awards'] = ""
   if default_values_getter:
     for column, value in default_values_getter(row['stars']).items():
       if (column not in row) or pd.isnull(row[column]):
@@ -57,6 +59,7 @@ class MetadataManager:
       'stars': float,
       'nmatches': int,
       'priority': float,
+      'awards': str,
     }
     if os.path.exists(self.db_fname):
       logging.info(f"{self.db_fname} exists, read")
@@ -121,7 +124,7 @@ class MetadataManager:
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
     return self.df.sample(n, weights='priority')
 
-  def update(self, fullname:str, upd_data:dict, matches_each:int, consensus_stars:float=None) -> None:
+  def update(self, fullname:str, upd_data:dict, matches_each:int=0, consensus_stars:float=None) -> None:
     short_name = short_fname(fullname)
 
     row = self.df.loc[short_name].copy()
