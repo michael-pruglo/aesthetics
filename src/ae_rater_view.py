@@ -13,9 +13,10 @@ from gui.profile_card import ProfileCard
 
 
 class RaterGui:
-  def __init__(self, user_listener:UserListener, tags_vocab:list[str]):
+  def __init__(self, user_listener:UserListener, tags_vocab:list[str], mode:AppMode):
     self.user_listener = user_listener
     self.tags_vocab = tags_vocab
+    self.mode = mode
     self.root = tk.Tk()
     self.root.geometry(build_geometry(.87))
     self.root.title("aesthetics")
@@ -42,8 +43,13 @@ class RaterGui:
     self.input_outcome.configure(highlightthickness=0)
     self.scheduled_jobs:list[str] = []
 
-  def display_match(self, profiles:list[ProfileInfo]) -> None:
-    n = len(profiles)
+  def display_match(self, profiles:list[ProfileInfo], n:int=None) -> None:
+    # print("display match")
+    # for p in profiles:print(p)
+    for c in self.cards:
+      c.destroy()
+    if n is None:
+      n = len(profiles)
     if len(self.cards) != n:
       self._prepare_layout(n)
     self.root.update()
@@ -68,17 +74,13 @@ class RaterGui:
                           feature:list[ProfileInfo]=None, outcome:Outcome=None) -> None:
     self.leaderboard.display(leaderboard, feature, outcome)
 
-  def display_search(self, hits:list[ProfileInfo]) -> None:
-    print("search results:")
-    for p in hits[:15]:
-      print(p)
-
   def mainloop(self):
     self.root.mainloop()
     for id in self.scheduled_jobs:
       self.root.after_cancel(id)
 
   def _prepare_layout(self, n:int):
+    self.cards = []
     if n==2:
       self.style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
       LDBRD_W = 0.24  # TODO: fix width
@@ -96,7 +98,7 @@ class RaterGui:
       self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
       ROWS = 1 if n<6 else 2
       COLS = (n+ROWS-1)//ROWS
-      LDBRD_W = 0.24 if False else 0.11  # TODO: make profiles for 1080p and 4k
+      LDBRD_W = 0.24 if False else 0.125  # TODO: make profiles for 1080p and 4k
       SINGLE_W = (1-LDBRD_W)/COLS
       INP_H = 0.055
       INP_LBL_H = INP_H*0.35
@@ -179,14 +181,17 @@ class RaterGui:
 
   def _on_input_received(self, event, n):
     s = self.input_outcome.get()
-    if Outcome.is_valid(s, n):
-      outcome = Outcome(s)
-      for idx, mult in outcome.get_boosts().items():
-        self.user_listener.give_boost(self.curr_prof_shnames[idx], mult)
-      self._enable_input(False)
-      self.user_listener.consume_result(outcome)
-    else:
-      self.input_outcome.config(background=RED_ERR)
+    if self.mode == AppMode.SEARCH:
+      self.user_listener.search_for(s)
+    elif self.mode == AppMode.MATCH:
+      if Outcome.is_valid(s, n):
+        outcome = Outcome(s)
+        for idx, mult in outcome.get_boosts().items():
+          self.user_listener.give_boost(self.curr_prof_shnames[idx], mult)
+        self._enable_input(False)
+        self.user_listener.consume_result(outcome)
+      else:
+        self.input_outcome.config(background=RED_ERR)
 
   def _on_give_boost(self, event):
     assert len(self.curr_prof_shnames) == 2

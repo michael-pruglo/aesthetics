@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import logging
-from enum import Enum, auto
 import argparse
 
 from helpers import short_fname
-from ae_rater_types import Outcome, UserListener
+from ae_rater_types import AppMode, Outcome, UserListener
 from ae_rater_view import RaterGui
 from ae_rater_model import RatingCompetition
 from ai_assistant import Assistant
@@ -28,13 +26,9 @@ def setup_logger(log_filename):
 
 
 class App(UserListener):
-  class Mode(Enum):
-    MATCH = auto()
-    SEARCH = auto()
-
-  def __init__(self, media_dir:str, mode:Mode=Mode.MATCH):
+  def __init__(self, media_dir:str, mode:AppMode=AppMode.MATCH):
     self.model = RatingCompetition(media_dir, refresh=False)
-    self.gui = RaterGui(self, self.model.get_tags_vocab())
+    self.gui = RaterGui(self, self.model.get_tags_vocab(), mode)
     self.mode = mode
     self.ai_assistant = Assistant()
     self.num_participants = 2
@@ -42,10 +36,10 @@ class App(UserListener):
   def run(self, num_participants:int) -> None:
     self.num_participants = num_participants
     try:
-      if self.mode == App.Mode.MATCH:
+      if self.mode == AppMode.MATCH:
         self.start_next_match()
-      elif self.mode == App.Mode.SEARCH:
-        self.show_search_results("")
+      elif self.mode == AppMode.SEARCH:
+        self.search_for("")
       else:
         raise RuntimeError(f"cannot start mode {self.mode}")
 
@@ -66,11 +60,11 @@ class App(UserListener):
     self.gui.display_leaderboard(self.model.get_leaderboard(), participants)
     self.gui.display_match(participants)
 
-  def show_search_results(self, query:str) -> None:
-    res = self.model.get_search_results(query)
+  def search_for(self, query:str) -> None:
+    res = self.model.get_search_results(query)[:10]
     ldbrd = self.model.get_leaderboard()
     self.gui.display_leaderboard(ldbrd, res)
-    self.gui.display_search(res)
+    self.gui.display_match(res)
 
   def give_boost(self, short_name:str, mult:int=1) -> None:
     self.model.give_boost(short_name, mult)
@@ -95,7 +89,7 @@ class App(UserListener):
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument('-s', '--search', dest='mode', action='store_const',
-                      const=App.Mode.SEARCH, default=App.Mode.MATCH,
+                      const=AppMode.SEARCH, default=AppMode.MATCH,
                       help="run SEARCH instead of MATCH mode")
   parser.add_argument('media_dir', nargs='?', default="./sample_imgs/",
                       help="media folder to operate on")

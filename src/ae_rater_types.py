@@ -247,3 +247,12 @@ class UserListener(ABC):
   @abstractmethod
   def suggest_tags(self, fullname:str) -> list:
     pass
+
+  @abstractmethod
+  def search_for(self, query:str) -> None:
+    pass
+
+
+class AppMode(Enum):
+  MATCH = auto()
+  SEARCH = auto()
