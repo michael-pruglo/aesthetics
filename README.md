@@ -4,15 +4,31 @@
 
 Exploration of personal style. Provided a media library with metadata - explore, rate, tag, use DL.
 
-## Run:
-
-### Run gui app with
+## Run
 
 ```bash
-python src/ae_rater.py [path/to/media] [n_cards=2]
+$ src/ae_rater.py --help
+usage: ae_rater.py [-h] [-s] [media_dir] [num_participants]
+
+positional arguments:
+  media_dir         media folder to operate on
+  num_participants  number of participants in MATCH mode
+
+optional arguments:
+  -h, --help        show this help message and exit
+  -s, --search      run SEARCH instead of MATCH mode
+
 ```
-Where `n_cards` is the number of participants in one match (increase efficiency of rating). <br>
-If `n_cards > 2` then you have to supply results in a string form. Each participant has it's own id letter (a,b,c,...). The result string consists of words separated by whitespace. Each word represents a tier, starting from the winners. <br>
+
+### Run tests with
+
+```bash
+python -m unittests
+```
+
+## Outcome language
+
+If `num_participants > 2` then you have to supply results in a string form. Each participant has it's own id letter (a,b,c,...). The result string consists of words separated by whitespace. Each word represents a tier, starting from the winners. <br>
 For example:
 
 ```
@@ -28,14 +44,8 @@ d++c a- b
 ```
 Will give 2 boosts to `d`, one decrease to `a`, and then process `dc a b`
 
-
 Click on tags to open the Meta Manager and change tags/stars on disk. You will even get suggestions from AI!<br>
 Click on any media to open the full version in an external program
-
-### Run tests with
-```bash
-python -m unittests
-```
 
 ## Architecture
 

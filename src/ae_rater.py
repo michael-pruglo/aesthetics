@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 from enum import Enum, auto
+import argparse
 
 from helpers import short_fname
 from ae_rater_types import Outcome, UserListener
@@ -92,11 +93,16 @@ class App(UserListener):
 
 
 if __name__ == "__main__":
-  given_dir = sys.argv[1] if len(sys.argv)>1 else "./sample_imgs/"
-  given_dir = os.path.abspath(given_dir)
-  assert os.path.exists(given_dir), f"path {given_dir} doesn't exist, maybe not mounted?"
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-s', '--search', dest='mode', action='store_const',
+                      const=App.Mode.SEARCH, default=App.Mode.MATCH,
+                      help="run SEARCH instead of MATCH mode")
+  parser.add_argument('media_dir', nargs='?', default="./sample_imgs/",
+                      help="media folder to operate on")
+  parser.add_argument('num_participants', type=int, nargs='?', default=2,
+                      help="number of participants in MATCH mode")
+  args = parser.parse_args()
 
-  num_participants = int(sys.argv[2]) if len(sys.argv)>2 else 2
-  # TODO: argparse to accept REFRESH and MODE
-  setup_logger(log_filename=f"./logs/matches_{short_fname(given_dir)}.log")
-  App(given_dir, App.Mode.SEARCH).run(num_participants)
+  assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
+  setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
+  App(args.media_dir, args.mode).run(args.num_participants)
