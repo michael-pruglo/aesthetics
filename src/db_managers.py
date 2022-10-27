@@ -108,12 +108,17 @@ class MetadataManager:
     return self.df
 
   def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
-    write_metadata(fullname, tags, stars, append=False)
-    upd_data = _db_row(fullname)
+    write_metadata(fullname, tags, append=False)
+    upd_data = {'tags': ' '.join(sorted(tags)).lower()}
+
+    curr_stars = self.get_file_info(short_fname(fullname))['stars']
+    if stars == int(curr_stars):
+      stars = None
     if stars is not None:
       assert self.defaults_getter is not None
       upd_data |= self.defaults_getter(stars)
-    self.update(fullname, upd_data, 0)
+
+    self.update(fullname, upd_data, 0, stars)
 
   def get_tags_vocab(self) -> list[str]:
     return get_vocab()
@@ -124,7 +129,7 @@ class MetadataManager:
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
     return self.df.sample(n, weights='priority')
 
-  def get_search_results(self, query:str) -> pd.DataFrame:
+  def get_search_results(self, query:str) -> pd.DataFrame:  # TODO: write tests
     if query == "":
       return self.df
 

@@ -9,7 +9,6 @@ import helpers as hlp
 
 
 class ProfileCard(tk.Frame):
-
   def __init__(self, idx:int, mode:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.idx = idx
