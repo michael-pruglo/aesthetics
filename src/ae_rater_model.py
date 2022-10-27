@@ -24,6 +24,9 @@ class RatingCompetition:
     self.db = DBAccess(img_dir, refresh, default_values_getter,
                        [s.name() for s in self.rat_systems])
 
+  def get_search_results(self, query:str) -> list[ProfileInfo]:
+    return self.db.get_search_results(query)
+
   def get_curr_match(self) -> list[ProfileInfo]:
     return self.curr_match
 
@@ -123,6 +126,11 @@ class DBAccess:
 
   def give_awards(self, fullname, awards):
     self.meta_mgr.update(fullname, {'awards':awards})
+
+  def get_search_results(self, query:str) -> list[ProfileInfo]:
+    hits = self.meta_mgr.get_search_results(query)
+    return [self._validate_and_convert_info(hits.iloc[i])
+            for i in range(len(hits))]
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()

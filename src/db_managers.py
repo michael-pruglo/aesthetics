@@ -73,8 +73,8 @@ class MetadataManager:
     is_first_run = not os.path.exists(self.db_fname)
     if refresh or is_first_run:
       logging.info("refreshing metadata db...")
-      def is_media(fname):
-        return fname.find('.')>0 and not fname.endswith('.csv')
+      def is_media(fname:str):
+        return fname.find('.')>0 and not fname.endswith(('.csv', '.pkl'))
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
       if is_first_run:
@@ -123,6 +123,22 @@ class MetadataManager:
 
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
     return self.df.sample(n, weights='priority')
+
+  def get_search_results(self, query:str) -> pd.DataFrame:
+    if query == "":
+      return self.df
+
+    words = query.split()
+    pos_filter, neg_filter = [], []
+    for w in words:
+      flt = neg_filter if w.startswith('-') else pos_filter
+      flt.append(w)
+
+    def is_match(row:pd.Series) -> bool:
+      pos = any(row.astype(str).str.contains(word).any() for word in pos_filter)
+      neg = any(row.astype(str).str.contains(word).any() for word in neg_filter)
+      return pos and not neg
+    return self.df[self.df.apply(is_match, axis=1)]
 
   def update(self, fullname:str, upd_data:dict, matches_each:int=0, consensus_stars:float=None) -> None:
     short_name = short_fname(fullname)

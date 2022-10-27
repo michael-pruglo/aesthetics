@@ -68,6 +68,11 @@ class RaterGui:
                           feature:list[ProfileInfo]=None, outcome:Outcome=None) -> None:
     self.leaderboard.display(leaderboard, feature, outcome)
 
+  def display_search(self, hits:list[ProfileInfo]) -> None:
+    print("search results:")
+    for p in hits[:15]:
+      print(p)
+
   def mainloop(self):
     self.root.mainloop()
     for id in self.scheduled_jobs:
@@ -91,7 +96,7 @@ class RaterGui:
       self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
       ROWS = 1 if n<6 else 2
       COLS = (n+ROWS-1)//ROWS
-      LDBRD_W = 0.24
+      LDBRD_W = 0.24 if False else 0.11  # TODO: make profiles for 1080p and 4k
       SINGLE_W = (1-LDBRD_W)/COLS
       INP_H = 0.055
       INP_LBL_H = INP_H*0.35
