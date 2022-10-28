@@ -62,14 +62,14 @@ class RatingCompetition:
     )
     self._refresh_curr_match()
 
-  def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
-    logging.info("update meta on disk: %s  %s %d", short_fname(fullname), tags, stars)
-    self.db.update_meta(fullname, tags, stars)
+  def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
+    shname = short_fname(fullname)
+    logging.info("model.update_meta for %s:\n %s", shname, meta)
+    db_row = self.db.retreive_profile(shname)
+    if int(db_row.stars) == meta.stars:
+      meta.stars = None
+    self.db.update_meta(fullname, meta)
     self._refresh_curr_match()
-
-  def give_awards(self, fullname:str, awards:list[str]) -> None:
-    logging.info(f"award {short_fname(fullname)} with '{awards}'")
-    self.db.give_awards(fullname, awards)
 
   def on_exit(self):
     self.db.on_exit()
@@ -97,6 +97,7 @@ class DBAccess:
                sysnames:list[str]) -> None:
     self.img_dir = img_dir
     self.meta_mgr = MetadataManager(img_dir, refresh, default_values_getter)
+    self.def_gettr = default_values_getter
     self.history_mgr = HistoryManager(img_dir)
     self.sysnames = sysnames
 
@@ -118,14 +119,20 @@ class DBAccess:
           sysname+'_rd': changes[i].new_rating.rd,
           sysname+'_time': changes[i].new_rating.timestamp,
         })
+      new_ratings['stars'] = statistics.mean(proposed_stars)
 
-      self.meta_mgr.update(prof.fullname, new_ratings, len(profiles)-1, statistics.mean(proposed_stars))
+      self.meta_mgr.update(prof.fullname, new_ratings, len(profiles)-1)
 
-  def update_meta(self, *args, **kwargs):
-    self.meta_mgr.update_meta(*args, **kwargs)
-
-  def give_awards(self, fullname, awards):
-    self.meta_mgr.update(fullname, {'awards':awards})
+  def update_meta(self, fullname:str, meta:ManualMetadata):
+    upd = {}
+    if meta.tags is not None:
+      upd['tags'] = ' '.join(sorted(meta.tags)).lower()
+    if meta.stars is not None:
+      upd['stars'] = meta.stars
+      upd |= self.def_gettr(meta.stars)
+    if meta.awards is not None:
+      upd['awards'] = ' '.join(sorted(meta.awards)).lower()
+    self.meta_mgr.update(fullname, upd_data=upd)
 
   def get_search_results(self, query:str) -> list[ProfileInfo]:
     hits = self.meta_mgr.get_search_results(query)

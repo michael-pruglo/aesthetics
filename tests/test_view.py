@@ -40,7 +40,6 @@ class MockListener(UserListener):
   def start_next_match(self): pass
   def update_meta(self, *args, **kwargs): pass
   def suggest_tags(self, *args, **kwargs): pass
-  def give_awards(self, *args, **kwargs): pass
   def search_for(self, *args, **kwargs): return []
 
 

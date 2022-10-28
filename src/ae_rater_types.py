@@ -97,6 +97,13 @@ class RatChange:
       ])
 
 
+@dataclass
+class ManualMetadata:
+  tags : list[str] = None
+  stars : int = None
+  awards : list[str] = None
+
+
 RatSystemName = str
 RatingOpinions = dict[RatSystemName, list[RatChange]]
 
@@ -237,11 +244,7 @@ class UserListener(ABC):
     pass
 
   @abstractmethod
-  def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
-    pass
-
-  @abstractmethod
-  def give_awards(self, fullname:str, awards:list[str]) -> None:
+  def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
     pass
 
   @abstractmethod

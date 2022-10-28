@@ -50,7 +50,6 @@ def _default_init(row, default_values_getter):
 
 class MetadataManager:
   def __init__(self, img_dir:str, refresh:bool=False, defaults_getter:Callable[[int], dict]=None):
-    self.defaults_getter = defaults_getter
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
     self.matches_since_last_save = 0
     metadata_dtypes = {
@@ -107,20 +106,6 @@ class MetadataManager:
 
     return self.df
 
-  # TODO: write test for changing and non-changing stars
-  def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
-    write_metadata(fullname, tags, append=False)
-    upd_data = {'tags': ' '.join(sorted(tags)).lower()}
-
-    curr_stars = self.get_file_info(short_fname(fullname))['stars']
-    if stars == int(curr_stars):
-      stars = None
-    if stars is not None:
-      assert self.defaults_getter is not None
-      upd_data |= self.defaults_getter(stars)
-
-    self.update(fullname, upd_data, 0, stars)
-
   def get_tags_vocab(self) -> list[str]:
     return get_vocab()
 
@@ -146,24 +131,30 @@ class MetadataManager:
       return all(pos) and not any(neg)
     return self.df[self.df.apply(is_match, axis=1)]
 
-  # TODO: now stars can come in upd_data and consensus_stars. unify.
-  def update(self, fullname:str, upd_data:dict, matches_each:int=0, consensus_stars:float=None) -> None:
+  def update(self, fullname:str, upd_data:dict, matches_each:int=0) -> None:
     short_name = short_fname(fullname)
-
     row = self.df.loc[short_name].copy()
+
+    # updates on disk
+    new_disk_tags = None
+    if 'tags' in upd_data:
+      new_disk_tags = upd_data['tags'].split()
+    new_disk_stars = None
+    if 'stars' in upd_data:
+      if upd_data['stars'] < 0:
+        raise ValueError(f"inappropriate consensus_stars: {upd_data['stars']}")
+      prev_stars = row['stars']
+      new_disk_stars = min(5, int(upd_data['stars']))
+      if min(5, int(prev_stars)) != new_disk_stars:
+        logging.info("file %s updated stars on disk: %f -> %f",
+                      short_name, prev_stars, new_disk_stars)
+      else:
+        new_disk_stars = None
+    write_metadata(fullname, new_disk_tags, new_disk_stars, append=False) #TDOD: write test for append=False
+
+    # updates in df
     if upd_data:
       row.update(upd_data)
-
-    if consensus_stars is not None:
-      if consensus_stars < 0:
-        raise ValueError(f"inappropriate consensus_stars: {consensus_stars}")
-      prev_stars = row['stars']
-      row.loc['stars'] = consensus_stars
-      disk_stars = min(5, int(consensus_stars))
-      if min(5, int(prev_stars)) != disk_stars:
-        write_metadata(fullname, stars=disk_stars)
-        logging.info("file %s updated stars on disk: %f -> %f",
-                      short_name, prev_stars, disk_stars)
 
     row.loc['nmatches'] += matches_each
 

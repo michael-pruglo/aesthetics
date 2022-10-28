@@ -3,7 +3,7 @@ from tkinter import ttk
 import tkinter.font
 from typing import Callable
 
-from ae_rater_types import ProfileInfo, UserListener
+from ae_rater_types import ManualMetadata, ProfileInfo, UserListener
 from gui.media_frame import MediaFrame
 from gui.guicfg import *
 import helpers as hlp
@@ -72,7 +72,7 @@ class TagEditor(ttk.Frame):
 
 
   def __init__(self, vocab:list[str], curr_prof:ProfileInfo, suggested_tags:list[str],
-               on_commit_cb:Callable[[list,int],None], style, *args, **kwargs):
+               on_commit_cb:Callable[[ManualMetadata],None], style, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.style = style
     self.vocab = vocab
@@ -181,9 +181,12 @@ class TagEditor(ttk.Frame):
     self.stars_lbl.configure(text='★'*self.stars+'☆'*(5-self.stars))
 
   def _on_commit_pressed(self):
-    selected = [tag for tag, var in self.states.items() if var.get()]
-    awards = self.content_award_entry.get()
-    self.on_commit_cb(selected, self.stars, awards)
+    input_meta = ManualMetadata(
+      tags = [tag for tag, var in self.states.items() if var.get()],
+      stars = self.stars,
+      awards = self.content_award_entry.get(),
+    )
+    self.on_commit_cb(input_meta)
 
   def cleanup(self):
     for i in range(6):
@@ -256,9 +259,8 @@ class MetaEditor:
     )
     self.style.configure("IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA, font=(None, 20))
 
-  def _on_commit_pressed(self, selected, stars, awards):
-    self.user_listener.give_awards(self.curr_prof.fullname, awards)
-    self.user_listener.update_meta(self.curr_prof.fullname, tags=selected, stars=stars)
+  def _on_commit_pressed(self, meta:ManualMetadata):
+    self.user_listener.update_meta(self.curr_prof.fullname, meta)
     self._cleanup()
 
   def _cleanup(self):
