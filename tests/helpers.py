@@ -55,8 +55,8 @@ def immitate_external_metadata_change() -> tuple:
   assert 0 <= stars1 <= 5, files[1]
   assert 0 <= stars2 <= 5, files[2]
   write_metadata(files[0], tags=["canary", "canary|tagcanary"])
-  write_metadata(files[1], rating=5-stars1)
-  write_metadata(files[2], tags=["finch", "finch|tagfi"], rating=5-stars2)
+  write_metadata(files[1], stars=5-stars1)
+  write_metadata(files[2], tags=["finch", "finch|tagfi"], stars=5-stars2)
   return 2, 2
 
 def disk_cleanup() -> None:

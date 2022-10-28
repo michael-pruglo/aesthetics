@@ -17,7 +17,6 @@ class ProfileCard(tk.Frame):
     self.fg = RIGHT_COLORFG if is_right else LEFT_COLORFG
     self.wincolor = RIGHT_COLORWIN if is_right else LEFT_COLORWIN
     self.drawcolor = COLORDRAW
-    self.mode = mode
 
     self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)
@@ -26,7 +25,7 @@ class ProfileCard(tk.Frame):
 
     TW = 0.22
     BRDR = 0.015
-    PH = 0.95 if self.mode==2 else 0.8
+    PH = 0.95 if mode==2 else 0.8
     self.tags.place  (relwidth=TW,        relheight=PH,       relx=is_right*(1-TW))
     self.media.place (relwidth=1-TW-BRDR, relheight=PH,       relx=BRDR if is_right else TW)
     self.name.place  (relwidth=1,         relheight=(1-PH)/2, rely=PH)

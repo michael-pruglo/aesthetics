@@ -47,7 +47,7 @@ class TestWritingMetadata(unittest.TestCase):
     self.assertFalse(os.path.exists(self.fname), self.fname)
 
   def test_only_rating(self):
-    write_metadata(self.fname, rating=3)
+    write_metadata(self.fname, stars=3)
     self.assertTupleEqual(get_metadata(self.fname), (set(),3))
 
   def test_only_tags(self):
@@ -57,23 +57,23 @@ class TestWritingMetadata(unittest.TestCase):
 
   def test_both(self):
     tgs = {"mood", "mood|smile", "color"}
-    write_metadata(self.fname, tags=tgs, rating=1)
+    write_metadata(self.fname, tags=tgs, stars=1)
     self.assertTupleEqual(get_metadata(self.fname), (tgs,1))
 
   def test_append(self):
     tgs1 = {"a", "b|_c", "b|_d", "b"}
     tgs2 = {"m", "m|n", "m|n|o", "p"}
-    write_metadata(self.fname, tags=tgs1, rating=4)
+    write_metadata(self.fname, tags=tgs1, stars=4)
     self.assertTupleEqual(get_metadata(self.fname), (tgs1,4))
-    write_metadata(self.fname, tags=tgs2, rating=1, append=True)
+    write_metadata(self.fname, tags=tgs2, stars=1, append=True)
     self.assertTupleEqual(get_metadata(self.fname), (tgs1|tgs2, 1))
 
   def test_overwrite(self):
     tgs1 = {"a", "b|_c", "b|_d", "b"}
     tgs2 = {"m", "m|n", "m|n|o", "p"}
-    write_metadata(self.fname, tags=tgs1, rating=4)
+    write_metadata(self.fname, tags=tgs1, stars=4)
     self.assertTupleEqual(get_metadata(self.fname), (tgs1,4))
-    write_metadata(self.fname, tags=tgs2, rating=1, append=False)
+    write_metadata(self.fname, tags=tgs2, stars=1, append=False)
     self.assertTupleEqual(get_metadata(self.fname), (tgs2, 1))
 
 

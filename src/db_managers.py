@@ -107,6 +107,7 @@ class MetadataManager:
 
     return self.df
 
+  # TODO: write test for changing and non-changing stars
   def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
     write_metadata(fullname, tags, append=False)
     upd_data = {'tags': ' '.join(sorted(tags)).lower()}
@@ -140,11 +141,12 @@ class MetadataManager:
       flt.append(w)
 
     def is_match(row:pd.Series) -> bool:
-      pos = any(row.astype(str).str.contains(word).any() for word in pos_filter)
-      neg = any(row.astype(str).str.contains(word).any() for word in neg_filter)
-      return pos and not neg
+      pos = [row.astype(str).str.contains(word).any() for word in pos_filter]
+      neg = [row.astype(str).str.contains(word).any() for word in neg_filter]
+      return all(pos) and not any(neg)
     return self.df[self.df.apply(is_match, axis=1)]
 
+  # TODO: now stars can come in upd_data and consensus_stars. unify.
   def update(self, fullname:str, upd_data:dict, matches_each:int=0, consensus_stars:float=None) -> None:
     short_name = short_fname(fullname)
 
@@ -159,7 +161,7 @@ class MetadataManager:
       row.loc['stars'] = consensus_stars
       disk_stars = min(5, int(consensus_stars))
       if min(5, int(prev_stars)) != disk_stars:
-        write_metadata(fullname, rating=disk_stars)
+        write_metadata(fullname, stars=disk_stars)
         logging.info("file %s updated stars on disk: %f -> %f",
                       short_name, prev_stars, disk_stars)
 

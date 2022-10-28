@@ -35,7 +35,7 @@ class RatingCompetition:
     return self.curr_match
 
   def get_leaderboard(self) -> list[ProfileInfo]:
-    return self.db.get_leaderboard(sortpriority=[s.name()+"_pts" for s in self.rat_systems])
+    return self.db.get_leaderboard(sortpriority=['stars']+[s.name()+"_pts" for s in self.rat_systems])
 
   def get_tags_vocab(self) -> list[str]:
     return self.db.get_tags_vocab()
@@ -63,7 +63,7 @@ class RatingCompetition:
     self._refresh_curr_match()
 
   def update_meta(self, fullname:str, tags:list[str]=None, stars:int=None) -> None:
-    logging.info("update tags on disk: %s  %s %d", short_fname(fullname), tags, stars)
+    logging.info("update meta on disk: %s  %s %d", short_fname(fullname), tags, stars)
     self.db.update_meta(fullname, tags, stars)
     self._refresh_curr_match()
 
@@ -134,7 +134,7 @@ class DBAccess:
 
   def get_leaderboard(self, sortpriority:list) -> list[ProfileInfo]:
     db = self.meta_mgr.get_db()
-    db.sort_values(['stars']+sortpriority, ascending=False, inplace=True)
+    db.sort_values(sortpriority, ascending=False, inplace=True)
     return [self._validate_and_convert_info(db.iloc[i]) for i in range(len(db))]
 
   def get_tags_vocab(self) -> list[str]:

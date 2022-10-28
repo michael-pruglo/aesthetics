@@ -37,17 +37,17 @@ def get_metadata(fullname:str, vocab:list[str]=None) -> tuple[set[str],int]:
       ret.add(tag)
     return ret
 
-  def get_rating():
+  def get_stars():
     propname = (consts.XMP_NS_XMP, "Rating")
     if not xmp.does_property_exist(*propname):
       return 0
 
     return xmp.get_property_int(*propname)
 
-  return get_tags(), get_rating()
+  return get_tags(), get_stars()
 
 
-def write_metadata(fullname:str, tags:Iterable[str]=None, rating:int=None, append:bool=True) -> None:
+def write_metadata(fullname:str, tags:Iterable[str]=None, stars:int=None, append:bool=True) -> None:
   xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
   xmp = xmpfile.get_xmp()
   if not xmp or not xmpfile.can_put_xmp(xmp):
@@ -74,9 +74,9 @@ def write_metadata(fullname:str, tags:Iterable[str]=None, rating:int=None, appen
       write_tag(hier_tag_prop, tag)
       write_tag(subj_tag_prop, tag.split('|')[-1])
 
-  if rating is not None:
+  if stars is not None:
     r_prop = (consts.XMP_NS_XMP, "Rating")
-    xmp.set_property_int(*r_prop, rating)
+    xmp.set_property_int(*r_prop, stars)
 
   xmpfile.put_xmp(xmp)
   xmpfile.close_file()
