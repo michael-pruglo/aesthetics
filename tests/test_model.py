@@ -122,7 +122,7 @@ class TestCompetition(unittest.TestCase):
           self.assertLessEqual(new_rating.rd, old_rating.rd)
           self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
 
-  def test_meta_update(self):
+  def _test_meta_update_impl(self, usr_input:ManualMetadata):
     testees = self.model.generate_match(8)
     hlp.backup_files([p.fullname for p in testees])
     self.model.consume_result(Outcome("a b c d e f g h"))  # to achieve fractional stars
@@ -134,21 +134,48 @@ class TestCompetition(unittest.TestCase):
       self.assertEqual(stars_before, int(prof.stars))
       self.assertSetEqual(tags_before, set(prof.tags.split()))
 
-      usr_input = ManualMetadata(
+      self.model.update_meta(prof.fullname, copy.deepcopy(usr_input))  # input is allowed to be modified
+      exp_stars = stars_before if usr_input.stars is None else usr_input.stars
+      exp_tags = tags_before if usr_input.tags is None else set(usr_input.tags)
+      exp_awards = set() if usr_input.awards is None else set(usr_input.awards)
+
+      tags_after, stars_after = get_metadata(prof.fullname)
+      self.assertEqual(stars_after, exp_stars)
+      if usr_input.tags is not None:
+        self.assertNotEqual(tags_after, tags_before, prof.fullname)
+      self.assertSetEqual(tags_after, exp_tags, prof.fullname)
+      new_prof = self._get_leaderboard_line(prof.fullname)
+      self.assertEqual(min(5,int(new_prof.stars)), exp_stars, prof.fullname)
+      self.assertSetEqual(set(new_prof.tags.split()), exp_tags, prof.fullname)
+      self.assertSetEqual(set(new_prof.awards.split()), exp_awards, prof.fullname)
+
+  def test_meta_update_0(self):
+    self._test_meta_update_impl(ManualMetadata(
         tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
         stars = random.randint(0, 5),
         awards = {"awa1", "awa2", "awa3"},
-      ) # TODO: test with some values = None
-      self.model.update_meta(prof.fullname, copy.deepcopy(usr_input))  # input is allowed to be modified
+    ))
 
-      tags_after, stars_after = get_metadata(prof.fullname)
-      self.assertEqual(stars_after, usr_input.stars)
-      self.assertNotEqual(tags_after, tags_before, prof.fullname)
-      self.assertSetEqual(tags_after, usr_input.tags)
-      new_prof = self._get_leaderboard_line(prof.fullname)
-      self.assertEqual(min(5,int(new_prof.stars)), usr_input.stars)
-      self.assertSetEqual(set(new_prof.tags.split()), usr_input.tags)
-      self.assertSetEqual(set(new_prof.awards.split()), usr_input.awards)
+  def test_meta_update_1(self):
+    self._test_meta_update_impl(ManualMetadata(
+        tags = None,
+        stars = random.randint(0, 5),
+        awards = {"awa1", "awa2", "awa3"},
+    ))
+
+  def test_meta_update_2(self):
+    self._test_meta_update_impl(ManualMetadata(
+        tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
+        stars = None,
+        awards = {"awa1", "awa2", "awa3"},
+    ))
+
+  def test_meta_update_3(self):
+    self._test_meta_update_impl(ManualMetadata(
+        tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
+        stars = random.randint(0, 5),
+        awards = None,
+    ))
 
   def _long_term(self, n):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
