@@ -1,6 +1,7 @@
 import copy
 import operator
 import statistics
+from string import ascii_letters
 import unittest
 import os
 import random
@@ -98,7 +99,7 @@ class TestCompetition(unittest.TestCase):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
     hlp.backup_files(all_files)
 
-    for _ in range(42):
+    for _ in range(20):
       n = random.randint(2, min(15,len(all_files)))
       participants = self.model.generate_match(n)
       metadata = [get_metadata(p.fullname) for p in participants]
@@ -123,31 +124,35 @@ class TestCompetition(unittest.TestCase):
           self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
 
   def _test_meta_update_impl(self, usr_input:ManualMetadata):
-    testees = self.model.generate_match(8)
+    N = 8
+    testees = self.model.generate_match(N)
     hlp.backup_files([p.fullname for p in testees])
-    self.model.consume_result(Outcome("a b c d e f g h"))  # to achieve fractional stars
+    self.model.consume_result(Outcome(' '.join(ascii_letters[:N])))  # to achieve fractional stars
     testees = [self._get_leaderboard_line(p.fullname) for p in testees]
 
-    # TODO: specifically test frac-int frac-different
-    for prof in testees:
+    same_stars = [True]*(N//2) + [False]*(N-N//2)  # if curr stars are 2.4, input 2 shouldn't change it
+    for prof, frac_int_test in zip(testees, same_stars):
       tags_before, stars_before = get_metadata(prof.fullname)
       self.assertEqual(stars_before, int(prof.stars))
       self.assertSetEqual(tags_before, set(prof.tags.split()))
+      if frac_int_test and usr_input.stars is not None:
+        usr_input.stars = stars_before
 
       self.model.update_meta(prof.fullname, copy.deepcopy(usr_input))  # input is allowed to be modified
       exp_stars = stars_before if usr_input.stars is None else usr_input.stars
       exp_tags = tags_before if usr_input.tags is None else set(usr_input.tags)
       exp_awards = set() if usr_input.awards is None else set(usr_input.awards)
 
+      dbg_info = f"{short_fname(prof.fullname)} frac_int:{frac_int_test}"
       tags_after, stars_after = get_metadata(prof.fullname)
       self.assertEqual(stars_after, exp_stars)
       if usr_input.tags is not None:
-        self.assertNotEqual(tags_after, tags_before, prof.fullname)
-      self.assertSetEqual(tags_after, exp_tags, prof.fullname)
+        self.assertNotEqual(tags_after, tags_before, dbg_info)
+      self.assertSetEqual(tags_after, exp_tags, dbg_info)
       new_prof = self._get_leaderboard_line(prof.fullname)
-      self.assertEqual(min(5,int(new_prof.stars)), exp_stars, prof.fullname)
-      self.assertSetEqual(set(new_prof.tags.split()), exp_tags, prof.fullname)
-      self.assertSetEqual(set(new_prof.awards.split()), exp_awards, prof.fullname)
+      self.assertEqual(min(5,int(new_prof.stars)), exp_stars, dbg_info)
+      self.assertSetEqual(set(new_prof.tags.split()), exp_tags, dbg_info)
+      self.assertSetEqual(set(new_prof.awards.split()), exp_awards, dbg_info)
 
   def test_meta_update_0(self):
     self._test_meta_update_impl(ManualMetadata(
