@@ -13,7 +13,7 @@ from gui.profile_card import ProfileCard
 
 
 class RaterGui:
-  def __init__(self, user_listener:UserListener, tags_vocab:list[str], mode:AppMode):
+  def __init__(self, user_listener:UserListener, tags_vocab:list[str], mode:AppMode=AppMode.MATCH):
     self.user_listener = user_listener
     self.tags_vocab = tags_vocab
     self.mode = mode

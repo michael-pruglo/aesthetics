@@ -10,9 +10,9 @@ class TestTypes(unittest.TestCase):
       self.assertTrue(better.stronger_than(worse), dbg_info)
       self.assertFalse(worse.stronger_than(better), dbg_info)
 
-    a = ProfileInfo("","",2,{'elo':Rating(1200),'glicko':Rating(1500,42)},123)
-    b = ProfileInfo("","",3,{'elo':Rating(1400),'glicko':Rating(1700,27)},23)
-    c = ProfileInfo("","",2,{'elo':Rating(1201),'glicko':Rating(1500,12)},3)
+    a = ProfileInfo("","",2,{'elo':Rating(1200),'glicko':Rating(1500,42)},123,"")
+    b = ProfileInfo("","",3,{'elo':Rating(1400),'glicko':Rating(1700,27)},23,"")
+    c = ProfileInfo("","",2,{'elo':Rating(1201),'glicko':Rating(1500,12)},3,"")
 
     compare(b, a)
     compare(c, a)

@@ -59,7 +59,7 @@ class TestMetadataManager(unittest.TestCase):
     if update_existing:
       for f in db0.index:
         fullname = os.path.join(MEDIA_FOLDER, f)
-        mm0.update(fullname, {}, 0, consensus_stars=db0.loc[f, 'stars']+.6)
+        mm0.update(fullname, {'stars':db0.loc[f,'stars']+.6}, 0)
       mm0._commit()
       db0 = mm0.get_db()
       tags_changed, stars_changed = hlp.immitate_external_metadata_change()
@@ -132,7 +132,7 @@ class TestMetadataManager(unittest.TestCase):
       inc_match = random.randint(0,17)
 
       hlp.backup_files([fullname])
-      mm.update(fullname, upd_data={}, matches_each=inc_match, consensus_stars=upd_stars)
+      mm.update(fullname, upd_data={'stars':upd_stars}, matches_each=inc_match)
 
       disk_tags_after, disk_stars_after = get_metadata(fullname)
       self.assertSetEqual(disk_tags_before, disk_tags_after, short_name)
@@ -160,9 +160,10 @@ class TestMetadataManager(unittest.TestCase):
       matches_each = random.randint(0,17)
       val_updates = {col:random.randint(0,2000)
                      for col in random.sample(["elo","glicko","tst"], random.randint(1,3))}
+      val_updates['stars'] = row_before['stars']
 
       hlp.backup_files([fullname])
-      mm.update(fullname, upd_data=val_updates, matches_each=matches_each, consensus_stars=row_before['stars'])
+      mm.update(fullname, upd_data=val_updates, matches_each=matches_each)
 
       row_after = mm.get_file_info(short_name)
       for col, given_val in row_after.items():

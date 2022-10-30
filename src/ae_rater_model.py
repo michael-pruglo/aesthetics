@@ -184,7 +184,7 @@ class DBAccess:
       ratings={sname:Rating(info[sname+'_pts'], info[sname+'_rd'], info[sname+'_time'])
                for sname in self.sysnames},
       nmatches=int(info['nmatches']),
-      awards=info['awards'].split(),
+      awards=info['awards'],
     )
 
   def on_exit(self):

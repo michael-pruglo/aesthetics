@@ -17,7 +17,8 @@ def generate_profiles(n:int) -> list[ProfileInfo]:
         'ELO':Rating(random.randint(1000,2000),0),
         'Glicko':Rating(random.randint(1400,3000),random.randint(30,300))
       },
-      nmatches=random.randint(2,100)
+      nmatches=random.randint(2,100),
+      awards=f"gen{i}awa",
     )
 
   return [gen_one_prof(i, shname)
@@ -71,6 +72,6 @@ class TestView(unittest.TestCase):
         gui.root.after_cancel(id)
     gui.root.destroy()
 
-  def test_gui(self):
+  def test_match_gui(self):
     for n in [2,10] + random.sample(range(3,13),2):
       self._test_competition_window(n)
