@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import string
 import time
 from enum import Enum, auto
+from typing import Iterable
 from dataclasses import dataclass, field
 from functools import total_ordering
 from numpy import interp
@@ -40,7 +41,7 @@ class ProfileInfo:
   stars : float
   ratings : dict[str,Rating]
   nmatches : int
-  awards: list[str]
+  awards: str
 
   def stronger_than(self, other):
     if not isinstance(other, self.__class__):
@@ -66,7 +67,7 @@ class ProfileInfo:
       FG_YELLOW,  f"{f'★{self.stars:.2f}':>5} ",
       FG_ELO,     f"{self.ratings} ",
       FG_MATCHES, f"{f'({self.nmatches})':<5} ",
-      FG_WHITE,   f"aw:{len(self.awards)}",
+      FG_WHITE,   f"aw:{len(self.awards.split())}",
       COLOR_RESET
     ])
 
@@ -99,9 +100,9 @@ class RatChange:
 
 @dataclass
 class ManualMetadata:
-  tags : list[str] = None
+  tags : Iterable[str] = None
   stars : int = None
-  awards : list[str] = None
+  awards : Iterable[str] = None
 
 
 RatSystemName = str

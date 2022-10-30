@@ -117,7 +117,7 @@ class TagEditor(ttk.Frame):
                               font=("Arial", 14, "bold"), justify="left",
                               textvariable=self.content_award_entry,
                               disabledbackground=BTFL_DARK_BG)
-    self.content_award_entry.set(' '.join(self.curr_prof.awards))
+    self.content_award_entry.set(self.curr_prof.awards)
 
     TH = .9
     ENTH = .05
@@ -184,7 +184,7 @@ class TagEditor(ttk.Frame):
     input_meta = ManualMetadata(
       tags = [tag for tag, var in self.states.items() if var.get()],
       stars = self.stars,
-      awards = self.content_award_entry.get(),
+      awards = self.content_award_entry.get().split(),
     )
     self.on_commit_cb(input_meta)
 

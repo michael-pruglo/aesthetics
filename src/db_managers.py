@@ -150,7 +150,7 @@ class MetadataManager:
                       short_name, prev_stars, new_disk_stars)
       else:
         new_disk_stars = None
-    write_metadata(fullname, new_disk_tags, new_disk_stars, append=False) #TDOD: write test for append=False
+    write_metadata(fullname, new_disk_tags, new_disk_stars, append=False)
 
     # updates in df
     if upd_data:
