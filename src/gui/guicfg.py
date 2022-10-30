@@ -80,7 +80,7 @@ def spice_up_color(
   return rgb_to_hex(*hsl_to_rgb(*hsl))
 
 
-CHANGE_MATCH_DELAY = 1500
+CHANGE_MATCH_DELAY = 100
 ACC_TAG_THRESH = 0.47
 
 BTFL_DARK_BG = "#222"

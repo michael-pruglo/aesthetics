@@ -1,5 +1,6 @@
 from functools import partial
 from itertools import filterfalse
+import math
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
@@ -10,6 +11,16 @@ import helpers as hlp
 from gui.guicfg import *
 from gui.leaderboard import Leaderboard
 from gui.profile_card import ProfileCard
+
+
+def factorize_good_ratio(n):
+    i = n
+    while i >= math.sqrt(n):
+      if n%i == 0:
+        cols = i
+      i -= 1
+    rows = n//cols
+    return (cols,rows) if cols<n else factorize_good_ratio(n+1)
 
 
 class RaterGui:
@@ -44,20 +55,17 @@ class RaterGui:
     self.scheduled_jobs:list[str] = []
 
   def display_match(self, profiles:list[ProfileInfo], n:int=None) -> None:
-    # print("display match")
-    # for p in profiles:print(p)
-    for c in self.cards:
-      c.destroy()
     if n is None:
       n = len(profiles)
     if len(self.cards) != n:
       self._prepare_layout(n)
     self.root.update()
     for card,profile in zip(self.cards, profiles):
+      # print(f"show {profile}")
       card.show_profile(profile)
       card.set_style(None)
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
-    if n == 2:
+    if n == 2 and self.mode == AppMode.MATCH:
       self._enable_arrows(True)
     else:
       self._enable_input(True, n)
@@ -80,7 +88,10 @@ class RaterGui:
       self.root.after_cancel(id)
 
   def _prepare_layout(self, n:int):
+    for c in self.cards:
+      c.destroy()
     self.cards = []
+
     if n==2:
       self.style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
       LDBRD_W = 0.24  # TODO: fix width
@@ -94,10 +105,9 @@ class RaterGui:
       self.help.place(relx=0.5-LDBRD_W/2, rely=1-HELP_H, relwidth=LDBRD_W, relheight=HELP_H)
       self.label_outcome.place_forget()
       self.input_outcome.place_forget()
-    elif 2 < n <= 12:
+    elif 2 < n <= 24:
       self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
-      ROWS = 1 if n<6 else 2
-      COLS = (n+ROWS-1)//ROWS
+      COLS, ROWS = factorize_good_ratio(n)
       LDBRD_W = 0.24 if False else 0.125  # TODO: make profiles for 1080p and 4k
       SINGLE_W = (1-LDBRD_W)/COLS
       INP_H = 0.055
@@ -105,7 +115,7 @@ class RaterGui:
       for i in range(n):
         card = ProfileCard(i, n, self.root)
         card.set_meta_editor(self.tags_vocab, self.user_listener)
-        card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*0.5, relwidth=SINGLE_W, relheight=1/ROWS)
+        card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)

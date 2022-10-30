@@ -119,11 +119,12 @@ class MetadataManager:
     if query == "":
       return self.df
 
-    words = query.split()
     pos_filter, neg_filter = [], []
-    for w in words:
-      flt = neg_filter if w.startswith('-') else pos_filter
-      flt.append(w)
+    for word in query.split():
+      if word.startswith('-'):
+        neg_filter.append(word[1:])
+      else:
+        pos_filter.append(word)
 
     def is_match(row:pd.Series) -> bool:
       pos = [row.astype(str).str.contains(word).any() for word in pos_filter]
