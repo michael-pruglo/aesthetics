@@ -61,10 +61,11 @@ class App(UserListener):
     self.gui.display_match(participants)
 
   def search_for(self, query:str) -> None:
-    res = self.model.get_search_results(query)[:10]
+    N = 10
+    res = self.model.get_search_results(query)[:N]
     ldbrd = self.model.get_leaderboard()
     self.gui.display_leaderboard(ldbrd, res)
-    self.gui.display_match(res)
+    self.gui.display_match(res, N)
 
   def give_boost(self, short_name:str, mult:int=1) -> None:
     self.model.give_boost(short_name, mult)
@@ -92,6 +93,7 @@ if __name__ == "__main__":
                       help="media folder to operate on")
   parser.add_argument('num_participants', type=int, nargs='?', default=2,
                       help="number of participants in MATCH mode")
+  # TODO: add -r for Refresh
   args = parser.parse_args()
 
   assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"

@@ -57,11 +57,10 @@ class RaterGui:
   def display_match(self, profiles:list[ProfileInfo], n:int=None) -> None:
     if n is None:
       n = len(profiles)
-    if len(self.cards) != n:
+    if len(self.cards) != len(profiles):
       self._prepare_layout(n)
     self.root.update()
     for card,profile in zip(self.cards, profiles):
-      # print(f"show {profile}")
       card.show_profile(profile)
       card.set_style(None)
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
