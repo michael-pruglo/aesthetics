@@ -26,8 +26,8 @@ def setup_logger(log_filename):
 
 
 class App(UserListener):
-  def __init__(self, media_dir:str, mode:AppMode=AppMode.MATCH):
-    self.model = RatingCompetition(media_dir, refresh=False)
+  def __init__(self, media_dir:str, refresh:bool, mode:AppMode):
+    self.model = RatingCompetition(media_dir, refresh)
     self.gui = RaterGui(self, self.model.get_tags_vocab(), mode)
     self.mode = mode
     self.ai_assistant = Assistant()
@@ -84,8 +84,11 @@ class App(UserListener):
       self.gui.display_match(updated_prof)
 
 
-if __name__ == "__main__":
+def main():
   parser = argparse.ArgumentParser()
+  parser.add_argument('-r', '--refresh', dest='refresh', action='store_const',
+                      const=True, default=False,
+                      help="refresh db to incorporate folder updates")
   parser.add_argument('-s', '--search', dest='mode', action='store_const',
                       const=AppMode.SEARCH, default=AppMode.MATCH,
                       help="run SEARCH instead of MATCH mode")
@@ -93,9 +96,12 @@ if __name__ == "__main__":
                       help="media folder to operate on")
   parser.add_argument('num_participants', type=int, nargs='?', default=2,
                       help="number of participants in MATCH mode")
-  # TODO: add -r for Refresh
   args = parser.parse_args()
 
   assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
   setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
-  App(args.media_dir, args.mode).run(args.num_participants)
+  App(args.media_dir, args.refresh, args.mode).run(args.num_participants)
+
+
+if __name__ == "__main__":
+  main()
