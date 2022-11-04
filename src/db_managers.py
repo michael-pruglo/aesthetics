@@ -115,21 +115,30 @@ class MetadataManager:
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
     return self.df.sample(n, weights='priority')
 
-  def get_search_results(self, query:str) -> pd.DataFrame:  # TODO: write tests
+  def get_search_results(self, query:str) -> pd.DataFrame:
+    query = query.strip()
     if query == "":
       return self.df
 
-    pos_filter, neg_filter = [], []
-    for word in query.split():
-      if word.startswith('-'):
-        neg_filter.append(word[1:])
-      else:
-        pos_filter.append(word)
-
+    def negpos(subquery:str) -> tuple:
+      neg, pos = [], []
+      for word in subquery.split():
+        if word.startswith('-'):
+          neg.append(word[1:])
+        else:
+          pos.append(word)
+      return neg, pos
+    subqueries = [negpos(sub) for sub in query.split('|')]
     def is_match(row:pd.Series) -> bool:
-      pos = [row.astype(str).str.contains(word).any() for word in pos_filter]
-      neg = [row.astype(str).str.contains(word).any() for word in neg_filter]
-      return all(pos) and not any(neg)
+      row['name'] = row.name
+      strrow = row.astype(str).str
+      for neg_filters, pos_filters in subqueries:
+        pos = [strrow.contains(word).any() for word in pos_filters]
+        neg = [strrow.contains(word).any() for word in neg_filters]
+        if all(pos) and not any(neg):
+          return True
+      return False
+
     return self.df[self.df.apply(is_match, axis=1)]
 
   def update(self, fullname:str, upd_data:dict, matches_each:int=0) -> None:
