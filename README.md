@@ -89,3 +89,5 @@ Tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 - improve tag suggestions and auto-label lower priority media
 - learn the overall/specific styles and generate new media with smth like stable diffusion
 - make a downloader + on-the-fly meta-editor
+- add PARANOID version - with extensive checks/asserts, and FAST - with no checks
+
