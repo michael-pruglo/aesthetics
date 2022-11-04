@@ -90,7 +90,9 @@ class TagEditor(ttk.Frame):
     self.style.configure("Entered.IHateTkinter.TCheckbutton", background="#991")
 
   def create_children(self):
-    self.stars_lbl = ttk.Label(self, justify=tk.CENTER, style="IHateTkinter.TLabel")  # just WHY will it not justify?
+    self.style.configure("G.IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA,
+                         background=BTFL_DARK_BG, font=(None, 18))  # just WHY will it not inherit style?
+    self.stars_lbl = ttk.Label(self, justify=tk.CENTER, style="G.IHateTkinter.TLabel")  # just WHY will it not justify?
     self._update_stars()
     for i in range(6):
       self.bind_all(str(i), self._update_stars)
@@ -253,11 +255,10 @@ class MetaEditor:
     self.style = ttk.Style(self.win)
     for elem in ["TButton", "TCheckbutton", "TFrame", "Vertical.TScrollbar"]:
       self.style.map("IHateTkinter."+elem,
-      foreground = [('active', "#fff"), ('!active', BTFL_LIGHT_GRAY)],
-      background = [('active', "#555")],
-      indicatorcolor = [('selected', "#0f0")],
-    )
-    self.style.configure("IHateTkinter.TLabel", foreground=BTFL_DARK_GRANOLA, font=(None, 20))
+        foreground = [('active', "#fff"), ('!active', BTFL_LIGHT_GRAY)],
+        background = [('active', "#555"), ('!active', BTFL_DARK_BG)],
+        indicatorcolor = [('selected', "#0f0")],
+      )
 
   def _on_commit_pressed(self, meta:ManualMetadata):
     self.user_listener.update_meta(self.curr_prof.fullname, meta)

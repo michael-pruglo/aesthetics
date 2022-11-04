@@ -10,6 +10,7 @@ import helpers as hlp
 class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .configure(background=)
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
+    self.configure(background=BTFL_DARK_BG)
     self.img = None
     self.img_frame = None
     self.vid_frame = None
@@ -29,7 +30,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
   def show_img(self, fname):
     self.unpack()
     if self.img_frame is None:
-      self.img_frame = ttk.Label(self, cursor="hand2")
+      self.img_frame = ttk.Label(self, border=0, cursor="hand2")
       self.img_frame.bind('<Button-1>', self._open_media_in_new_window)
     self.img = Image.open(fname)
     selfsize = (self.winfo_width(), self.winfo_height())
