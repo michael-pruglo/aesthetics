@@ -9,6 +9,7 @@ from db_managers import get_vocab
 import helpers as hlp
 from ai_assistant import Assistant
 from metadata import write_metadata
+from udownloader import UDownloader
 
 
 class MockListener(UserListener):
@@ -22,12 +23,6 @@ class MockListener(UserListener):
     print("update_meta: ", fullname, meta)
     write_metadata(fullname, meta.tags, meta.stars, append=False)
 
-
-def download_media(url:str) -> str:
-  dirr = os.path.abspath("./sample_imgs/")
-  fname = "006f129e1d4baaa9cd5e766d06256f58.jpg"
-  fullname = os.path.join(dirr,fname)
-  return fullname
 
 def show_editor(fullname:str):
   root = tk.Tk()
@@ -43,8 +38,8 @@ def show_editor(fullname:str):
   window.bind('<Destroy>', on_destroy)
   window.mainloop()
 
-def main(url):
-  fullname = download_media(url)
+def main(url, media_dir):
+  fullname = UDownloader.retreive_media(url, media_dir)
   ext = hlp.file_extension(fullname)
   if ext in ['png','webp','webm']:
     print(f"unsupported file extension '{ext}'")
@@ -53,4 +48,4 @@ def main(url):
 
 
 if __name__ == "__main__":
-  main("")
+  main("", os.path.abspath("./sample_imgs/"))
