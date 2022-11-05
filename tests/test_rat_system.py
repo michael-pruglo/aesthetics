@@ -18,7 +18,7 @@ def make_testcase(system:RatingBackend):
       stars = system.rating_to_stars(rating)
     if matches is None:
       matches = random.randint(0, 2000)
-    return ProfileInfo("autotgs", "autonm", stars, {system.name():rating}, matches, "autoawa")
+    return ProfileInfo("autonm", "autotgs", stars, {system.name():rating}, matches, "autoawa")
 
 
   class TestRatingSystemImpl(unittest.TestCase):

@@ -10,8 +10,8 @@ from tests.helpers import MEDIA_FOLDER, SKIPLONG, get_initial_mediafiles
 def generate_profiles(n:int) -> list[ProfileInfo]:
   def gen_one_prof(i, shname):
     return ProfileInfo(
-      tags=f"gen{i}tgs",
       fullname=os.path.join(MEDIA_FOLDER, shname),
+      tags=f"gen{i}tgs",
       stars=random.randint(0,500)/100,
       ratings={
         'ELO':Rating(random.randint(1000,2000),0),

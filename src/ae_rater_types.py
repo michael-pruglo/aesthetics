@@ -36,12 +36,12 @@ class Rating:
 
 @dataclass
 class ProfileInfo:
-  tags : str
   fullname : str
-  stars : float
-  ratings : dict[str,Rating]
-  nmatches : int
-  awards: str
+  tags : str = ""
+  stars : float = 0
+  ratings : dict[str,Rating] = field(default_factory=dict)
+  nmatches : int = 0
+  awards: str = ""
 
   def stronger_than(self, other):
     if not isinstance(other, self.__class__):

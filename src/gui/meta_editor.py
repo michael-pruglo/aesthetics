@@ -207,13 +207,15 @@ class MetaEditor:
   def set_curr_profile(self, prof:ProfileInfo):
     self.curr_prof = prof
 
-  def open(self, event):
+  def open(self, event) -> tk.Toplevel:
     assert self.curr_prof
     try:
       suggested_tags = self.user_listener.suggest_tags(self.curr_prof.fullname)
     except:
       suggested_tags = []
     self._create_window(suggested_tags)
+    assert self.win
+    return self.win
 
   def _create_window(self, suggested_tags):
     self.win = tk.Toplevel(self.master)
