@@ -2,6 +2,7 @@
 
 import os
 import tkinter as tk
+import argparse
 
 from gui.meta_editor import MetaEditor
 from ae_rater_types import ManualMetadata, ProfileInfo, UserListener
@@ -38,8 +39,8 @@ def show_editor(fullname:str):
   window.bind('<Destroy>', on_destroy)
   window.mainloop()
 
-def main(url, media_dir):
-  fullname = UDownloader.retreive_media(url, media_dir)
+def main(args):
+  fullname = UDownloader.retreive_media(args.url, args.dest)
   ext = hlp.file_extension(fullname)
   if ext in ['png','webp','webm']:
     print(f"unsupported file extension '{ext}'")
@@ -48,4 +49,8 @@ def main(url, media_dir):
 
 
 if __name__ == "__main__":
-  main("", os.path.abspath("./sample_imgs/"))
+  parser = argparse.ArgumentParser()
+  parser.add_argument('url', help="url of page with media")
+  parser.add_argument('dest', help="dir media will be downloaded to")
+
+  main(parser.parse_args())

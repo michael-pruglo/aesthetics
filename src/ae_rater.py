@@ -83,8 +83,13 @@ class App(UserListener):
       self.gui.display_leaderboard(self.model.get_leaderboard(), updated_prof)
       self.gui.display_match(updated_prof)
 
+def main(args):
+  assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
+  setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
+  App(args.media_dir, args.refresh, args.mode).run(args.num_participants)
 
-def main():
+
+if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument('-r', '--refresh', dest='refresh', action='store_const',
                       const=True, default=False,
@@ -96,12 +101,5 @@ def main():
                       help="media folder to operate on")
   parser.add_argument('num_participants', type=int, nargs='?', default=2,
                       help="number of participants in MATCH mode")
-  args = parser.parse_args()
 
-  assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
-  setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
-  App(args.media_dir, args.refresh, args.mode).run(args.num_participants)
-
-
-if __name__ == "__main__":
-  main()
+  main(parser.parse_args())
