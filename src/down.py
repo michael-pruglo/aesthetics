@@ -7,6 +7,7 @@ from gui.meta_editor import MetaEditor
 from ae_rater_types import ManualMetadata, ProfileInfo, UserListener
 from db_managers import get_vocab
 import helpers as hlp
+from ai_assistant import Assistant
 
 
 class MockListener(UserListener):
@@ -14,15 +15,15 @@ class MockListener(UserListener):
   def give_boost(self, *args, **kwargs): pass
   def start_next_match(self): pass
   def search_for(self, *args, **kwargs): pass
-  def suggest_tags(self, *args, **kwargs):
-    return [('sugg',.8), ('prob',.5)]
+  def suggest_tags(self, fullname: str) -> list:
+    return Assistant().suggest_tags(fullname)
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
     print("Update Meta: ", fullname, meta)
 
 
 def download_media(url:str) -> str:
   dirr = os.path.abspath("./sample_imgs/")
-  fname = "hallway.jpg"
+  fname = "006f129e1d4baaa9cd5e766d06256f58.jpg"
   fullname = os.path.join(dirr,fname)
   return fullname
 
