@@ -40,7 +40,7 @@ def show_editor(fullname:str):
   window.mainloop()
 
 def main(args):
-  fullname = UDownloader.retreive_media(args.url, args.dest)
+  fullname = UDownloader(args.dest).retreive_media(args.url)
   ext = hlp.file_extension(fullname)
   if ext in ['png','webp','webm']:
     print(f"unsupported file extension '{ext}'")
