@@ -1,7 +1,14 @@
+import logging
 import subprocess
+import os
+import shutil
 import re
+import glob
+import random
+from abc import ABC, abstractmethod
 from instaloader import Instaloader, Post
 
+logging.basicConfig(level=logging.DEBUG)
 SUPPORTED_FORMATS = ['jpg', 'mp4', 'gif', 'jfif', 'jpeg', 'png']
 
 def is_direct_link(url:str) -> bool:
@@ -16,49 +23,102 @@ def get_host(url:str) -> str:
   return m[1]
 
 
+class SiteDownloader(ABC):
+  @abstractmethod
+  def retrieve(self, url) -> str:
+    pass
+
+
 class UDownloader:
   def __init__(self, dst_path:str) -> None:
     self.dst_path = dst_path
-    self.instldr = None
+    self.dls:dict[str,SiteDownloader] = {
+      "instagram": IgDownloader(dst_path),
+      # "youtube": self.download_youtube,
+      # "tiktok": self.download_tiktok,
+      # "reddit": self.download_reddit,
+      # "twitter": self.download_twitter,
+      # "pinterest": self.download_pinterest,
+    }
 
   def retreive_media(self, url:str) -> str:
     """ download the media and return fullname of file on disk """
     if is_direct_link(url):
       return self.download_direct(url)
     else:
-      downloader_f = {
-        "instagram": self.download_instagram,
-        "youtube": self.download_youtube,
-        "tiktok": self.download_tiktok,
-        "reddit": self.download_reddit,
-        "twitter": self.download_twitter,
-        "pinterest": self.download_pinterest,
-      }[get_host(url)]
-      return downloader_f(url)
-      # return os.path.join(dst_path, "006f129e1d4baaa9cd5e766d06256f58.jpg")
+      host = get_host(url)
+      assert host in self.dls
+      return self.dls[host].retrieve(url)
 
   def download_direct(self, url:str) -> str:
-    print("download direct ", url)
+    logging.debug("download direct ", url)
     # BAD BAD security! TODO: protect against injections
     output = subprocess.run([f'wget -nv -P {self.dst_path} {url} 2>&1'], shell=True, capture_output=True)
     fullname = output.stdout.decode().strip()
-    print("downloaded ", fullname, "    output:", output.stdout.decode())
+    logging.info("downloaded ", fullname, "    output:", fullname)
     return fullname
 
-  def download_instagram(self, url:str):
-    if not self.instldr:
-      self.instldr = Instaloader(
-          user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 15_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 244.0.0.12.112",
-          filename_pattern="{profile}_{shortcode}",
-          download_video_thumbnails=False,
-          save_metadata=False,
-      )
-      self.instldr.load_session_from_file('sonderishere')
 
+class IgDownloader(SiteDownloader):
+  def __init__(self, dst_path) -> None:
+    self.dst_path = dst_path
+    self.L = None
+    assert self._parse_url_test()
 
-class SiteLoader:
-  pass
+  def retrieve(self, url) -> str:
+    logging.debug(f"retreive {url}")
+    if not self.L:
+      self._init_l()
 
+    shortcode, idx = self._parse_url(url)
+    tmppath = f"tmp_ig_{random.randint(1,1000000)}"
+    os.mkdir(tmppath)
 
-class IgLoader(SiteLoader):
-  pass
+    post = Post.from_shortcode(self.L.context, shortcode)
+    self.L.download_post(post, target=tmppath)
+
+    sffx = f"*_{idx}.*" if idx else "*"
+    cand_names = os.path.join(os.path.abspath(tmppath), sffx)
+    cands = glob.glob(cand_names)
+    logging.debug(f" cand_names = {cand_names}   cands = {cands}")
+    ret_name = None
+    assert len(cands) == 1
+    fname = cands[0]
+    logging.debug(f"copy {fname}")
+    ret_name = shutil.copy(fname, self.dst_path)
+    shutil.rmtree(tmppath, ignore_errors=False)
+
+    return ret_name
+
+  def _init_l(self):
+    self.L = Instaloader(
+      user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 15_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 244.0.0.12.112",
+      filename_pattern="{profile}_{shortcode}",
+      download_video_thumbnails=False,
+      save_metadata=False,
+      post_metadata_txt_pattern="",
+    )
+    self.L.login("", "")
+    logging.debug("_init_l success")
+
+  def _parse_url(self, url:str) -> tuple:
+    url = url.split('?')[0]
+    if not url.endswith('/'):
+      url += '/'
+    parts = url.split('/')
+    assert len(parts) > 2
+    shortcode, idx = (parts[-2],None) if len(parts[-2])>2 else (parts[-3],int(parts[-2]))
+    return shortcode, idx
+
+  def _parse_url_test(self):
+    for url, exp in [
+      ("https://www.instagram.com/p/SHRTCDE/4/", ("SHRTCDE",4)),
+      ("https://www.instagram.com/p/SHRTCDE/4", ("SHRTCDE",4)),
+      ("https://www.instagram.com/p/SHRTCDE/", ("SHRTCDE",None)),
+      ("https://www.instagram.com/p/SHRTCDE/?blah&l?d", ("SHRTCDE",None)),
+      ("https://www.instagram.com/p/SHRTCDE", ("SHRTCDE",None)),
+    ]:
+      given = self._parse_url(url)
+      assert given==exp, given
+
+    return True
