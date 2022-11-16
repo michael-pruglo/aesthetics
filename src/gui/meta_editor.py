@@ -255,10 +255,11 @@ class MetaEditor:
 
   def _configure_style(self):
     self.style = ttk.Style(self.win)
+    self.style.configure('.', background=BTFL_DARK_BG)
     for elem in ["TButton", "TCheckbutton", "TFrame", "Vertical.TScrollbar"]:
       self.style.map("IHateTkinter."+elem,
         foreground = [('active', "#fff"), ('!active', BTFL_LIGHT_GRAY)],
-        background = [('active', "#555"), ('!active', BTFL_DARK_BG)],
+        background = [('active', "#555")],
         indicatorcolor = [('selected', "#0f0")],
       )
 
