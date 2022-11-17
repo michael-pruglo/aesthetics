@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import tkinter as tk
-import logging
 
 from gui.meta_editor import MetaEditor
 from ae_rater_types import ManualMetadata, ProfileInfo, UserListener
@@ -9,7 +8,8 @@ from db_managers import get_vocab
 import helpers as hlp
 from ai_assistant import Assistant
 from metadata import write_metadata
-from udownloader import UDownloader, UDownloaderCfg
+from udownloader import UDownloader
+from secretcfg import UDOWNLOADER_CFG
 
 
 class MockListener(UserListener):
@@ -40,16 +40,13 @@ def show_editor(fullname:str):
   root.destroy()
 
 def main(cfg):
-  logging.info("Initialized with cfg=%s", cfg)
   udownloader = UDownloader(cfg)
   while True:
     usr_input = input("> ")
     if usr_input.lower() == "exit":
       break
 
-    logging.info("Received user input: '%s'", usr_input)
     fullname = udownloader.retreive_media(usr_input)
-    logging.info("Downloaded to file '%s'", fullname)
     ext = hlp.file_extension(fullname)
     if ext in ['png','webp','webm']:
       print(f"unsupported file extension '{ext}'")
@@ -58,8 +55,4 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-  main(UDownloaderCfg(
-    dst_path="",
-    ig_login="",
-    ig_password="",
-  ))
+  main(UDOWNLOADER_CFG)
