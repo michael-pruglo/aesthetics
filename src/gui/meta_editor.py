@@ -225,7 +225,7 @@ class MetaEditor:
 
     self._configure_style()
 
-    media_panel = MediaFrame(self.win)
+    self.media_panel = MediaFrame(self.win)
     self.tag_editor = TagEditor(self.vocab, self.curr_prof, suggested_tags,
                                 self._on_commit_pressed, self.style, self.win)
     sugg_panel = tk.Text(self.win, padx=0, pady=10, bd=0, cursor="arrow", spacing1=8,
@@ -236,12 +236,12 @@ class MetaEditor:
     LW, MW = .5, .22
     RW = 1 - (LW + MW)
 
-    media_panel.place(relwidth=LW, relheight=1)
+    self.media_panel.place(relwidth=LW, relheight=1)
     self.tag_editor.place(relwidth=MW, relheight=1, relx=LW)
     sugg_panel.place(relwidth=RW, relheight=1, relx=LW+MW)
     self.win.update()
     self.tag_editor.create_children()
-    media_panel.show_media(self.curr_prof.fullname)
+    self.media_panel.show_media(self.curr_prof.fullname)
 
   def _display_suggestions(self, suggested_tags, sugg_panel:tk.Text):
     sugg_panel.configure(state=tk.NORMAL)
@@ -268,5 +268,7 @@ class MetaEditor:
     self._cleanup()
 
   def _cleanup(self):
+    if self.media_panel:
+      self.media_panel.unpack()
     self.tag_editor.cleanup()
     self.win.destroy()

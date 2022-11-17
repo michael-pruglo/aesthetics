@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-import os
 import tkinter as tk
-import argparse
+import logging
 
 from gui.meta_editor import MetaEditor
 from ae_rater_types import ManualMetadata, ProfileInfo, UserListener
@@ -10,7 +9,7 @@ from db_managers import get_vocab
 import helpers as hlp
 from ai_assistant import Assistant
 from metadata import write_metadata
-from udownloader import UDownloader
+from udownloader import UDownloader, UDownloaderCfg
 
 
 class MockListener(UserListener):
@@ -38,19 +37,29 @@ def show_editor(fullname:str):
       root.quit()
   window.bind('<Destroy>', on_destroy)
   window.mainloop()
+  root.destroy()
 
-def main(args):
-  fullname = UDownloader(args.dest).retreive_media(args.url)
-  ext = hlp.file_extension(fullname)
-  if ext in ['png','webp','webm']:
-    print(f"unsupported file extension '{ext}'")
-  else:
-    show_editor(fullname)
+def main(cfg):
+  logging.info("Initialized with cfg=%s", cfg)
+  udownloader = UDownloader(cfg)
+  while True:
+    usr_input = input("> ")
+    if usr_input.lower() == "exit":
+      break
+
+    logging.info("Received user input: '%s'", usr_input)
+    fullname = udownloader.retreive_media(usr_input)
+    logging.info("Downloaded to file '%s'", fullname)
+    ext = hlp.file_extension(fullname)
+    if ext in ['png','webp','webm']:
+      print(f"unsupported file extension '{ext}'")
+    else:
+      show_editor(fullname)
 
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument('url', help="url of page with media")
-  parser.add_argument('dest', help="dir media will be downloaded to")
-
-  main(parser.parse_args())
+  main(UDownloaderCfg(
+    dst_path="",
+    ig_login="",
+    ig_password="",
+  ))

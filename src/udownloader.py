@@ -5,6 +5,7 @@ import shutil
 import re
 import glob
 import itertools
+import urllib.request
 from enum import Enum, auto
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
@@ -14,9 +15,10 @@ from instaloader import Instaloader, Post, Profile
 logging.basicConfig(level=logging.DEBUG)
 SUPPORTED_FORMATS = ['jpg', 'mp4', 'gif', 'jfif', 'jpeg', 'png']
 
-def is_direct_link(url:str) -> bool:
-  pattern = r"\.(" + '|'.join(SUPPORTED_FORMATS) + r")(\?.+)?"
-  return bool(re.search(pattern, url))
+def get_direct_fname(url:str) -> str:
+  pattern = r"/(\w+\.(?:" + '|'.join(SUPPORTED_FORMATS) + r"))(\?.+)?"
+  m = re.search(pattern, url)
+  return m[1] if m else ""
 
 def parse_url(url:str) -> tuple:
   m = re.match(r"(?:https://)?(?:www\.)?(\w+)\.com([^?\s]+)(?:\?\S+)?", url)
@@ -32,11 +34,18 @@ class SiteDownloader(ABC):
     pass
 
 
+@dataclass
+class UDownloaderCfg:
+  dst_path: str
+  ig_login: str
+  ig_password: str
+
+
 class UDownloader:
-  def __init__(self, dst_path:str) -> None:
-    self.dst_path = dst_path
+  def __init__(self, cfg:UDownloaderCfg) -> None:
+    self.dst_path = cfg.dst_path
     self.dls:dict[str,SiteDownloader] = {
-      "instagram": IgDownloader(dst_path),
+      "instagram": IgDownloader(cfg.dst_path, cfg.ig_login, cfg.ig_password),
       # "youtube": self.download_youtube,
       # "tiktok": self.download_tiktok,
       # "reddit": self.download_reddit,
@@ -46,19 +55,18 @@ class UDownloader:
 
   def retreive_media(self, url:str) -> str:
     """ download the media and return fullname of file on disk """
-    if is_direct_link(url):
-      return self.download_direct(url)
+    if (direct_fname:=get_direct_fname(url)):
+      return self.download_direct(url, direct_fname)
     else:
       domain, urlpath = parse_url(url)
       assert domain in self.dls
       return self.dls[domain].retrieve(urlpath)
 
-  def download_direct(self, url:str) -> str:
-    logging.debug("download direct ", url)
-    # BAD BAD security! TODO: protect against injections
-    output = subprocess.run([f'wget -nv -P {self.dst_path} {url} 2>&1'], shell=True, capture_output=True)
-    fullname = output.stdout.decode().strip()
-    logging.info("downloaded ", fullname, "    output:", fullname)
+  def download_direct(self, url:str, fname:str) -> str:
+    logging.debug("download direct '%s'", url)
+    fullname = os.path.join(self.dst_path, fname)
+    urllib.request.urlretrieve(url, filename=fullname)
+    logging.info("downloaded fname '%s'", fullname)
     return fullname
 
 
@@ -75,13 +83,15 @@ class IgDownloader(SiteDownloader):
     username: str = None
     story_id: int = None
 
-  def __init__(self, dst_path) -> None:
+  def __init__(self, dst_path:str, ig_login:str, ig_password:str) -> None:
     self.dst_path = dst_path
+    self.ig_login = ig_login
+    self.ig_password = ig_password
     self.L = None
     assert IgDownloader._parse_url_test()
 
   def retrieve(self, urlpath) -> str:
-    logging.debug(f"ig retreive {urlpath}")
+    logging.debug("ig retreive %s", urlpath)
     if not self.L:
       self._init_l()
 
@@ -106,11 +116,11 @@ class IgDownloader(SiteDownloader):
     sffx = f"*_{idx+1}.*" if idx is not None else "*"
     cand_names = os.path.join(os.path.abspath(tmppath), sffx)
     cands = glob.glob(cand_names)
-    logging.debug(f" cand_names = {cand_names}   cands = {cands}")
+    logging.debug(" cand_names = %s   cands = %s", str(cand_names), str(cands))
     ret_name = None
     assert len(cands) == 1
     fname = cands[0]
-    logging.debug(f"copy {fname}")
+    logging.debug("copy %s", fname)
     ret_name = shutil.copy(fname, self.dst_path)
     shutil.rmtree(tmppath, ignore_errors=False)
 
@@ -121,7 +131,6 @@ class IgDownloader(SiteDownloader):
     if not os.path.exists(tmppath):
       os.mkdir(tmppath)
 
-    self._ensure_login()
     user = Profile.from_username(self.L.context, username)
     highlight = next(h for h in self.L.get_highlights(user) if h.unique_id==highlight_id)
     idx = highlight.itemcount - 1 - idx  # api returns them in reversed (chronological) order
@@ -131,11 +140,11 @@ class IgDownloader(SiteDownloader):
     sffx = "*"
     cand_names = os.path.join(os.path.abspath(tmppath), sffx)
     cands = glob.glob(cand_names)
-    logging.debug(f" cand_names = {cand_names}   cands = {cands}")
+    logging.debug(" cand_names = %s   cands = %s", str(cand_names), str(cands))
     ret_name = None
     assert len(cands) == 1
     fname = cands[0]
-    logging.debug(f"copy {fname}")
+    logging.debug("copy %s", fname)
     ret_name = shutil.copy(fname, self.dst_path)
     shutil.rmtree(tmppath, ignore_errors=False)
 
@@ -146,7 +155,6 @@ class IgDownloader(SiteDownloader):
     if not os.path.exists(tmppath):
       os.mkdir(tmppath)
 
-    self._ensure_login()
     user = Profile.from_username(self.L.context, username)
     item = next(it
                 for story in self.L.get_stories([user.userid])
@@ -157,11 +165,11 @@ class IgDownloader(SiteDownloader):
     sffx = "*"
     cand_names = os.path.join(os.path.abspath(tmppath), sffx)
     cands = glob.glob(cand_names)
-    logging.debug(f" cand_names = {cand_names}   cands = {cands}")
+    logging.debug(" cand_names = %s   cands = %s", str(cand_names), str(cands))
     ret_name = None
     assert len(cands) == 1
     fname = cands[0]
-    logging.debug(f"copy {fname}")
+    logging.debug("copy %s", fname)
     ret_name = shutil.copy(fname, self.dst_path)
     shutil.rmtree(tmppath, ignore_errors=False)
 
@@ -209,15 +217,12 @@ class IgDownloader(SiteDownloader):
       save_metadata=False,
       post_metadata_txt_pattern="",
     )
-
-  def _ensure_login(self):
-    username, password = "", ""
     try:
-      self.L.load_session_from_file(username)
+      self.L.load_session_from_file(self.ig_login)
       logging.info("loaded session from file")
     except FileNotFoundError:
       logging.info("needs a fresh login")
-      self.L.login(username, password)
+      self.L.login(self.ig_login, self.ig_password)
       self.L.save_session_to_file()
     except Exception:
       logging.exception("")
