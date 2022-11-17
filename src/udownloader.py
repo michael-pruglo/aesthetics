@@ -66,18 +66,17 @@ class IgDownloader(SiteDownloader):
   class UrlData:
     class Type(Enum):
       POST = auto()
-      HIGHLIGHT = auto()
       STORY = auto()
     type: Type
-    shortcode: str
-    idx: int
-    username: str
-    highlight_id: int
+    shortcode: str = None
+    idx: int = None
+    username: str = None
+    story_id: int = None
 
   def __init__(self, dst_path) -> None:
     self.dst_path = dst_path
     self.L = None
-    assert self._parse_url_test()
+    assert IgDownloader._parse_url_test()
 
   def retrieve(self, urlpath) -> str:
     logging.debug(f"ig retreive {urlpath}")
@@ -87,10 +86,8 @@ class IgDownloader(SiteDownloader):
     urldata = self._parse_urlpath(urlpath)
     if urldata.type == IgDownloader.UrlData.Type.POST:
       self.retreive_post(urldata.shortcode, urldata.idx)
-    elif urldata.type == IgDownloader.UrlData.Type.HIGHLIGHT:
-      self.retreive_highlight(urldata.username, urldata.highlight_id, urldata.idx)
     elif urldata.type == IgDownloader.UrlData.Type.STORY:
-      self.retreive_story(urldata)
+      self.retreive_highlight(urldata.username, urldata.story_id, urldata.idx)
     else:
       raise RuntimeError(f"unknown urldata type: {urldata}")
 
@@ -115,29 +112,23 @@ class IgDownloader(SiteDownloader):
 
     return ret_name
 
+  @staticmethod
   def _parse_urlpath(urlpath:str) -> UrlData:
-    m = re.match(r"", urlpath)
+    m = re.match(r"/?p/(\w+)(?:/(\d+))?/?", urlpath)
     if m:
       return IgDownloader.UrlData(
         type=IgDownloader.UrlData.Type.POST,
         shortcode=m[1],
-        idx=m[1],
+        idx=int(m[2]) if m[2] else None,
       )
 
-    m = re.match(r"", urlpath)
-    if m:
-      return IgDownloader.UrlData(
-        type=IgDownloader.UrlData.Type.HIGHLIGHT,
-        username=m[1],
-        highlight_id=m[1],
-        idx=m[1],
-      )
-
-    m = re.match(r"", urlpath)
+    m = re.match(r"/?stories/(\w+)/(\d+)(?:/(\d+))?/?", urlpath)
     if m:
       return IgDownloader.UrlData(
         type=IgDownloader.UrlData.Type.STORY,
-
+        username=m[1],
+        story_id=int(m[2]),
+        idx=int(m[3]) if m[3] else None,
       )
 
     raise ValueError(f"cannot parse urlpath '{urlpath}'")
@@ -153,24 +144,16 @@ class IgDownloader(SiteDownloader):
     self.L.login("", "")
     logging.debug("_init_l success")
 
-  def _parse_url(self, url:str) -> tuple:
-    url = url.split('?')[0]
-    if not url.endswith('/'):
-      url += '/'
-    parts = url.split('/')
-    assert len(parts) > 2
-    shortcode, idx = (parts[-2],None) if len(parts[-2])>2 else (parts[-3],int(parts[-2]))
-    return shortcode, idx
-
-  def _parse_url_test(self):
-    for url, exp in [
-      ("https://www.instagram.com/p/SHRTCDE/4/", ("SHRTCDE",4)),
-      ("https://www.instagram.com/p/SHRTCDE/4", ("SHRTCDE",4)),
-      ("https://www.instagram.com/p/SHRTCDE/", ("SHRTCDE",None)),
-      ("https://www.instagram.com/p/SHRTCDE/?blah&l?d", ("SHRTCDE",None)),
-      ("https://www.instagram.com/p/SHRTCDE", ("SHRTCDE",None)),
+  @staticmethod
+  def _parse_url_test():
+    for urlpath, exp in [
+      ( "p/SHRTCDE/4", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.POST, shortcode="SHRTCDE", idx=4)),
+      ( "p/SHRTCDE", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.POST, shortcode="SHRTCDE", idx=None)),
+      ( "stories/lexfridman/2972926188754278171/2", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.STORY, username="lexfridman", story_id=2972926188754278171, idx=2)),
+      ( "stories/lexfridman/2972926188754278171", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.STORY, username="lexfridman", story_id=2972926188754278171, idx=None)),
     ]:
-      given = self._parse_url(url)
-      assert given==exp, given
-
+      for pref in ["", "/"]:
+        for suff in ["", "/"]:
+          given = IgDownloader._parse_urlpath(pref + urlpath + suff)
+          assert given == exp, f"\n\t{pref+urlpath+suff}\n\t{given}"
     return True
