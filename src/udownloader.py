@@ -121,6 +121,7 @@ class IgDownloader(SiteDownloader):
     if not os.path.exists(tmppath):
       os.mkdir(tmppath)
 
+    self._ensure_login()
     user = Profile.from_username(self.L.context, username)
     highlight = next(h for h in self.L.get_highlights(user) if h.unique_id==highlight_id)
     idx = highlight.itemcount - 1 - idx  # api returns them in reversed (chronological) order
@@ -145,6 +146,7 @@ class IgDownloader(SiteDownloader):
     if not os.path.exists(tmppath):
       os.mkdir(tmppath)
 
+    self._ensure_login()
     user = Profile.from_username(self.L.context, username)
     item = next(it
                 for story in self.L.get_stories([user.userid])
@@ -207,8 +209,18 @@ class IgDownloader(SiteDownloader):
       save_metadata=False,
       post_metadata_txt_pattern="",
     )
-    self.L.login("", "")
-    logging.debug("_init_l success")
+
+  def _ensure_login(self):
+    username, password = "", ""
+    try:
+      self.L.load_session_from_file(username)
+      logging.info("loaded session from file")
+    except FileNotFoundError:
+      logging.info("needs a fresh login")
+      self.L.login(username, password)
+      self.L.save_session_to_file()
+    except Exception:
+      logging.exception("")
 
   @staticmethod
   def _parse_url_test():
