@@ -4,11 +4,12 @@ import os
 import shutil
 import re
 import glob
+import itertools
 from enum import Enum, auto
 from dataclasses import dataclass
-import random
 from abc import ABC, abstractmethod
-from instaloader import Instaloader, Post
+from instaloader import Instaloader, Post, Profile
+
 
 logging.basicConfig(level=logging.DEBUG)
 SUPPORTED_FORMATS = ['jpg', 'mp4', 'gif', 'jfif', 'jpeg', 'png']
@@ -66,10 +67,11 @@ class IgDownloader(SiteDownloader):
   class UrlData:
     class Type(Enum):
       POST = auto()
+      HIGHLIGHT = auto()
       STORY = auto()
     type: Type
     shortcode: str = None
-    idx: int = None
+    idx: int = None  # NOTE: 0-indexed
     username: str = None
     story_id: int = None
 
@@ -85,21 +87,72 @@ class IgDownloader(SiteDownloader):
 
     urldata = self._parse_urlpath(urlpath)
     if urldata.type == IgDownloader.UrlData.Type.POST:
-      self.retreive_post(urldata.shortcode, urldata.idx)
+      return self.retreive_post(urldata.shortcode, urldata.idx)
+    elif urldata.type == IgDownloader.UrlData.Type.HIGHLIGHT:
+      return self.retreive_highlight(urldata.username, urldata.story_id, urldata.idx)
     elif urldata.type == IgDownloader.UrlData.Type.STORY:
-      self.retreive_highlight(urldata.username, urldata.story_id, urldata.idx)
+      return self.retreive_story(urldata.username, urldata.story_id)
     else:
       raise RuntimeError(f"unknown urldata type: {urldata}")
 
-  def retreive_post(self, shortcode:str, idx:int=None):
-    """ Note idx is 0-indexed """
-    tmppath = f"tmp_ig_{random.randint(1,1000000)}"
-    os.mkdir(tmppath)
+  def retreive_post(self, shortcode:str, idx:int=None) -> str:
+    tmppath = f"tmp_ig_{shortcode}"
+    if not os.path.exists(tmppath):
+      os.mkdir(tmppath)
 
     post = Post.from_shortcode(self.L.context, shortcode)
     self.L.download_post(post, target=tmppath)
 
-    sffx = f"*_{idx+1}.*" if idx else "*"
+    sffx = f"*_{idx+1}.*" if idx is not None else "*"
+    cand_names = os.path.join(os.path.abspath(tmppath), sffx)
+    cands = glob.glob(cand_names)
+    logging.debug(f" cand_names = {cand_names}   cands = {cands}")
+    ret_name = None
+    assert len(cands) == 1
+    fname = cands[0]
+    logging.debug(f"copy {fname}")
+    ret_name = shutil.copy(fname, self.dst_path)
+    shutil.rmtree(tmppath, ignore_errors=False)
+
+    return ret_name
+
+  def retreive_highlight(self, username:str, highlight_id:int, idx:int) -> str:
+    tmppath = f"tmp_ig_{highlight_id}"
+    if not os.path.exists(tmppath):
+      os.mkdir(tmppath)
+
+    user = Profile.from_username(self.L.context, username)
+    highlight = next(h for h in self.L.get_highlights(user) if h.unique_id==highlight_id)
+    idx = highlight.itemcount - 1 - idx  # api returns them in reversed (chronological) order
+    item = next(itertools.islice(highlight.get_items(), idx, idx+1))
+    self.L.download_storyitem(item, tmppath)
+
+    sffx = "*"
+    cand_names = os.path.join(os.path.abspath(tmppath), sffx)
+    cands = glob.glob(cand_names)
+    logging.debug(f" cand_names = {cand_names}   cands = {cands}")
+    ret_name = None
+    assert len(cands) == 1
+    fname = cands[0]
+    logging.debug(f"copy {fname}")
+    ret_name = shutil.copy(fname, self.dst_path)
+    shutil.rmtree(tmppath, ignore_errors=False)
+
+    return ret_name
+
+  def retreive_story(self, username:str, story_id:int) -> str:
+    tmppath = f"tmp_ig_{story_id}"
+    if not os.path.exists(tmppath):
+      os.mkdir(tmppath)
+
+    user = Profile.from_username(self.L.context, username)
+    item = next(it
+                for story in self.L.get_stories([user.userid])
+                for it in story.get_items()
+                if it.mediaid==story_id)
+    self.L.download_storyitem(item, tmppath)
+
+    sffx = "*"
     cand_names = os.path.join(os.path.abspath(tmppath), sffx)
     cands = glob.glob(cand_names)
     logging.debug(f" cand_names = {cand_names}   cands = {cands}")
@@ -122,13 +175,26 @@ class IgDownloader(SiteDownloader):
         idx=int(m[2]) if m[2] else None,
       )
 
-    m = re.match(r"/?stories/(\w+)/(\d+)(?:/(\d+))?/?", urlpath)
+    # NOTE: in case of highlights, user needs to manually type username at the end
+    # e.g. intead of      'instagram.com/stories/highlights/18151027342237295/1/',
+    # user needs to input 'instagram.com/stories/highlights/18151027342237295/1/joerogan'
+    # this is because there's no way to download without username or deduce it from id
+    m = re.match(r"/?stories/highlights/(\d+)/(\d+)/(\w+)/?", urlpath)
     if m:
+      return IgDownloader.UrlData(
+        type=IgDownloader.UrlData.Type.HIGHLIGHT,
+        story_id=int(m[1]),
+        idx=int(m[2]),
+        username=m[3],
+      )
+
+    m = re.match(r"/?stories/(\w+)/(\d+)/?", urlpath)
+    if m:
+      assert m[1] != "highlights", "did you forget to manually type name for highlight?"
       return IgDownloader.UrlData(
         type=IgDownloader.UrlData.Type.STORY,
         username=m[1],
         story_id=int(m[2]),
-        idx=int(m[3]) if m[3] else None,
       )
 
     raise ValueError(f"cannot parse urlpath '{urlpath}'")
@@ -149,8 +215,8 @@ class IgDownloader(SiteDownloader):
     for urlpath, exp in [
       ( "p/SHRTCDE/4", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.POST, shortcode="SHRTCDE", idx=4)),
       ( "p/SHRTCDE", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.POST, shortcode="SHRTCDE", idx=None)),
-      ( "stories/lexfridman/2972926188754278171/2", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.STORY, username="lexfridman", story_id=2972926188754278171, idx=2)),
-      ( "stories/lexfridman/2972926188754278171", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.STORY, username="lexfridman", story_id=2972926188754278171, idx=None)),
+      ( "stories/lexfridman/2972926188754278171", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.STORY, username="lexfridman", story_id=2972926188754278171)),
+      ( "stories/highlights/18151027342237295/3/joerogan", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.HIGHLIGHT, username="joerogan", story_id=18151027342237295, idx=3)),
     ]:
       for pref in ["", "/"]:
         for suff in ["", "/"]:
