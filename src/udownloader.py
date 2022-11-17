@@ -4,6 +4,8 @@ import os
 import shutil
 import re
 import glob
+from enum import Enum, auto
+from dataclasses import dataclass
 import random
 from abc import ABC, abstractmethod
 from instaloader import Instaloader, Post
@@ -15,12 +17,12 @@ def is_direct_link(url:str) -> bool:
   pattern = r"\.(" + '|'.join(SUPPORTED_FORMATS) + r")(\?.+)?"
   return bool(re.search(pattern, url))
 
-def get_host(url:str) -> str:
-  if "youtu.be" in url:
-    return "youtube"
-  m = re.search(r"([a-z]+)\.com/", url)
-  assert m
-  return m[1]
+def parse_url(url:str) -> tuple:
+  m = re.match(r"(?:https://)?(?:www\.)?(\w+)\.com([^?\s]+)(?:\?\S+)?", url)
+  if not m:
+    raise ValueError(f"cannot parse url '{url}'")
+  return m[1], m[2]
+
 
 
 class SiteDownloader(ABC):
@@ -46,9 +48,9 @@ class UDownloader:
     if is_direct_link(url):
       return self.download_direct(url)
     else:
-      host = get_host(url)
-      assert host in self.dls
-      return self.dls[host].retrieve(url)
+      domain, urlpath = parse_url(url)
+      assert domain in self.dls
+      return self.dls[domain].retrieve(urlpath)
 
   def download_direct(self, url:str) -> str:
     logging.debug("download direct ", url)
@@ -60,24 +62,47 @@ class UDownloader:
 
 
 class IgDownloader(SiteDownloader):
+  @dataclass
+  class UrlData:
+    class Type(Enum):
+      POST = auto()
+      HIGHLIGHT = auto()
+      STORY = auto()
+    type: Type
+    shortcode: str
+    idx: int
+    username: str
+    highlight_id: int
+
   def __init__(self, dst_path) -> None:
     self.dst_path = dst_path
     self.L = None
     assert self._parse_url_test()
 
-  def retrieve(self, url) -> str:
-    logging.debug(f"retreive {url}")
+  def retrieve(self, urlpath) -> str:
+    logging.debug(f"ig retreive {urlpath}")
     if not self.L:
       self._init_l()
 
-    shortcode, idx = self._parse_url(url)
+    urldata = self._parse_urlpath(urlpath)
+    if urldata.type == IgDownloader.UrlData.Type.POST:
+      self.retreive_post(urldata.shortcode, urldata.idx)
+    elif urldata.type == IgDownloader.UrlData.Type.HIGHLIGHT:
+      self.retreive_highlight(urldata.username, urldata.highlight_id, urldata.idx)
+    elif urldata.type == IgDownloader.UrlData.Type.STORY:
+      self.retreive_story(urldata)
+    else:
+      raise RuntimeError(f"unknown urldata type: {urldata}")
+
+  def retreive_post(self, shortcode:str, idx:int=None):
+    """ Note idx is 0-indexed """
     tmppath = f"tmp_ig_{random.randint(1,1000000)}"
     os.mkdir(tmppath)
 
     post = Post.from_shortcode(self.L.context, shortcode)
     self.L.download_post(post, target=tmppath)
 
-    sffx = f"*_{idx}.*" if idx else "*"
+    sffx = f"*_{idx+1}.*" if idx else "*"
     cand_names = os.path.join(os.path.abspath(tmppath), sffx)
     cands = glob.glob(cand_names)
     logging.debug(f" cand_names = {cand_names}   cands = {cands}")
@@ -89,6 +114,33 @@ class IgDownloader(SiteDownloader):
     shutil.rmtree(tmppath, ignore_errors=False)
 
     return ret_name
+
+  def _parse_urlpath(urlpath:str) -> UrlData:
+    m = re.match(r"", urlpath)
+    if m:
+      return IgDownloader.UrlData(
+        type=IgDownloader.UrlData.Type.POST,
+        shortcode=m[1],
+        idx=m[1],
+      )
+
+    m = re.match(r"", urlpath)
+    if m:
+      return IgDownloader.UrlData(
+        type=IgDownloader.UrlData.Type.HIGHLIGHT,
+        username=m[1],
+        highlight_id=m[1],
+        idx=m[1],
+      )
+
+    m = re.match(r"", urlpath)
+    if m:
+      return IgDownloader.UrlData(
+        type=IgDownloader.UrlData.Type.STORY,
+
+      )
+
+    raise ValueError(f"cannot parse urlpath '{urlpath}'")
 
   def _init_l(self):
     self.L = Instaloader(

@@ -1,10 +1,12 @@
 import unittest
 
-from src.udownloader import is_direct_link, get_host
+from src.udownloader import is_direct_link, parse_url
 
 
 def all_variations(url:str):
-  return [url, "www."+url, "https://www."+url]
+  prefs = ["", "www.", "https://", "https://www."]
+  suffs = ["", "?blah=value&blah2=foo"]
+  return [p+url+s for p in prefs for s in suffs]
 
 
 class TestDownloader(unittest.TestCase):
@@ -23,9 +25,14 @@ class TestDownloader(unittest.TestCase):
       for fullurl in all_variations(url):
         self.assertFalse(is_direct_link(fullurl), fullurl)
 
-  def test_get_host(self):
-    for url, host in [
-      ("instagram.com/p/ClBpN0sty75/", "instagram"),
+  def test_parse_url(self):
+    for url, domain, urlpath in [
+      ("instagram.com/p/ClBpN0sty75/", "instagram", "/p/ClBpN0sty75/"),
+      ("instagram.com/p/ClBpN0sty75/3/", "instagram", "/p/ClBpN0sty75/3/"),
+      ("instagram.com/stories/lexfridman/2972926188754278171/", "instagram", "/stories/lexfridman/2972926188754278171/"),
+      ("instagram.com/stories/lexfridman/2972926188754278171/2/", "instagram", "/stories/lexfridman/2972926188754278171/2/"),
+      ("instagram.com/stories/highlights/18151027342237295/", "instagram", "/stories/highlights/18151027342237295/"),
+      ("instagram.com/stories/highlights/18151027342237295/4/", "instagram", "/stories/highlights/18151027342237295/4/"),
     ]:
       for fullurl in all_variations(url):
-        self.assertEqual(get_host(fullurl), host, fullurl)
+        self.assertTupleEqual(parse_url(fullurl), (domain,urlpath), fullurl)
