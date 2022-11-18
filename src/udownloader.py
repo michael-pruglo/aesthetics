@@ -12,7 +12,6 @@ from abc import ABC, abstractmethod
 from instaloader import Instaloader, Post, Profile
 
 
-logging.basicConfig(level=logging.DEBUG)
 SUPPORTED_FORMATS = ['jpg', 'mp4', 'gif', 'jfif', 'jpeg', 'png']
 
 def get_direct_fname(url:str) -> str:
@@ -43,6 +42,7 @@ class UDownloaderCfg:
 
 class UDownloader:
   def __init__(self, cfg:UDownloaderCfg) -> None:
+    assert os.path.exists(cfg.dst_path), "did you forget to mount it?"
     self.dst_path = cfg.dst_path
     self.dls:dict[str,SiteDownloader] = {
       "instagram": IgDownloader(cfg.dst_path, cfg.ig_login, cfg.ig_password),
@@ -52,6 +52,7 @@ class UDownloader:
       # "twitter": self.download_twitter,
       # "pinterest": self.download_pinterest,
     }
+    logging.basicConfig(level=logging.DEBUG)
 
   def retreive_media(self, url:str) -> str:
     """ download the media and return fullname of file on disk """
@@ -177,11 +178,16 @@ class IgDownloader(SiteDownloader):
 
   @staticmethod
   def _parse_urlpath(urlpath:str) -> UrlData:
-    m = re.match(r"/?p/(\w+)(?:/(\d+))?/?", urlpath)
+    m = re.match(r"/?p/([\w-]+)(?:/(\d+))?/?", urlpath)
     if m:
+      shcode = m[1]
+      if len(shcode) != 11:
+        logging.warning("ig shortcode '%s' length != 11", shcode)
+      if shcode[0] != 'C':
+        logging.warning("ig shortcode '%s' doesn't stars with 'C'", shcode)
       return IgDownloader.UrlData(
         type=IgDownloader.UrlData.Type.POST,
-        shortcode=m[1],
+        shortcode=shcode,
         idx=int(m[2]) if m[2] else None,
       )
 
@@ -231,6 +237,7 @@ class IgDownloader(SiteDownloader):
   def _parse_url_test():
     for urlpath, exp in [
       ( "p/SHRTCDE/4", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.POST, shortcode="SHRTCDE", idx=4)),
+      ( "p/with-dash/3", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.POST, shortcode="with-dash", idx=3)),
       ( "p/SHRTCDE", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.POST, shortcode="SHRTCDE", idx=None)),
       ( "stories/lexfridman/2972926188754278171", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.STORY, username="lexfridman", story_id=2972926188754278171)),
       ( "stories/highlights/18151027342237295/3/joerogan", IgDownloader.UrlData(type=IgDownloader.UrlData.Type.HIGHLIGHT, username="joerogan", story_id=18151027342237295, idx=3)),
