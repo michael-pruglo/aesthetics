@@ -4,6 +4,7 @@ import helpers as hlp
 from udownloader import UDownloader
 from down_gui import DownGui
 
+
 def main(cfg):
   udownloader = UDownloader(cfg)
   gui = DownGui()
