@@ -13,7 +13,11 @@ def main(cfg):
     if usr_input.lower() == "exit":
       break
 
-    fullname = udownloader.retreive_media(usr_input)
+    try:
+      fullname = udownloader.retreive_media(usr_input)
+    except:
+      continue
+
     ext = hlp.file_extension(fullname)
     if ext in ['png','webp','webm']:
       print(f"unsupported file extension '{ext}'")

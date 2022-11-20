@@ -1,4 +1,5 @@
 import logging
+import random
 import shutil
 import os
 import glob
@@ -36,85 +37,53 @@ class IgDownloader(SiteDownloader):
     if not self.L:
       self._init_l()
 
+    self.tmppath = f"tmp_ig_{random.randint(2000,10000000)}"
+    if not os.path.exists(self.tmppath):
+      os.mkdir(self.tmppath)
+
     urldata = self._parse_urlpath(urlpath)
     if urldata.type == IgDownloader.UrlData.Type.POST:
-      return self.retreive_post(urldata.shortcode, urldata.idx)
+      sffx = self.retreive_post(urldata.shortcode, urldata.idx)
     elif urldata.type == IgDownloader.UrlData.Type.HIGHLIGHT:
-      return self.retreive_highlight(urldata.username, urldata.story_id, urldata.idx)
+      sffx = self.retreive_highlight(urldata.username, urldata.story_id, urldata.idx)
     elif urldata.type == IgDownloader.UrlData.Type.STORY:
-      return self.retreive_story(urldata.username, urldata.story_id)
+      sffx = self.retreive_story(urldata.username, urldata.story_id)
     else:
       raise RuntimeError(f"unknown urldata type: {urldata}")
 
-  def retreive_post(self, shortcode:str, idx:int=None) -> str:
-    tmppath = f"tmp_ig_{shortcode}"
-    if not os.path.exists(tmppath):
-      os.mkdir(tmppath)
-
-    post = Post.from_shortcode(self.L.context, shortcode)
-    self.L.download_post(post, target=tmppath)
-
-    sffx = f"*_{idx+1}.*" if idx is not None else "*"
-    cand_names = os.path.join(os.path.abspath(tmppath), sffx)
+    cand_names = os.path.join(os.path.abspath(self.tmppath), sffx)
     cands = glob.glob(cand_names)
     logging.debug(" cand_names = %s   cands = %s", str(cand_names), str(cands))
-    ret_name = None
     assert len(cands) == 1
     fname = cands[0]
-    logging.debug("copy %s", fname)
     ret_name = shutil.copy(fname, self.dst_path)
-    shutil.rmtree(tmppath, ignore_errors=False)
-
+    shutil.rmtree(self.tmppath, ignore_errors=False)
     return ret_name
 
-  def retreive_highlight(self, username:str, highlight_id:int, idx:int) -> str:
-    tmppath = f"tmp_ig_{highlight_id}"
-    if not os.path.exists(tmppath):
-      os.mkdir(tmppath)
+  def retreive_post(self, shortcode:str, idx:int=None) -> str:
+    post = Post.from_shortcode(self.L.context, shortcode)
+    if idx is not None:
+      self.L.slide_start = self.L.slide_end = idx
+    self.L.download_post(post, target=self.tmppath)
+    return "*"
+    # return f"*_{idx+1}.*" if idx is not None else "*"
 
+  def retreive_highlight(self, username:str, highlight_id:int, idx:int) -> str:
     user = Profile.from_username(self.L.context, username)
     highlight = next(h for h in self.L.get_highlights(user) if h.unique_id==highlight_id)
     idx = highlight.itemcount - 1 - idx  # api returns them in reversed (chronological) order
     item = next(itertools.islice(highlight.get_items(), idx, idx+1))
-    self.L.download_storyitem(item, tmppath)
-
-    sffx = "*"
-    cand_names = os.path.join(os.path.abspath(tmppath), sffx)
-    cands = glob.glob(cand_names)
-    logging.debug(" cand_names = %s   cands = %s", str(cand_names), str(cands))
-    ret_name = None
-    assert len(cands) == 1
-    fname = cands[0]
-    logging.debug("copy %s", fname)
-    ret_name = shutil.copy(fname, self.dst_path)
-    shutil.rmtree(tmppath, ignore_errors=False)
-
-    return ret_name
+    self.L.download_storyitem(item, self.tmppath)
+    return "*"
 
   def retreive_story(self, username:str, story_id:int) -> str:
-    tmppath = f"tmp_ig_{story_id}"
-    if not os.path.exists(tmppath):
-      os.mkdir(tmppath)
-
     user = Profile.from_username(self.L.context, username)
     item = next(it
                 for story in self.L.get_stories([user.userid])
                 for it in story.get_items()
                 if it.mediaid==story_id)
-    self.L.download_storyitem(item, tmppath)
-
-    sffx = "*"
-    cand_names = os.path.join(os.path.abspath(tmppath), sffx)
-    cands = glob.glob(cand_names)
-    logging.debug(" cand_names = %s   cands = %s", str(cand_names), str(cands))
-    ret_name = None
-    assert len(cands) == 1
-    fname = cands[0]
-    logging.debug("copy %s", fname)
-    ret_name = shutil.copy(fname, self.dst_path)
-    shutil.rmtree(tmppath, ignore_errors=False)
-
-    return ret_name
+    self.L.download_storyitem(item, self.tmppath)
+    return "*"
 
   @staticmethod
   def _parse_urlpath(urlpath:str) -> UrlData:
