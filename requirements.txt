@@ -5,4 +5,4 @@ pandas
 numpy
 pillow
 screeninfo
-instaloader
+yt-dlp

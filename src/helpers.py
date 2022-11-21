@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+from termios import tcflush, TCIFLUSH
 
 
 def truncate(s:str, lim:int, suffix:str='…') -> str:
@@ -22,3 +23,8 @@ def start_file(fname:str) -> None:
     subprocess.call(["open", fname])
   else:
     subprocess.call(["xdg-open", fname])
+
+
+def amnesic_input(*args, **kwargs):
+  tcflush(sys.stdin, TCIFLUSH)
+  return input(*args, **kwargs)

@@ -11,5 +11,6 @@ class SiteDownloader(ABC):
 @dataclass
 class UDownloaderCfg:
   dst_path: str
+  uncateg_path: str
   ig_login: str
   ig_password: str

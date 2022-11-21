@@ -82,6 +82,8 @@ Tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 
 ## TODO
 
+- learn how to convert webp and other unsupported formats right with yt-dlp
+
 - improve performance
 - learn to predict rating
 - scrape web for new media, predict ratings and show the most promising candidates
