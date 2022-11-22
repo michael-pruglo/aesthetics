@@ -8,22 +8,24 @@ from down_types import UDownloaderCfg
 
 class UDownloader:
   def __init__(self, cfg:UDownloaderCfg) -> None:
-    assert os.path.exists(cfg.dst_path), "did you forget to mount it?"
+    assert os.path.exists(cfg.dir_ready), "did you forget to mount it?"
     self.cfg = cfg
 
   def retreive_media(self, url:str) -> str:
     """ download the media and return fullname of file on disk """
-    # dry run
-    with yt_dlp.YoutubeDL({"listformats":True}) as ydl:
-      try:
-        ydl.download(url)
-      except yt_dlp.utils.DownloadError as e:
-        logging.error("yt-dlp cannot download '%s'\n%s", url, e)
-        raise
+    PARANOID = True
+    if PARANOID:
+      # dry run
+      with yt_dlp.YoutubeDL({"listformats":True}) as ydl:
+        try:
+          ydl.download(url)
+        except yt_dlp.utils.DownloadError as e:
+          logging.error("yt-dlp cannot download '%s'\n%s", url, e)
+          raise
 
-    # usr confirmation
-    if hlp.amnesic_input("proceed? ") == "n":
-      return ""
+      # usr confirmation
+      if hlp.amnesic_input("proceed? ") == "n":
+        return ""
 
     # real download run
     ret_name = None
@@ -35,7 +37,7 @@ class UDownloader:
     dwnl_opts = {
       "restrictfilenames": True,
       "windowsfilenames": True,
-      "paths": {'home': self.cfg.dst_path},
+      "paths": {'home': self.cfg.dir_ready},
       "progress_hooks": [monitor_name],
     }
     with yt_dlp.YoutubeDL(dwnl_opts) as ydl:
