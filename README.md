@@ -40,59 +40,41 @@ This language also allows for manual change of rating, independent of matches. F
 For example:
 
 ```
-d++c a- b
+d+++c a- b
 ```
-Will give 2 boosts to `d`, one decrease to `a`, and then process `dc a b`
+Will give 3 boosts to `d`, one decrease to `a`, and then process `dc a b`
 
 Click on tags to open the Meta Manager and change tags/stars on disk. You will even get suggestions from AI!<br>
 Click on any media to open the full version in an external program
 
-## Architecture
-
-```
-|--------------|    |---------------|
-|  ae_rater    | -> | ae_rater_view |
-| (controller) |    |    (view)     |
-|--------------|    |---------------|
-      |
-      V
-|----------------|    |-----------------|
-| ae_rater_model | -> | rating_backends |
-|     (model)    |    | (ELO, Glicko..) |
-|----------------|    |-----------------|
-      |
-      V
-|-------------|
-| db_managers |
-|-------------|
-      |
-      V
-|-------------|
-| metadata.py |
-| (read/write |
-|  metadata   |
-|  on disk)   |
-|-------------|
-```
-
 ## Note
 
-simple CNN didn't learn rating from tags
-Tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
+simple CNN didn't learn rating from imgs or tags
+random forest from tags didn't learn rating
+tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 
 ## TODO
 
-- learn how to convert webp and other unsupported formats right with yt-dlp
+### short-term
 
-- improve performance
-- learn to predict rating
-- scrape web for new media, predict ratings and show the most promising candidates
-  - scrape reverse-search img from the higest rated
-- improve tag suggestions and auto-label lower priority media
-- learn the overall/specific styles and generate new media with smth like stable diffusion
+- learn how to convert webp and other unsupported formats right with yt-dlp
+- embed awards (and all future metadata) into files
+- group similar items, finding balance between two crucial points:
+  a: avoid oversaturation of close things
+  b: but simultaneously preserve the important differences/elements
+  ideas: 
+    - maybe create an unrated folder with all the possible variations - to help ML - violates 'b'
+    - maybe combine into groups, and rate/compare/meta the whole group - violates 'b'
+      would be cool to have general meta shared by the group and some unique for each media
 - add PARANOID version - with extensive checks/asserts, and FAST - with no checks
 - add more tests for downloaders
 
-Raid dataset:
-- delete if duplicate and much lower rating
-- combine almost duplicates
+### long-term
+
+- improve performance
+- improve tag suggestions and auto-label lower priority media
+- learn to predict rating
+- scrape web for new media, predict ratings and show the most promising candidates
+  - scrape reverse-search img from the higest rated
+- learn the overall/specific styles and generate new media with smth like stable diffusion
+
