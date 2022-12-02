@@ -27,8 +27,8 @@ def dshell_files(cfg:UDownloaderCfg):
     try:
       fullname = udownloader.retreive_media(usr_input)
       yield fullname
-    except Exception as e:
-      logging.error("could not retreive '%s': %s", usr_input, e)
+    except:
+      logging.exception("could not retreive media")
       continue
 
 def untagged_files(dir:str):
