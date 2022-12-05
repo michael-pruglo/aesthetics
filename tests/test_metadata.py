@@ -18,6 +18,7 @@ class TestReadingMetadata(unittest.TestCase):
       ManualMetadata(
          tags={"hair", "hair|front_locks", "face", "eyes", "eyes|eyelines"},
          stars=5,
+         awards={'investigation', 'Further'},
       )
     )
     self._test_metadata_read("no_metadata.JPG", ManualMetadata())
@@ -32,30 +33,20 @@ class TestWritingMetadata(unittest.TestCase):
     shutil.copyfile(original, self.fname)
     self.assertTrue(os.path.exists(self.fname), self.fname)
 
-  def tearDown(self) -> None:
+  def tearDown(self):
     self.assertTrue(os.path.exists(self.fname), self.fname)
     os.remove(self.fname)
     self.assertFalse(os.path.exists(self.fname), self.fname)
 
-  def test_only_rating(self):
-    meta = ManualMetadata(stars=3)
-    write_metadata(self.fname, meta)
-    self.assertEqual(get_metadata(self.fname), meta)
-
-  def test_only_tags(self):
-    meta = ManualMetadata(
-      tags={'blah', 'blah|hierarchical', 'another'}
-    )
-    write_metadata(self.fname, meta)
-    self.assertEqual(get_metadata(self.fname), meta)
-
-  def test_both(self):
-    meta = ManualMetadata(
-      tags={"mood", "mood|smile", "color"},
-      stars=1,
-    )
-    write_metadata(self.fname, meta)
-    self.assertEqual(get_metadata(self.fname), meta)
+  def test_sweep(self):
+    for st in range(6):
+      for tg in [None, {"blah", "blah|hierarchical", "another"}, {"mood", "mood|smile", "color"}]:
+        for aw in [None, {"e_awa", "e_22"}, {"perfect", "daily"}]:
+          self.tearDown()
+          self.setUp()
+          meta = ManualMetadata(tg, st, aw)
+          write_metadata(self.fname, meta)
+          self.assertEqual(get_metadata(self.fname), meta)
 
   def test_append(self):
     tgs1 = {"a", "b|_c", "b|_d", "b"}

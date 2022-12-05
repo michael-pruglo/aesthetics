@@ -5,18 +5,24 @@ from ae_rater_types import ManualMetadata
 import helpers as hlp
 
 
+PROP_TAGS_HIERARCHICAL = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
+PROP_TAGS_BACKUP = (consts.XMP_NS_DC, "subject")
+PROP_STARS = (consts.XMP_NS_XMP, "Rating")
+PROP_AWARDS = (consts.XMP_NS_XMP, "Label")
+
+
 def get_metadata(fullname:str, vocab:list[str]=None) -> ManualMetadata:
   xmpfile = XMPFiles(file_path=fullname)
   xmp = xmpfile.get_xmp()
   if xmp is None:
-    return set(), 0
+    return ManualMetadata()
   xmpfile.close_file()
 
   def get_tags():
     no_hierarchical = False
-    propname = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
+    propname = PROP_TAGS_HIERARCHICAL
     if not xmp.does_property_exist(*propname):
-      propname = (consts.XMP_NS_DC, "subject")
+      propname = PROP_TAGS_BACKUP
       if not xmp.does_property_exist(*propname):
         logging.warning("No tags in metadata of %s", hlp.short_fname(fullname))
         return None
@@ -37,14 +43,19 @@ def get_metadata(fullname:str, vocab:list[str]=None) -> ManualMetadata:
     return ret or None
 
   def get_stars():
-    propname = (consts.XMP_NS_XMP, "Rating")
+    propname = PROP_STARS
     if not xmp.does_property_exist(*propname):
       return 0
 
     return xmp.get_property_int(*propname)
 
   def get_awards():
-    return None
+    propname = PROP_AWARDS
+    if not xmp.does_property_exist(*propname):
+      return None
+
+    awards = xmp.get_property(*propname)
+    return set(awards.split())
 
   return ManualMetadata(
     tags=get_tags(),
@@ -63,8 +74,8 @@ def write_metadata(fullname:str, metadata:ManualMetadata, append:bool=True) -> N
     if not xmp.does_array_item_exist(*property, tag):
       xmp.append_array_item(*property, tag, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
   if metadata.tags:
-    hier_tag_prop = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
-    subj_tag_prop = (consts.XMP_NS_DC, "subject")
+    hier_tag_prop = PROP_TAGS_HIERARCHICAL
+    subj_tag_prop = PROP_TAGS_BACKUP
     try:
       xmp.register_namespace(hier_tag_prop[0], "pref1")
       xmp.register_namespace(subj_tag_prop[1], "pref2")
@@ -81,11 +92,12 @@ def write_metadata(fullname:str, metadata:ManualMetadata, append:bool=True) -> N
       write_tag(subj_tag_prop, tag.split('|')[-1])
 
   if metadata.stars is not None:
-    r_prop = (consts.XMP_NS_XMP, "Rating")
+    r_prop = PROP_STARS
     xmp.set_property_int(*r_prop, metadata.stars)
 
   if metadata.awards is not None:
-    pass
+    awa_prop = PROP_AWARDS
+    xmp.set_property(*awa_prop, ' '.join(metadata.awards))
 
   xmpfile.put_xmp(xmp)
   xmpfile.close_file()
