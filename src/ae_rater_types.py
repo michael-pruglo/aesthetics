@@ -101,7 +101,7 @@ class RatChange:
 @dataclass
 class ManualMetadata:
   tags : Iterable[str] = None
-  stars : int = None
+  stars : int = 0
   awards : Iterable[str] = None
 
 

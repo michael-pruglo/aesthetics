@@ -62,12 +62,16 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 - group similar items, finding balance between two crucial points:
   a: avoid oversaturation of close things
   b: but simultaneously preserve the important differences/elements
-  ideas: 
+  ideas:
     - maybe create an unrated folder with all the possible variations - to help ML - violates 'b'
     - maybe combine into groups, and rate/compare/meta the whole group - violates 'b'
       would be cool to have general meta shared by the group and some unique for each media
 - add PARANOID version - with extensive checks/asserts, and FAST - with no checks
 - add more tests for downloaders
+- plot a couple of "surprise" metrics and follow it overtime - how well the current ratings predict current matches. As a metric for convergence to true ratings
+  - average Glicko rd
+  - ELO/Glicko MSE expected results/real results
+  - sum of absolute changes to ratings
 
 ### long-term
 
@@ -77,4 +81,3 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 - scrape web for new media, predict ratings and show the most promising candidates
   - scrape reverse-search img from the higest rated
 - learn the overall/specific styles and generate new media with smth like stable diffusion
-

@@ -1,35 +1,26 @@
 import unittest
 import os
 import shutil
-from typing import Callable
 
 from metadata import *
 from tests.helpers import MEDIA_FOLDER
 
 
 class TestReadingMetadata(unittest.TestCase):
-  def _test_metadata_read(self,
-    short_name:str,
-    getter,
-    expected_rating:int,
-    expected_tags:set[str]
-  ):
+  def _test_metadata_read(self, short_name:str, exp_meta:ManualMetadata):
     fname = os.path.join(MEDIA_FOLDER, "fixed/"+short_name)
     self.assertTrue(os.path.exists(fname), fname)
-    self.assertTupleEqual(getter(fname), (expected_tags, expected_rating))
-
-  def _test_metaread_function(self, getter:Callable[[str],tuple[set[str],int]]):
-    self._test_metadata_read(
-      "006f129e1d4baaa9cd5e766d06256f58.jpg", getter, 5,
-      {"hair", "hair|front_locks", "face", "eyes", "eyes|eyelines"},
-    )
-    self._test_metadata_read("no_metadata.JPG", getter, 0, set())
+    self.assertEqual(get_metadata(fname), exp_meta)
 
   def test_libxmp(self):
-    self._test_metaread_function(get_metadata)
-
-  def test_pillow(self):
-    self._test_metaread_function(get_metadata2)
+    self._test_metadata_read(
+      "006f129e1d4baaa9cd5e766d06256f58.jpg",
+      ManualMetadata(
+         tags={"hair", "hair|front_locks", "face", "eyes", "eyes|eyelines"},
+         stars=5,
+      )
+    )
+    self._test_metadata_read("no_metadata.JPG", ManualMetadata())
 
 
 class TestWritingMetadata(unittest.TestCase):
@@ -47,34 +38,43 @@ class TestWritingMetadata(unittest.TestCase):
     self.assertFalse(os.path.exists(self.fname), self.fname)
 
   def test_only_rating(self):
-    write_metadata(self.fname, stars=3)
-    self.assertTupleEqual(get_metadata(self.fname), (set(),3))
+    meta = ManualMetadata(stars=3)
+    write_metadata(self.fname, meta)
+    self.assertEqual(get_metadata(self.fname), meta)
 
   def test_only_tags(self):
-    tgs = {'blah', 'blah|hierarchical', 'another'}
-    write_metadata(self.fname, tags=tgs)
-    self.assertTupleEqual(get_metadata(self.fname), (tgs,0))
+    meta = ManualMetadata(
+      tags={'blah', 'blah|hierarchical', 'another'}
+    )
+    write_metadata(self.fname, meta)
+    self.assertEqual(get_metadata(self.fname), meta)
 
   def test_both(self):
-    tgs = {"mood", "mood|smile", "color"}
-    write_metadata(self.fname, tags=tgs, stars=1)
-    self.assertTupleEqual(get_metadata(self.fname), (tgs,1))
+    meta = ManualMetadata(
+      tags={"mood", "mood|smile", "color"},
+      stars=1,
+    )
+    write_metadata(self.fname, meta)
+    self.assertEqual(get_metadata(self.fname), meta)
 
   def test_append(self):
     tgs1 = {"a", "b|_c", "b|_d", "b"}
     tgs2 = {"m", "m|n", "m|n|o", "p"}
-    write_metadata(self.fname, tags=tgs1, stars=4)
-    self.assertTupleEqual(get_metadata(self.fname), (tgs1,4))
-    write_metadata(self.fname, tags=tgs2, stars=1, append=True)
-    self.assertTupleEqual(get_metadata(self.fname), (tgs1|tgs2, 1))
+    meta1 = ManualMetadata(tgs1, 4)
+    write_metadata(self.fname, meta1)
+    self.assertEqual(get_metadata(self.fname), meta1)
+    write_metadata(self.fname, ManualMetadata(tgs2, 1), append=True)
+    self.assertEqual(get_metadata(self.fname), ManualMetadata(tgs1|tgs2, 1))
 
   def test_overwrite(self):
     tgs1 = {"a", "b|_c", "b|_d", "b"}
     tgs2 = {"m", "m|n", "m|n|o", "p"}
-    write_metadata(self.fname, tags=tgs1, stars=4)
-    self.assertTupleEqual(get_metadata(self.fname), (tgs1,4))
-    write_metadata(self.fname, tags=tgs2, stars=1, append=False)
-    self.assertTupleEqual(get_metadata(self.fname), (tgs2, 1))
+    meta1 = ManualMetadata(tgs1, 4)
+    meta2 = ManualMetadata(tgs2, 4)
+    write_metadata(self.fname, meta1)
+    self.assertEqual(get_metadata(self.fname), meta1)
+    write_metadata(self.fname, meta2, append=False)
+    self.assertEqual(get_metadata(self.fname), meta2)
 
 
 if __name__ == '__main__':
