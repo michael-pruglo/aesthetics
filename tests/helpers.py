@@ -54,9 +54,13 @@ def immitate_external_metadata_change() -> tuple:
   assert not any(t in meta0.tags|meta2.tags for t in ["canary", "finch"]), str(files)
   assert 0 <= meta1.stars <= 5, files[1]
   assert 0 <= meta2.stars <= 5, files[2]
-  write_metadata(files[0], ManualMetadata(tags=["canary", "canary|tagcanary"]))
-  write_metadata(files[1], ManualMetadata(stars=5-meta1.stars))
-  write_metadata(files[2], ManualMetadata(tags=["finch", "finch|tagfi"], stars=5-meta2.stars))
+  meta0.tags = ["canary", "canary|tagcanary"]
+  meta1.stars = 5 - meta1.stars
+  meta2.tags = ["finch", "finch|tagfi"]
+  meta2.stars = 5 - meta2.stars
+  write_metadata(files[0], meta0)
+  write_metadata(files[1], meta1)
+  write_metadata(files[2], meta2)
   return 2, 2
 
 def disk_cleanup() -> None:

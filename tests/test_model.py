@@ -142,7 +142,7 @@ class TestCompetition(unittest.TestCase):
       self.assertEqual(meta_before.stars, int(prof.stars))
       self.assertSetEqual(meta_before.tags, set(prof.tags.split()))
       if meta_before.awards:
-        self.assertSetEqual(meta_before.awards, set(prof.awards.split()))
+        self.assertSetEqual(meta_before.awards, set(prof.awards.split()), prof.fullname)
       if frac_int_test and usr_input.stars is not None:
         usr_input.stars = meta_before.stars
 

@@ -38,7 +38,11 @@ class TestMetadataManager(unittest.TestCase):
     fname = os.path.join(MEDIA_FOLDER, short_name)
     self.assertTrue(os.path.exists(fname))
     expected_metadata = get_metadata(fname)
-    given_metadata = ManualMetadata({t for t in row['tags'].split()}, int(row['stars']))
+    given_metadata = ManualMetadata(
+      {t for t in row['tags'].split()} or None,
+      int(row['stars']),
+      {a for a in row['awards'].split()} or None,
+    )
     self.assertEqual(given_metadata, expected_metadata, short_name)
 
   def _check_db(self, db:pd.DataFrame, expected_len:int) -> None:
