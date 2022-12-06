@@ -2,6 +2,7 @@ import logging
 import os
 import pandas as pd
 from typing import Callable
+from ae_rater_types import ManualMetadata
 
 from metadata import get_metadata, write_metadata
 from helpers import short_fname
@@ -16,15 +17,18 @@ def get_vocab() -> list[str]:
 
 def _db_row(fname):
   try:
-    tags, stars = get_metadata(fname, get_vocab())
+    meta = get_metadata(fname, get_vocab())
   except:
-    tags, stars = [], 0
+    meta = ManualMetadata()
     logging.warning("error reading metadata of %s", short_fname(fname))
 
+  def stringify(iterable):
+    return ' '.join(sorted(iterable)).lower() if iterable else ""
   return {
     'name': short_fname(fname),
-    'tags': ' '.join(sorted(tags)).lower(),
-    'stars': stars,
+    'tags': stringify(meta.tags),
+    'stars': meta.stars,
+    'awards': stringify(meta.awards),
   }
 
 
@@ -149,6 +153,9 @@ class MetadataManager:
     new_disk_tags = None
     if 'tags' in upd_data:
       new_disk_tags = upd_data['tags'].split()
+    new_disk_awards = None
+    if 'awards' in upd_data:
+      new_disk_awards = upd_data['awards'].split()
     new_disk_stars = None
     if 'stars' in upd_data:
       if upd_data['stars'] < 0:
@@ -160,7 +167,8 @@ class MetadataManager:
                       short_name, prev_stars, new_disk_stars)
       else:
         new_disk_stars = None
-    write_metadata(fullname, new_disk_tags, new_disk_stars, append=False)
+    new_disk_meta = ManualMetadata(new_disk_tags, new_disk_stars, new_disk_awards)
+    write_metadata(fullname, new_disk_meta, append=False)
 
     # updates in df
     if upd_data:

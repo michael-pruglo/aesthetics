@@ -3,6 +3,7 @@ import os
 import random
 import pandas as pd
 from pandas import testing as tm
+from ae_rater_types import ManualMetadata
 
 from src.metadata import get_metadata
 from src.db_managers import MetadataManager
@@ -37,8 +38,8 @@ class TestMetadataManager(unittest.TestCase):
     fname = os.path.join(MEDIA_FOLDER, short_name)
     self.assertTrue(os.path.exists(fname))
     expected_metadata = get_metadata(fname)
-    given_metadata = ({t for t in row['tags'].split()}, int(row['stars']))
-    self.assertTupleEqual(given_metadata, expected_metadata, short_name)
+    given_metadata = ManualMetadata({t for t in row['tags'].split()}, int(row['stars']))
+    self.assertEqual(given_metadata, expected_metadata, short_name)
 
   def _check_db(self, db:pd.DataFrame, expected_len:int) -> None:
     self.assertEqual(len(db), expected_len)
@@ -122,24 +123,25 @@ class TestMetadataManager(unittest.TestCase):
     tst_updates = []
     for short_name in random.sample(self.initial_files, self.nfiles//3):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
-      disk_tags_before, disk_stars_before = get_metadata(fullname)
+      disk_meta_before = get_metadata(fullname)
       row_before = mm.get_file_info(short_name)
       if random.randint(0,1):
-        upd_stars = 5 - disk_stars_before + random.randint(1,9)/10
+        upd_stars = 5 - disk_meta_before.stars + random.randint(1,9)/10
         tst_updates.append((short_name, upd_stars))
       else:
-        upd_stars = disk_stars_before
+        upd_stars = disk_meta_before.stars
       inc_match = random.randint(0,17)
 
       hlp.backup_files([fullname])
       mm.update(fullname, upd_data={'stars':upd_stars}, matches_each=inc_match)
 
-      disk_tags_after, disk_stars_after = get_metadata(fullname)
-      self.assertSetEqual(disk_tags_before, disk_tags_after, short_name)
+      disk_meta_after = get_metadata(fullname)
+      self.assertSetEqual(disk_meta_before.tags, disk_meta_after.tags, short_name)
+      self.assertEqual(disk_meta_before.awards, disk_meta_after.awards, short_name)
       if upd_stars is None:
-        self.assertEqual(disk_stars_after, disk_stars_before, short_name)
+        self.assertEqual(disk_meta_after.stars, disk_meta_before.stars, short_name)
       else:
-        self.assertEqual(disk_stars_after, int(upd_stars), short_name)
+        self.assertEqual(disk_meta_after.stars, int(upd_stars), short_name)
 
       row_after = mm.get_file_info(short_name)
       self._check_row(short_name, row_after)

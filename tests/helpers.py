@@ -3,7 +3,7 @@ import shutil
 import random
 import string
 from typing import Iterable
-from ae_rater_types import Outcome
+from ae_rater_types import ManualMetadata, Outcome
 
 from src.helpers import file_extension
 from src.metadata import get_metadata, write_metadata
@@ -48,15 +48,15 @@ def immitate_external_metadata_change() -> tuple:
   files = [os.path.join(MEDIA_FOLDER, f)
             for f in random.sample(get_initial_mediafiles(), num_files)]
   backup_files(files)
-  tags0, stars0 = get_metadata(files[0])
-  tags1, stars1 = get_metadata(files[1])
-  tags2, stars2 = get_metadata(files[2])
-  assert not any(t in tags0|tags2 for t in ["canary", "finch"]), str(files)
-  assert 0 <= stars1 <= 5, files[1]
-  assert 0 <= stars2 <= 5, files[2]
-  write_metadata(files[0], tags=["canary", "canary|tagcanary"])
-  write_metadata(files[1], stars=5-stars1)
-  write_metadata(files[2], tags=["finch", "finch|tagfi"], stars=5-stars2)
+  meta0 = get_metadata(files[0])
+  meta1 = get_metadata(files[1])
+  meta2 = get_metadata(files[2])
+  assert not any(t in meta0.tags|meta2.tags for t in ["canary", "finch"]), str(files)
+  assert 0 <= meta1.stars <= 5, files[1]
+  assert 0 <= meta2.stars <= 5, files[2]
+  write_metadata(files[0], ManualMetadata(tags=["canary", "canary|tagcanary"]))
+  write_metadata(files[1], ManualMetadata(stars=5-meta1.stars))
+  write_metadata(files[2], ManualMetadata(tags=["finch", "finch|tagfi"], stars=5-meta2.stars))
   return 2, 2
 
 def disk_cleanup() -> None:

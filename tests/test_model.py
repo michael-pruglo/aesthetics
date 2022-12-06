@@ -97,8 +97,8 @@ class TestCompetition(unittest.TestCase):
         self.assertEqual(profile_after.stars, consensus_stars, dbg_info)
         if consensus_stars<=5 and int(consensus_stars)!=int(stars_before):
           self.assertEqual(int(consensus_stars), int(stars_before)+1, dbg_info)
-          _, disk_stars = get_metadata(prof.fullname)
-          self.assertEqual(disk_stars, int(consensus_stars), dbg_info)
+          disk_meta = get_metadata(prof.fullname)
+          self.assertEqual(disk_meta.stars, int(consensus_stars), dbg_info)
           break
         prof = profile_after
 
@@ -119,11 +119,10 @@ class TestCompetition(unittest.TestCase):
       for old_p, old_meta, new_p, new_meta in zip(participants, metadata, news, new_metadata):
         dbg_info = '\n'.join(map(str, [old_p, old_meta, new_p, new_meta]))
         self.assertEqual(new_p.nmatches, old_p.nmatches+len(participants)-1, dbg_info)
-        disk_tags_old, disk_tags_new = old_meta[0], new_meta[0]
-        disk_stars_old, disk_stars_new = old_meta[1], new_meta[1]
-        self.assertSetEqual(disk_tags_old, disk_tags_new)
-        self.assertEqual(min(5, int(old_p.stars)), disk_stars_old)
-        self.assertEqual(min(5, int(new_p.stars)), disk_stars_new)
+        self.assertSetEqual(old_meta.tags, new_meta.tags)
+        self.assertEqual(old_meta.awards, new_meta.awards)
+        self.assertEqual(min(5, int(old_p.stars)), old_meta.stars)
+        self.assertEqual(min(5, int(new_p.stars)), new_meta.stars)
         for ratsys in old_p.ratings.keys():
           old_rating = old_p.ratings[ratsys]
           new_rating = new_p.ratings[ratsys]
@@ -139,27 +138,32 @@ class TestCompetition(unittest.TestCase):
 
     same_stars = [True]*(N//2) + [False]*(N-N//2)  # if curr stars are 2.4, input 2 shouldn't change it
     for prof, frac_int_test in zip(testees, same_stars):
-      tags_before, stars_before = get_metadata(prof.fullname)
-      self.assertEqual(stars_before, int(prof.stars))
-      self.assertSetEqual(tags_before, set(prof.tags.split()))
+      meta_before = get_metadata(prof.fullname)
+      self.assertEqual(meta_before.stars, int(prof.stars))
+      self.assertSetEqual(meta_before.tags, set(prof.tags.split()))
+      if meta_before.awards:
+        self.assertSetEqual(meta_before.awards, set(prof.awards.split()))
       if frac_int_test and usr_input.stars is not None:
-        usr_input.stars = stars_before
+        usr_input.stars = meta_before.stars
 
       self.model.update_meta(prof.fullname, copy.deepcopy(usr_input))  # input is allowed to be modified
-      exp_stars = stars_before if usr_input.stars is None else usr_input.stars
-      exp_tags = tags_before if usr_input.tags is None else set(usr_input.tags)
-      exp_awards = set() if usr_input.awards is None else set(usr_input.awards)
+      exp_stars = meta_before.stars if usr_input.stars is None else usr_input.stars
+      exp_tags = meta_before.tags if usr_input.tags is None else set(usr_input.tags)
+      exp_awards = meta_before.awards if usr_input.awards is None else set(usr_input.awards)
 
       dbg_info = f"{short_fname(prof.fullname)} frac_int:{frac_int_test}"
-      tags_after, stars_after = get_metadata(prof.fullname)
-      self.assertEqual(stars_after, exp_stars)
+      meta_after = get_metadata(prof.fullname)
+      self.assertEqual(meta_after.stars, exp_stars)
       if usr_input.tags is not None:
-        self.assertNotEqual(tags_after, tags_before, dbg_info)
-      self.assertSetEqual(tags_after, exp_tags, dbg_info)
+        self.assertNotEqual(meta_after.tags, meta_before.tags, dbg_info)
+      self.assertSetEqual(meta_after.tags, exp_tags, dbg_info)
+      if meta_after.awards:
+        self.assertSetEqual(meta_after.awards, exp_awards, dbg_info)
       new_prof = self._get_leaderboard_line(prof.fullname)
       self.assertEqual(min(5,int(new_prof.stars)), exp_stars, dbg_info)
       self.assertSetEqual(set(new_prof.tags.split()), exp_tags, dbg_info)
-      self.assertSetEqual(set(new_prof.awards.split()), exp_awards, dbg_info)
+      if new_prof.awards:
+        self.assertSetEqual(set(new_prof.awards.split()), exp_awards, dbg_info)
 
   def test_meta_update_0(self):
     self._test_meta_update_impl(ManualMetadata(
