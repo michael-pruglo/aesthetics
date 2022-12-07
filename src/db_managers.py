@@ -6,6 +6,7 @@ from ae_rater_types import ManualMetadata
 
 from metadata import get_metadata, write_metadata
 from helpers import short_fname
+from prioritizers import make_prioritizer, PrioritizerType
 
 
 def get_vocab() -> list[str]:
@@ -98,6 +99,9 @@ class MetadataManager:
       self.df.sort_values('stars', ascending=False, inplace=True)
       self._commit()
 
+    self.prioritizer = make_prioritizer(PrioritizerType.FRESH)
+    self.df = self.df.apply(self.prioritizer.calc, axis=1)
+
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
     if min_tag_freq:
       freq_tags = self._get_frequent_tags(min_tag_freq)
@@ -173,15 +177,8 @@ class MetadataManager:
     # updates in df
     if upd_data:
       row.update(upd_data)
-
     row.loc['nmatches'] += matches_each
-
-    def calc_priority():
-      st = 0.4 + (row['stars'] + .1)/10
-      mt = max(0.0, (50-row['nmatches'])/50)
-      return (st+mt)/2
-    row.loc['priority'] = calc_priority()
-
+    row = self.prioritizer.calc(row)
     self.df.loc[short_name] = row
     logging.debug("updated db: %s", row)
 
