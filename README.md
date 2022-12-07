@@ -8,22 +8,24 @@ Exploration of personal style. Provided a media library with metadata - explore,
 
 ```bash
 $ src/ae_rater.py --help
-usage: ae_rater.py [-h] [-s] [media_dir] [num_participants]
+usage: ae_rater.py [-h] [-r] [-p {default,fresh,top}] [-s] [media_dir] [num_participants]
 
 positional arguments:
-  media_dir         media folder to operate on
-  num_participants  number of participants in MATCH mode
+  media_dir             media folder to operate on
+  num_participants      number of participants in MATCH mode
 
 optional arguments:
-  -h, --help        show this help message and exit
-  -s, --search      run SEARCH instead of MATCH mode
-
+  -h, --help            show this help message and exit
+  -r, --refresh         refresh db to incorporate folder updates
+  -p {default,fresh,top}, --prioritizer {default,fresh,top}
+                        which media is prioritized for matches
+  -s, --search          run SEARCH instead of MATCH mode
 ```
 
 ### Run tests with
 
 ```bash
-python -m unittests
+[SKIPLONG=1] python -m unittests
 ```
 
 ## Outcome language
@@ -58,7 +60,6 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 ### short-term
 
 - learn how to convert webp and other unsupported formats right with yt-dlp
-- embed awards (and all future metadata) into files
 - group similar items, finding balance between two crucial points:
   a: avoid oversaturation of close things
   b: but simultaneously preserve the important differences/elements
@@ -72,6 +73,11 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
   - average Glicko rd
   - ELO/Glicko MSE expected results/real results
   - sum of absolute changes to ratings
+- polish dataset
+  - add health checkers:
+    - correspondence csv/embedded meta
+    - awards/tags
+    - corellation between rankings: stars/Glicko/ELO
 
 ### long-term
 
