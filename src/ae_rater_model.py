@@ -7,13 +7,12 @@ from typing import Callable
 
 from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
-from metadata import write_metadata
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
 
 class RatingCompetition:
-  def __init__(self, img_dir:str, refresh:bool):
+  def __init__(self, img_dir:str, refresh:bool, prioritizer_type):
     self.curr_match:list[ProfileInfo] = []
     self.rat_systems:list[RatingBackend] = [Glicko(), ELO()]
     def default_values_getter(stars:float)->dict:
@@ -21,7 +20,7 @@ class RatingCompetition:
       for s in self.rat_systems:
         default_values.update(s.get_default_values(stars))
       return default_values
-    self.db = DBAccess(img_dir, refresh, default_values_getter,
+    self.db = DBAccess(img_dir, refresh, prioritizer_type, default_values_getter,
                        [s.name() for s in self.rat_systems])
 
   def get_search_results(self, query:str) -> list[ProfileInfo]:
@@ -93,10 +92,10 @@ class RatingCompetition:
 
 
 class DBAccess:
-  def __init__(self, img_dir:str, refresh:bool, default_values_getter:Callable[[int],dict],
-               sysnames:list[str]) -> None:
+  def __init__(self, img_dir:str, refresh:bool, prioritizer_type,
+               default_values_getter:Callable[[int],dict], sysnames:list[str]) -> None:
     self.img_dir = img_dir
-    self.meta_mgr = MetadataManager(img_dir, refresh, default_values_getter)
+    self.meta_mgr = MetadataManager(img_dir, refresh, prioritizer_type, default_values_getter)
     self.def_gettr = default_values_getter
     self.history_mgr = HistoryManager(img_dir)
     self.sysnames = sysnames

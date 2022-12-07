@@ -54,7 +54,9 @@ def _default_init(row, default_values_getter):
 
 
 class MetadataManager:
-  def __init__(self, img_dir:str, refresh:bool=False, defaults_getter:Callable[[int], dict]=None):
+  def __init__(self, img_dir:str, refresh:bool=False,
+               prioritizer_type:PrioritizerType=PrioritizerType.DEFAULT,
+               defaults_getter:Callable[[int], dict]=None):
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
     self.matches_since_last_save = 0
     metadata_dtypes = {
@@ -99,7 +101,7 @@ class MetadataManager:
       self.df.sort_values('stars', ascending=False, inplace=True)
       self._commit()
 
-    self.prioritizer = make_prioritizer(PrioritizerType.FRESH)
+    self.prioritizer = make_prioritizer(prioritizer_type)
     self.df = self.df.apply(self.prioritizer.calc, axis=1)
 
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:

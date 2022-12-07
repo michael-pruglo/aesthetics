@@ -9,6 +9,7 @@ from ae_rater_types import AppMode, ManualMetadata, Outcome, UserListener
 from ae_rater_view import RaterGui
 from ae_rater_model import RatingCompetition
 from ai_assistant import Assistant
+from prioritizers import PrioritizerType
 
 
 def setup_logger(log_filename):
@@ -26,8 +27,8 @@ def setup_logger(log_filename):
 
 
 class App(UserListener):
-  def __init__(self, media_dir:str, refresh:bool, mode:AppMode):
-    self.model = RatingCompetition(media_dir, refresh)
+  def __init__(self, media_dir:str, refresh:bool, prioritizer_type:PrioritizerType, mode:AppMode):
+    self.model = RatingCompetition(media_dir, refresh, prioritizer_type)
     self.gui = RaterGui(self, self.model.get_tags_vocab(), mode)
     self.mode = mode
     self.ai_assistant = Assistant()
@@ -86,7 +87,7 @@ class App(UserListener):
 def main(args):
   assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
   setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
-  App(args.media_dir, args.refresh, args.mode).run(args.num_participants)
+  App(args.media_dir, args.refresh, args.prioritizer_type, args.mode).run(args.num_participants)
 
 
 if __name__ == "__main__":
@@ -94,6 +95,9 @@ if __name__ == "__main__":
   parser.add_argument('-r', '--refresh', dest='refresh', action='store_const',
                       const=True, default=False,
                       help="refresh db to incorporate folder updates")
+  parser.add_argument('-p', '--prioritizer', dest='prioritizer_type', type=PrioritizerType,
+                      choices=list(PrioritizerType), default=PrioritizerType.DEFAULT,
+                      help="which media is prioritized for matches")
   parser.add_argument('-s', '--search', dest='mode', action='store_const',
                       const=AppMode.SEARCH, default=AppMode.MATCH,
                       help="run SEARCH instead of MATCH mode")

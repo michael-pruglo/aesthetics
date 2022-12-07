@@ -1,5 +1,5 @@
 from functools import partial
-from enum import Enum, auto
+from enum import Enum
 import pandas as pd
 from typing import Callable
 import statistics
@@ -14,9 +14,11 @@ def star_coef(p, row):
 
 
 class PrioritizerType(Enum):
-  DEFAULT = auto()
-  FRESH = auto()
-  TOP = auto()
+  DEFAULT = 'default'
+  FRESH = 'fresh'
+  TOP = 'top'
+  def __str__(self):
+    return self.value
 
 def make_prioritizer(type:PrioritizerType = PrioritizerType.DEFAULT):
   if type == PrioritizerType.FRESH:
