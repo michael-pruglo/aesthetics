@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from enum import Enum
 import logging
 import shutil
 import os
@@ -93,20 +94,28 @@ def main(file_source:Iterable[str], file_prepper:Callable[[str],bool]=None):
     gui.show_editor(fullname)
 
 
-if __name__ == "__main__":
-  # parser = argparse.ArgumentParser()
-  # parser.add_argument('-m', '--mode', dest='mode', action='store_const',
-  #                     const=True, #choices=list(gen_modes.keys()),
-  #                     help="where to receive files from")
-  # args = parser.parse_args()
-  mode = "untagged"
+class DownMode(Enum):
+  DSHELL = "dshell"
+  UNTAGGED = "untagged"
+  USHER = "usher"
+  def __str__(self):
+    return self.value
 
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-m', '--mode', dest='mode', type=DownMode,
+                      choices=list(DownMode), default=DownMode.DSHELL,
+                      help="""mode specifies the source of the media to process: 'dshell' accepts
+                              links online, 'untagged' takes files already on disk, and 'usher'
+                              stands by taking the newly created media files""")
+  args = parser.parse_args()
 
   from secretcfg import UDOWNLOADER_CFG
   file_source = {
-    "dshell": dshell_files(UDOWNLOADER_CFG),
-    "untagged": untagged_files(UDOWNLOADER_CFG.dir_main),
-    "usher": online_usher_files(UDOWNLOADER_CFG.dir_main),
-  }[mode]
+    DownMode.DSHELL: dshell_files(UDOWNLOADER_CFG),
+    DownMode.UNTAGGED: untagged_files(UDOWNLOADER_CFG.dir_main),
+    DownMode.USHER: online_usher_files(UDOWNLOADER_CFG.dir_main),
+  }[args.mode]
 
   main(file_source, FilePrepper(UDOWNLOADER_CFG.dir_uncateg))

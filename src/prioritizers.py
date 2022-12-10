@@ -14,9 +14,9 @@ def star_coef(p, row):
 
 
 class PrioritizerType(Enum):
-  DEFAULT = 'default'
-  FRESH = 'fresh'
-  TOP = 'top'
+  DEFAULT = "default"
+  FRESH = "fresh"
+  TOP = "top"
   def __str__(self):
     return self.value
 
