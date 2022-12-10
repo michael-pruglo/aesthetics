@@ -6,6 +6,7 @@ import shutil
 import os
 import time
 from typing import Iterable, Callable
+from ae_rater_types import ManualMetadata
 
 import helpers as hlp
 from metadata import get_metadata
@@ -36,7 +37,7 @@ def untagged_files(dir:str):
   for f in os.listdir(dir):
     fullname = os.path.join(dir, f)
     if os.path.isfile(fullname):
-      has_no_meta = (get_metadata(fullname) == (set(),0))
+      has_no_meta = (get_metadata(fullname) == ManualMetadata())
       if has_no_meta:
         yield fullname
 
@@ -98,7 +99,7 @@ if __name__ == "__main__":
   #                     const=True, #choices=list(gen_modes.keys()),
   #                     help="where to receive files from")
   # args = parser.parse_args()
-  mode = "dshell"
+  mode = "untagged"
 
 
   from secretcfg import UDOWNLOADER_CFG

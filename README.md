@@ -75,8 +75,6 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
   - sum of absolute changes to ratings
 - polish dataset
   - add health checkers:
-    - correspondence csv/embedded meta
-    - awards/tags
     - corellation between rankings: stars/Glicko/ELO
 
 ### long-term

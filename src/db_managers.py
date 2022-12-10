@@ -9,8 +9,8 @@ from helpers import short_fname
 from prioritizers import make_prioritizer, PrioritizerType
 
 
-def get_vocab() -> list[str]:
-  fname = os.path.abspath("./tags_vocab.txt")
+def get_vocab(fname="./tags_vocab.txt") -> list[str]:
+  fname = os.path.abspath(fname)
   if not os.path.exists(fname):
     return None
   with open(fname, "r") as vocab_file:

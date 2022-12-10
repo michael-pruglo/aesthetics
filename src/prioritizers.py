@@ -20,7 +20,7 @@ class PrioritizerType(Enum):
   def __str__(self):
     return self.value
 
-def make_prioritizer(type:PrioritizerType = PrioritizerType.DEFAULT):
+def make_prioritizer(type:PrioritizerType):
   if type == PrioritizerType.FRESH:
     return Prioritizer([
       partial(match_coef, 20),

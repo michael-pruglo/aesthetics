@@ -16,7 +16,7 @@ class MockListener(UserListener):
     return Assistant().suggest_tags(fullname)
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
     print("update_meta: ", fullname, meta)
-    write_metadata(fullname, meta.tags, meta.stars, append=False)
+    write_metadata(fullname, meta, append=False)
 
 class DownGui:
   def __init__(self) -> None:

@@ -7,12 +7,13 @@ from typing import Callable
 
 from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
+from prioritizers import PrioritizerType
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
 
 class RatingCompetition:
-  def __init__(self, img_dir:str, refresh:bool, prioritizer_type):
+  def __init__(self, img_dir:str, refresh:bool, prioritizer_type:PrioritizerType=PrioritizerType.DEFAULT):
     self.curr_match:list[ProfileInfo] = []
     self.rat_systems:list[RatingBackend] = [Glicko(), ELO()]
     def default_values_getter(stars:float)->dict:
