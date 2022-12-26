@@ -47,6 +47,7 @@ class RatingCompetition:
     opinions = {s.name(): s.process_match(self.curr_match, outcome)
                 for s in self.rat_systems}
     logging.info("opinions:\n%s", self._pretty_opinions(opinions, outcome))
+    logging.info("confidence markers:\n%s", self._confidence_markers(opinions))
     self.db.apply_opinions(self.curr_match, opinions)
 
     self.curr_match = []
@@ -86,6 +87,16 @@ class RatingCompetition:
           s += f"{system}: {changes[idx]} "
         s += "\n"
     return s
+
+  def _confidence_markers(self, opinions:RatingOpinions) -> str:
+    avg_changes = {sname: statistics.mean([abs(ch.delta_rating) for ch in changes])
+                   for sname,changes in opinions.items()}
+    rd_improvements = {}
+    for system, changes in opinions.items():
+        sys_rd = statistics.mean([prof.ratings[system].rd-change.new_rating.rd
+                                  for prof, change in zip(self.curr_match, changes)])
+        rd_improvements[system] = sys_rd
+    return f"average_changes: {avg_changes}\nrd_improvements: {rd_improvements}\n"
 
   def _refresh_curr_match(self) -> None:
     self.curr_match = [self.db.retreive_profile(short_fname(prof.fullname))

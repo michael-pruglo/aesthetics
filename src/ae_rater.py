@@ -62,7 +62,7 @@ class App(UserListener):
     self.gui.display_match(participants)
 
   def search_for(self, query:str) -> None:
-    N = 10
+    N = 15
     res = self.model.get_search_results(query)[:N]
     ldbrd = self.model.get_leaderboard()
     self.gui.display_leaderboard(ldbrd, res)
