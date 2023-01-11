@@ -13,7 +13,7 @@ class Leaderboard(tk.Text):
     is_featured: bool
     fgfeatured: str
     spacing: int
-    textfixs: list[str]
+    prefix: str
 
   def __init__(self, master) -> None:
     super().__init__(master, padx=0, pady=10, bd=0, cursor="arrow",
@@ -21,7 +21,7 @@ class Leaderboard(tk.Text):
     super().configure(highlightthickness=0)
     self.HEAD_LEN = 5
 
-  def display(self, leaderboard, feature, outcome, context:int=2):
+  def display(self, leaderboard, feature, context:int=2):
     """ display top and everyone from `feature` and `context` lines around them """
     self.configure(state=tk.NORMAL)
     self.delete("1.0", tk.END)
@@ -44,17 +44,17 @@ class Leaderboard(tk.Text):
       if i-prev != 1:
         self.tag_configure('chunk_break', foreground=BTFL_LIGHT_GRAY, justify="center", spacing1=10, spacing3=10)
         self.insert(tk.END, "...\n", 'chunk_break')
-      self._write_profile(i, leaderboard[i], displayed_rows[i], len(feature)==2, outcome)
+      self._write_profile(i, leaderboard[i], displayed_rows[i])
       prev = i
 
     self.configure(state=tk.DISABLED)
 
-  def _write_profile(self, idx:int, prof:ProfileInfo, letter:str, both_sides:bool, outcome):
-    cfg = self._get_line_visual_cfg(letter, both_sides, outcome)
+  def _write_profile(self, idx:int, prof:ProfileInfo, letter:str):
+    cfg = self._get_line_visual_cfg(letter)
 
     tagfix = 'tag_prefix'+str(idx)
     self.tag_configure(tagfix, background=cfg.bgs[0], foreground=cfg.fgfeatured, spacing1=cfg.spacing, spacing3=cfg.spacing)
-    self.insert(tk.END, cfg.textfixs[0], tagfix)
+    self.insert(tk.END, cfg.prefix, tagfix)
 
     for tag,fg,txt in self._get_display_blueprint(idx, prof):
       if cfg.is_featured:
@@ -66,61 +66,24 @@ class Leaderboard(tk.Text):
       self.tag_configure(tag, background=cfg.bgs[1], foreground=fg, spacing1=cfg.spacing, spacing3=cfg.spacing)
       self.insert(tk.END, txt, tag)
 
-    tagfix = 'tag_suffix'+str(idx)
-    self.tag_configure(tagfix, background=cfg.bgs[2], foreground=cfg.fgfeatured, spacing1=cfg.spacing, spacing3=cfg.spacing)
-    self.insert(tk.END, cfg.textfixs[1], tagfix)
-
     self.insert(tk.END, '\n')
 
-  def _get_line_visual_cfg(self, letter, both_sides, outcome) -> LineVisualCfg:
-    default_bg = BTFL_DARK_BG
-    lenfix = 3
-    featured_spacing = 10
-
-    if letter == "":
+  def _get_line_visual_cfg(self, letter) -> LineVisualCfg:
+    if letter:
       return self.LineVisualCfg(
-        bgs = [default_bg, "#282828", default_bg],
+        bgs = [LEFT_COLORBG]*2,
+        is_featured = True,
+        fgfeatured = LEFT_COLORFG,
+        spacing = 10,
+        prefix = ' '+letter+' ',
+      )
+    else:
+      return self.LineVisualCfg(
+        bgs = [BTFL_DARK_BG, "#282828"],
         is_featured = False,
         fgfeatured = BTFL_LIGHT_GRAY,
         spacing = 0,
-        textfixs = [' '*lenfix,' '*lenfix],
-      )
-
-    if both_sides:
-      if letter == "a":
-        outcome_bg = {
-          Outcome("a b"): LEFT_COLORWIN,
-          Outcome("ab"): COLORDRAW,
-          Outcome("b a"): LEFT_COLORBG,
-        }.get(outcome, LEFT_COLORBG)
-        return self.LineVisualCfg(
-          bgs = [outcome_bg]*2 + [default_bg],
-          is_featured = True,
-          fgfeatured = LEFT_COLORFG,
-          spacing = featured_spacing,
-          textfixs = ['<'*lenfix,' '*lenfix],
-        )
-      else:
-        assert letter == "b"
-        outcome_bg = {
-          Outcome("a b"): RIGHT_COLORBG,
-          Outcome("ab"): COLORDRAW,
-          Outcome("b a"): RIGHT_COLORWIN,
-        }.get(outcome, RIGHT_COLORBG)
-        return self.LineVisualCfg(
-          bgs = [default_bg] + [outcome_bg]*2,
-          is_featured = True,
-          fgfeatured = RIGHT_COLORFG,
-          spacing = featured_spacing,
-          textfixs = [' '*lenfix,'>'*lenfix],
-        )
-    else:
-      return self.LineVisualCfg(
-        bgs = [LEFT_COLORWIN if outcome else LEFT_COLORBG]*2 + [default_bg],
-        is_featured = True,
-        fgfeatured = LEFT_COLORFG,
-        spacing = featured_spacing,
-        textfixs = [' '+letter+' ',' '*lenfix],
+        prefix = '   ',
       )
 
   def _get_display_blueprint(self, idx, prof) -> list[tuple[str,str,str]]:

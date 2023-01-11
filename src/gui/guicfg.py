@@ -92,9 +92,5 @@ LEFT_COLORBG = "#353935"
 RIGHT_COLORBG = "#353539"
 spice_fg_rgb  = lambda r,g,b: tuple([int(max(x*1.2,255) if x==max(r,g,b) else x) for x in (r,g,b)])
 spice_fg_hsl  = lambda h,s,l: (h, .1, .6)
-spice_win_hsl = lambda h,s,l: (h, .3, .3)
 LEFT_COLORFG   = spice_up_color(LEFT_COLORBG,   spice_fg_rgb,  spice_fg_hsl)
 RIGHT_COLORFG  = spice_up_color(RIGHT_COLORBG,  spice_fg_rgb,  spice_fg_hsl)
-LEFT_COLORWIN  = spice_up_color(LEFT_COLORBG,   None, spice_win_hsl)
-RIGHT_COLORWIN = spice_up_color(RIGHT_COLORBG,  None, spice_win_hsl)
-COLORDRAW      = spice_up_color(RIGHT_COLORWIN, None, lambda h,s,l: (60, s, l))

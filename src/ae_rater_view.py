@@ -15,13 +15,20 @@ from gui.profile_card import ProfileCard
 
 
 def factorize_good_ratio(n):
-    i = n
-    while i >= math.sqrt(n):
-      if n%i == 0:
-        cols = i
-      i -= 1
-    rows = n//cols
-    return (cols,rows) if cols<n else factorize_good_ratio(n+1)
+  special_cases = {
+    2: (2,1),
+    26: (9,3),
+  }
+  if n in special_cases:
+    return special_cases[n]
+
+  i = n
+  while i >= math.sqrt(n):
+    if n%i == 0:
+      cols = i
+    i -= 1
+  rows = n//cols
+  return (cols,rows) if cols<n else factorize_good_ratio(n+1)
 
 
 class RaterGui:
@@ -42,9 +49,6 @@ class RaterGui:
     self.curr_prof_shnames:list[str] = []
     self.cards:list[ProfileCard] = []
     self.leaderboard = Leaderboard(self.root)
-    self.help = ttk.Label(self.root, background="#333", anchor='s',
-                          justify="center", padding=(10,10),
-                          text="<-/-> to choose winner\n^ to draw\nCtrl+ <-/-> to give boost")
 
     self.content_outcome = tk.StringVar()
     self.label_outcome = ttk.Label(self.root, anchor="center", text="enter outcome string:")
@@ -63,20 +67,17 @@ class RaterGui:
     self.root.update()
     for card,profile in zip(self.cards, profiles):
       card.show_profile(profile)
-      card.set_style(None)
+      card.reset_style()
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
-    if n == 2 and self.mode == AppMode.MATCH:
-      self._enable_arrows(True)
-    else:
-      self._enable_input(True, n)
+    self._enable_input(True, n)
 
   def conclude_match(self) -> None:
     job_id = self.root.after(CHANGE_MATCH_DELAY, self.user_listener.start_next_match)
     self.scheduled_jobs.append(job_id)
 
   def display_leaderboard(self, leaderboard:list[ProfileInfo],
-                          feature:list[ProfileInfo]=None, outcome:Outcome=None) -> None:
-    self.leaderboard.display(leaderboard, feature, outcome)
+                          feature:list[ProfileInfo]=None) -> None:
+    self.leaderboard.display(leaderboard, feature)
 
   def mainloop(self):
     self.root.mainloop()
@@ -88,20 +89,7 @@ class RaterGui:
       c.destroy()
     self.cards = []
 
-    if n==2:
-      self.style.configure('TLabel', font=("Arial", 11), foreground="#ccc")
-      LDBRD_W = 0.24  # TODO: fix width
-      HELP_H = 0.07
-      for i in range(n):
-        card = ProfileCard(i, n, self.root)
-        card.set_meta_editor(self.tags_vocab, self.user_listener)
-        card.place(relx=i*(0.5+LDBRD_W/2), relwidth=0.5-LDBRD_W/2, relheight=1)
-        self.cards.append(card)
-      self.leaderboard.place(relx=0.5-LDBRD_W/2, relwidth=LDBRD_W, relheight=1-HELP_H)
-      self.help.place(relx=0.5-LDBRD_W/2, rely=1-HELP_H, relwidth=LDBRD_W, relheight=HELP_H)
-      self.label_outcome.place_forget()
-      self.input_outcome.place_forget()
-    elif 2 < n <= 24:
+    if 1 < n <= 26:
       self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
       COLS, ROWS = factorize_good_ratio(n)
       LDBRD_W = 0.24 if False else 0.125  # TODO: make profiles for 1080p and 4k
@@ -109,7 +97,7 @@ class RaterGui:
       INP_H = 0.055
       INP_LBL_H = INP_H*0.35
       for i in range(n):
-        card = ProfileCard(i, n, self.root)
+        card = ProfileCard(i, self.root)
         card.set_meta_editor(self.tags_vocab, self.user_listener)
         card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
@@ -131,7 +119,7 @@ class RaterGui:
 
   def _highlight_curr_outcome(self, n:int):
     for card in self.cards:
-      card.set_style(None)
+      card.reset_style()
 
     input_so_far = self.content_outcome.get()
     input_so_far = ''.join(filterfalse(str.isdigit, input_so_far))
@@ -149,32 +137,9 @@ class RaterGui:
       for idx, tier in tiers.items():
         x = color_intensities[tier]
         tier_color = f"#{int(x):02x}{MAXCOLOR-int(x):02x}00"
-        self.cards[idx].set_style(color=tier_color)
+        self.cards[idx].set_style(tier_color)
 
     self.input_outcome.configure(background=bgcolor)
-
-  def _enable_arrows(self, enable:bool):
-    for key in '<Left>', '<Right>', '<Up>':
-      boost_seq = f'<Control-{key[1:-1]}>'
-      if enable:
-        self.root.bind(key, self._on_arrow_press)
-        self.root.bind(boost_seq, self._on_give_boost)
-      else:
-        self.root.unbind(key)
-        self.root.unbind(boost_seq)
-
-  def _on_arrow_press(self, event):
-    self._enable_arrows(False)
-
-    outcome = {
-      "Left": (Outcome("a b"), -1),
-      "Up":   (Outcome("ab"),   0),
-      "Right":(Outcome("b a"),  1),
-    }[event.keysym]
-    self.cards[0].set_style(outcome=-outcome[1])
-    self.cards[1].set_style(outcome= outcome[1])
-    self.root.update()
-    self.user_listener.consume_result(outcome[0])
 
   def _enable_input(self, enable:bool, n:int=0):
     if enable:
@@ -196,8 +161,3 @@ class RaterGui:
         self.user_listener.consume_result(Outcome(s))
       else:
         self.input_outcome.config(background=RED_ERR)
-
-  def _on_give_boost(self, event):
-    assert len(self.curr_prof_shnames) == 2
-    is_right = (event.keysym=="Right")
-    self.user_listener.give_boost(self.curr_prof_shnames[is_right], 1)

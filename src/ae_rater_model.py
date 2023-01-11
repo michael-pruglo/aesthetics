@@ -10,7 +10,6 @@ from prioritizers import PrioritizerType
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
-# delete n=2 case
 # make history replay work
 # add diagnostic info
 # make default_values work

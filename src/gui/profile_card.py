@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from ae_rater_types import ProfileInfo, Outcome, RatChange
+from ae_rater_types import ProfileInfo, Outcome
 from gui.meta_editor import MetaEditor
 from gui.media_frame import MediaFrame
 from gui.guicfg import *
@@ -9,14 +9,11 @@ import helpers as hlp
 
 
 class ProfileCard(tk.Frame):
-  def __init__(self, idx:int, mode:int, *args, **kwargs):
+  def __init__(self, idx:int, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.idx = idx
-    is_right = idx % 2
-    self.bg = RIGHT_COLORBG if is_right else LEFT_COLORBG
-    self.fg = RIGHT_COLORFG if is_right else LEFT_COLORFG
-    self.wincolor = RIGHT_COLORWIN if is_right else LEFT_COLORWIN
-    self.drawcolor = COLORDRAW
+    self.bg = RIGHT_COLORBG if idx%2 else LEFT_COLORBG
+    self.fg = RIGHT_COLORFG if idx%2 else LEFT_COLORFG
 
     self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)
@@ -25,9 +22,9 @@ class ProfileCard(tk.Frame):
 
     TW = 0.22
     BRDR = 0.015
-    PH = 0.95 if mode==2 else 0.8
-    self.tags.place  (relwidth=TW,        relheight=PH,       relx=is_right*(1-TW))
-    self.media.place (relwidth=1-TW-BRDR, relheight=PH,       relx=BRDR if is_right else TW)
+    PH = 0.8
+    self.tags.place  (relwidth=TW,        relheight=PH,       relx=1-TW)
+    self.media.place (relwidth=1-TW-BRDR, relheight=PH,       relx=BRDR)
     self.name.place  (relwidth=1,         relheight=(1-PH)/2, rely=PH)
     self.rating.place(relwidth=1,         relheight=(1-PH)/2, rely=(PH+1)/2)
 
@@ -43,13 +40,10 @@ class ProfileCard(tk.Frame):
     self._show_rating(profile)
     self.media.show_media(profile.fullname)
 
-  def set_style(self, outcome:int=None, color:str=None) -> None:
-    if color is None:
-      if outcome is None:
-        color = self.bg
-      else:
-        color = [self.bg, self.drawcolor, self.wincolor][outcome+1]
+  def reset_style(self) -> None:
+    self.set_style(self.bg)
 
+  def set_style(self, color:str) -> None:
     for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
