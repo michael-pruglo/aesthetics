@@ -3,6 +3,7 @@ import math
 import time
 from ae_rater_types import *
 
+import logging
 
 class RatingBackend(ABC):
   @abstractmethod
@@ -14,8 +15,9 @@ class RatingBackend(ABC):
     pass
 
   @abstractmethod
-  def process_match(self, participants:list[ProfileInfo],
-                    outcome:Outcome) -> list[RatChange]:
+  def process_match(self, match:MatchInfo) -> list[RatChange]:
+    # boosts apply
+    # process_match_impl
     pass
 
   def name(self) -> RatSystemName:
@@ -49,13 +51,14 @@ class ELO(RatingBackend):
   def rating_to_stars(self, rat):
     return max((rat.points-self.BASE_RATING)/self.STD, 0.0)
 
-  def process_match(self, participants, outcome):
-    changes = [0] * len(participants)
-    for curr, matches in outcome.as_dict().items():
+  def process_match(self, match):
+    logging.info("exec")
+    changes = [0] * len(match.profiles)
+    for curr, matches in match.outcome.as_dict().items():
       for opponent, sr in matches:
-        changes[curr] += self._process_pair(participants[curr], participants[opponent], sr)[0].delta_rating
+        changes[curr] += self._process_pair(match.profiles[curr], match.profiles[opponent], sr)[0].delta_rating
     ret = []
-    for i, prof in enumerate(participants):
+    for i, prof in enumerate(match.profiles):
       newrat = Rating(prof.ratings[self.name()].points + changes[i])
       ret.append(RatChange(newrat, changes[i], self.rating_to_stars(newrat)))
     return ret
@@ -99,22 +102,24 @@ class Glicko(RatingBackend):
     return max((rat.points-self.BASE_POINTS)/self.MAX_RD, 0.0)
 
   # http://glicko.net/glicko/glicko.pdf
-  def process_match(self, participants, outcome):
-    for i in outcome.as_dict().keys():
-      currat = participants[i].ratings[self.name()]
+  def process_match(self, match):
+    logging.info("exec")
+    for i in match.outcome.as_dict().keys():
+      currat = match.profiles[i].ratings[self.name()]
       assert self.MIN_RD <= currat.rd <= self.MAX_RD
-      currat.rd = self._update_rd(currat)
+      currat.rd = self._update_rd(match.timestamp, currat)
       assert self.MIN_RD <= currat.rd <= self.MAX_RD
 
     ret = []
-    for i, matches in sorted(outcome.as_dict().items()):
-      currat = participants[i].ratings[self.name()]
-      newrat = self._calc_new_rat(currat, [participants[m[0]].ratings[self.name()] for m in matches], [m[1] for m in matches])
+    for i, matches in sorted(match.outcome.as_dict().items()):
+      currat = match.profiles[i].ratings[self.name()]
+      newrat = self._calc_new_rat(currat, [match.profiles[m[0]].ratings[self.name()] for m in matches], [m[1] for m in matches])
       ret.append(RatChange(newrat, newrat.points-currat.points, self.rating_to_stars(newrat)))
     return ret
 
-  def _update_rd(self, rating:Rating) -> int:
-    days_since_last_match = (time.time()-rating.timestamp)/86400
+  def _update_rd(self, match_timestamp, rating:Rating) -> int:
+    days_since_last_match = (match_timestamp-rating.timestamp)/86400
+    assert days_since_last_match >= 0
     c = days_since_last_match
     new_rd = round(math.sqrt(rating.rd**2 + c**2))
     return min(new_rd, self.MAX_RD)

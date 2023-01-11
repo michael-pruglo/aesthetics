@@ -101,10 +101,15 @@ class MetadataManager:
       self.df.sort_values('stars', ascending=False, inplace=True)
       self._commit()
 
+    self.set_prioritizer(prioritizer_type)
+
+  def set_prioritizer(self, prioritizer_type) -> None:
+    logging.info("exec")
     self.prioritizer = make_prioritizer(prioritizer_type)
     self.df = self.df.apply(self.prioritizer.calc, axis=1)
 
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
+    logging.info("exec")
     if min_tag_freq:
       freq_tags = self._get_frequent_tags(min_tag_freq)
       logging.debug("frequency of tags (threshold %d):\n%s", min_tag_freq, freq_tags)
@@ -117,15 +122,19 @@ class MetadataManager:
     return self.df
 
   def get_tags_vocab(self) -> list[str]:
+    logging.info("exec")
     return get_vocab()
 
   def get_file_info(self, short_name:str) -> pd.Series:
+    logging.info("exec")
     return self.df.loc[short_name]
 
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
+    logging.info("exec")
     return self.df.sample(n, weights='priority')
 
   def get_search_results(self, query:str) -> pd.DataFrame:
+    logging.info("exec")
     query = query.strip()
     if query == "":
       return self.df
@@ -152,6 +161,7 @@ class MetadataManager:
     return self.df[self.df.apply(is_match, axis=1)]
 
   def update(self, fullname:str, upd_data:dict, matches_each:int=0) -> None:
+    logging.info("exec\n%s\n%s\nmatches_each=%d\n", fullname, upd_data, matches_each)
     short_name = short_fname(fullname)
     row = self.df.loc[short_name].copy()
 
@@ -190,6 +200,7 @@ class MetadataManager:
       self.matches_since_last_save = 0
 
   def on_exit(self):
+    logging.info("exec")
     self._commit()
 
   def _get_frequent_tags(self, min_tag_freq):
@@ -221,3 +232,6 @@ class HistoryManager:
   def save_match(self, timestamp:float, names:list[str], outcome:str) -> None:
     self.matches_df.loc[len(self.matches_df)] = [timestamp, names, outcome]
     self.matches_df.to_csv(self.matches_fname, index=False)
+
+  def get_match_history(self):
+    return self.matches_df

@@ -69,11 +69,7 @@ class RaterGui:
     else:
       self._enable_input(True, n)
 
-  def conclude_match(self, opinions:RatingOpinions) -> None:
-    for system_name,changes in opinions.items():
-      for card,change in zip(self.cards, changes):
-        card.show_results(system_name, change)
-
+  def conclude_match(self) -> None:
     job_id = self.root.after(CHANGE_MATCH_DELAY, self.user_listener.start_next_match)
     self.scheduled_jobs.append(job_id)
 

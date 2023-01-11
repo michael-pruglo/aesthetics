@@ -59,6 +59,9 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 
 ### short-term
 
+- make history replays
+    - after the replays are done, compare different ratsystems on the task of predicting outcomes - NOTE that we have to start from the same initial point to compare
+- deprecate and delete the special case N=2
 - learn how to convert webp and other unsupported formats right with yt-dlp
 - group similar items, finding balance between two crucial points:
   a: avoid oversaturation of close things

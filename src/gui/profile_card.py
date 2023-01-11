@@ -53,12 +53,6 @@ class ProfileCard(tk.Frame):
     for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
-  def show_results(self, system_name:str, res:RatChange) -> None:
-    self.rating.configure(text='; '.join([
-      self.rating.cget('text'),
-      f"{system_name}: {res.new_rating}({res.delta_rating:+})",
-    ]))
-
   def pause(self):
     self.media.pause()
 

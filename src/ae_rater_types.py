@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import string
 import time
 from enum import Enum, auto
@@ -231,30 +230,28 @@ class Outcome:
     return hash(self.tiers)
 
 
-class UserListener(ABC):
-  @abstractmethod
-  def consume_result(self, outcome:Outcome) -> None:
-    pass
+@dataclass
+class MatchInfo:
+  profiles: list[ProfileInfo]
+  outcome: Outcome
+  timestamp: float = field(default_factory=time.time)
 
-  @abstractmethod
-  def give_boost(self, short_name:str, mult:int=1) -> None:
-    pass
 
-  @abstractmethod
+class UserListener:
   def start_next_match(self) -> None:
-    pass
+    raise NotImplementedError()
 
-  @abstractmethod
+  def consume_result(self, outcome:Outcome) -> None:
+    raise NotImplementedError()
+
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
-    pass
+    raise NotImplementedError()
 
-  @abstractmethod
   def suggest_tags(self, fullname:str) -> list:
-    pass
+    raise NotImplementedError()
 
-  @abstractmethod
   def search_for(self, query:str) -> None:
-    pass
+    raise NotImplementedError()
 
 
 class AppMode(Enum):
