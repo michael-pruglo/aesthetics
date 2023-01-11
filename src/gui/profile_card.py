@@ -9,11 +9,11 @@ import helpers as hlp
 
 
 class ProfileCard(tk.Frame):
-  def __init__(self, idx:int, *args, **kwargs):
+  def __init__(self, idx:int, checkers_color:bool, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.idx = idx
-    self.bg = RIGHT_COLORBG if idx%2 else LEFT_COLORBG
-    self.fg = RIGHT_COLORFG if idx%2 else LEFT_COLORFG
+    self.bg = RIGHT_COLORBG if checkers_color else LEFT_COLORBG
+    self.fg = RIGHT_COLORFG if checkers_color else LEFT_COLORFG
 
     self.tags   = ttk.Label (self, anchor="center", foreground=self.fg, text="tags")
     self.media  = MediaFrame(self)

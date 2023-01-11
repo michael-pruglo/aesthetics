@@ -10,9 +10,9 @@ from prioritizers import PrioritizerType
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
+# make default_values work
 # make history replay work
 # add diagnostic info
-# make default_values work
 
 
 class RatingCompetition:

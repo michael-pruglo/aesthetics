@@ -97,9 +97,11 @@ class RaterGui:
       INP_H = 0.055
       INP_LBL_H = INP_H*0.35
       for i in range(n):
-        card = ProfileCard(i, self.root)
+        col, row = i%COLS, i//COLS
+        checkers_color = (col+row)%2
+        card = ProfileCard(i, checkers_color, self.root)
         card.set_meta_editor(self.tags_vocab, self.user_listener)
-        card.place(relx=i%COLS*SINGLE_W, rely=i//COLS*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
+        card.place(relx=col*SINGLE_W, rely=row*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
