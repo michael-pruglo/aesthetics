@@ -14,10 +14,32 @@ class RatingBackend(ABC):
   def rating_to_stars(self, rat:Rating) -> float:
     pass
 
-  @abstractmethod
   def process_match(self, match:MatchInfo) -> list[RatChange]:
-    # boosts apply
-    # process_match_impl
+    print("\n ---- ")
+    print("initial: ", [p.ratings[self.name()] for p in match.profiles])
+
+    boosts = []
+    for i,p in enumerate(match.profiles):
+      mult = match.outcome.boosts[i] if i in match.outcome.boosts else 0
+      boost = self.get_boost(p, mult).delta_rating
+      boosts.append(boost)
+      match.profiles[i].ratings[self.name()].points += boost
+
+    print("after:   ", [p.ratings[self.name()] for p in match.profiles])
+
+    changes = self._process_match_strategy(match)
+    ret = [RatChange(ch.new_rating, ch.delta_rating+boost, ch.new_stars)
+            for ch,boost in zip(changes, boosts)]
+
+    print("boosts:  ", boosts)
+    print("changes: ", changes)
+    print("ret:     ", ret)
+    print(" ---- \n")
+
+    return ret
+
+  @abstractmethod
+  def _process_match_strategy(self, match:MatchInfo) -> list[RatChange]:
     pass
 
   def name(self) -> RatSystemName:
@@ -51,7 +73,7 @@ class ELO(RatingBackend):
   def rating_to_stars(self, rat):
     return max((rat.points-self.BASE_RATING)/self.STD, 0.0)
 
-  def process_match(self, match):
+  def _process_match_strategy(self, match):
     logging.info("exec")
     changes = [0] * len(match.profiles)
     for curr, matches in match.outcome.as_dict().items():
@@ -102,7 +124,7 @@ class Glicko(RatingBackend):
     return max((rat.points-self.BASE_POINTS)/self.MAX_RD, 0.0)
 
   # http://glicko.net/glicko/glicko.pdf
-  def process_match(self, match):
+  def _process_match_strategy(self, match):
     logging.info("exec")
     for i in match.outcome.as_dict().keys():
       currat = match.profiles[i].ratings[self.name()]

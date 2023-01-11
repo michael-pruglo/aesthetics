@@ -10,7 +10,6 @@ from prioritizers import PrioritizerType
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
-# make boosts work
 # delete n=2 case
 # make history replay work
 # add diagnostic info
@@ -26,7 +25,7 @@ class RatingCompetition:
 
   def consume_match(self, match:MatchInfo) -> tuple[RatingOpinions, str]:
     logging.info("exec")
-    logging.info("consume_match outcome = %s", match.outcome.tiers)
+    logging.info("consume_match outcome = '%s'  boosts = %s", match.outcome.tiers, match.outcome.boosts)
     opinions = {s.name(): s.process_match(match)
                 for s in self.rat_systems}
     logging.info("opinions:\n%s", self._pretty_opinions(match.profiles, opinions, match.outcome))

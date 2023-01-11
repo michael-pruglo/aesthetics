@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 import tkinter.font
 import numpy as np
+import logging
 
 from ae_rater_types import *
 import helpers as hlp
@@ -189,12 +190,10 @@ class RaterGui:
     if self.mode == AppMode.SEARCH:
       self.user_listener.search_for(s)
     elif self.mode == AppMode.MATCH:
+      logging.info("usr input '%s'", s)
       if Outcome.is_valid(s, n):
-        outcome = Outcome(s)
-        for idx, mult in outcome.get_boosts().items():
-          self.user_listener.give_boost(self.curr_prof_shnames[idx], mult)
         self._enable_input(False)
-        self.user_listener.consume_result(outcome)
+        self.user_listener.consume_result(Outcome(s))
       else:
         self.input_outcome.config(background=RED_ERR)
 
