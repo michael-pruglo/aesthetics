@@ -45,14 +45,6 @@ class RatingBackend(ABC):
   def name(self) -> RatSystemName:
     return type(self).__name__
 
-  def get_default_values(self, stars:float) -> dict:
-    def_rat = self.stars_to_rating(stars)
-    return {
-      self.name()+"_pts": def_rat.points,
-      self.name()+"_rd": def_rat.rd,
-      self.name()+"_time": def_rat.timestamp,
-    }
-
   def get_boost(self, profile:ProfileInfo, mult:int=1) -> RatChange:
     delta = 10 * mult
     rating = profile.ratings[self.name()]

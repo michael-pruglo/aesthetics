@@ -2,15 +2,12 @@ import logging
 import os
 import statistics
 import numpy as np
-from typing import Callable
 
 from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
-from prioritizers import PrioritizerType
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
-# make default_values work
 # make history replay work
 # add diagnostic info
 
@@ -19,8 +16,8 @@ class RatingCompetition:
   def __init__(self):
     self.rat_systems:list[RatingBackend] = [Glicko(), ELO()]
 
-  def get_sysnames(self) -> list[RatSystemName]:
-    return [s.name() for s in self.rat_systems]
+  def get_rat_systems(self) -> list[RatingBackend]:
+    return self.rat_systems
 
   def consume_match(self, match:MatchInfo) -> tuple[RatingOpinions, str]:
     logging.info("exec")
@@ -54,44 +51,6 @@ class RatingCompetition:
     return f"average_changes: {avg_changes}\nrd_improvements: {rd_improvements}\n"
 
 
-
-
-
-class RatingCompetitionOLD:
-  def __init__(self, img_dir:str, refresh:bool):
-    self.curr_match:list[ProfileInfo] = []
-    self.rat_systems:list[RatingBackend] = [Glicko(), ELO()]
-    def default_values_getter(stars:float)->dict:
-      default_values = {}
-      for s in self.rat_systems:
-        default_values.update(s.get_default_values(stars))
-      return default_values
-    self.db = DBAccess(img_dir, refresh, default_values_getter,
-                       [s.name() for s in self.rat_systems])
-
-
-
-  def give_boost(self, short_name:str, mult:int) -> None:
-    profile = self.db.retreive_profile(short_name)
-    logging.info("boost %+dx %s", mult, profile)
-
-    self.db.apply_opinions(
-      [profile],
-      {s.name(): [s.get_boost(profile, mult)] for s in self.rat_systems},
-    )
-    self._refresh_curr_match()
-
-  def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
-    shname = short_fname(fullname)
-    logging.info("model.update_meta for %s:\n %s", shname, meta)
-    db_row = self.db.retreive_profile(shname)
-    if int(db_row.stars) == meta.stars:
-      meta.stars = None
-    self.db.update_meta(fullname, meta)
-    self._refresh_curr_match()
-
-
-
 class Analyzer:
   def consume_diagnostic(self, diagnostic_info):
     logging.info("exec %s", diagnostic_info)
@@ -99,17 +58,21 @@ class Analyzer:
 
 
 class DBAccess:
-  def __init__(self, media_dir, refresh, prioritizer_type=PrioritizerType.DEFAULT) -> None:
+  def __init__(self, media_dir, refresh, prioritizer_type, rat_systems:list[RatingBackend]) -> None:
     self.media_dir = media_dir
-    self.meta_mgr = MetadataManager(media_dir, refresh, prioritizer_type)
+    self.rat_systems = rat_systems
+    def default_values_getter(stars:float)->dict:
+      default_values = {}
+      for s in rat_systems:
+        def_rat = s.stars_to_rating(stars)
+        default_values.update({
+          s.name()+"_pts": def_rat.points,
+          s.name()+"_rd": def_rat.rd,
+          s.name()+"_time": def_rat.timestamp,
+        })
+      return default_values
+    self.meta_mgr = MetadataManager(media_dir, refresh, prioritizer_type, default_values_getter)
     self.history_mgr = HistoryManager(media_dir)
-    self.sysnames = []
-
-  def set_sysnames(self, sysnames:list[RatSystemName]) -> None:
-    self.sysnames = sysnames
-
-  def set_prioritizer(self, prioritizer_type) -> None:
-    self.meta_mgr.set_prioritizer(prioritizer_type)
 
   def save_match(self, match:MatchInfo) -> None:
     logging.info("exec")
@@ -196,11 +159,11 @@ class DBAccess:
       'priority': np.float64,
       'awards': str,
     }
-    for sname in self.sysnames:
+    for s in self.rat_systems:
       expected_dtypes |= {
-        sname+'_pts': np.int64,
-        sname+'_rd': np.int64,
-        sname+'_time': np.float64,
+        s.name()+'_pts': np.int64,
+        s.name()+'_rd': np.int64,
+        s.name()+'_time': np.float64,
       }
     assert all(col in info.index for col in expected_dtypes.keys()), str(info)
     assert 0 <= info['stars']
@@ -211,18 +174,8 @@ class DBAccess:
       tags=info['tags'],
       fullname=os.path.join(self.media_dir, short_name),
       stars=info['stars'],
-      ratings={sname:Rating(info[sname+'_pts'], info[sname+'_rd'], info[sname+'_time'])
-               for sname in self.sysnames},
+      ratings={s.name():Rating(info[s.name()+'_pts'], info[s.name()+'_rd'], info[s.name()+'_time'])
+               for s in self.rat_systems},
       nmatches=int(info['nmatches']),
       awards=info['awards'],
     )
-
-
-class DBAccessOLD:
-  def __init__(self, img_dir:str, refresh:bool, prioritizer_type,
-               default_values_getter:Callable[[int],dict], sysnames:list[str]) -> None:
-    self.img_dir = img_dir
-    self.meta_mgr = MetadataManager(img_dir, refresh, prioritizer_type, default_values_getter)
-    self.def_gettr = default_values_getter
-    self.history_mgr = HistoryManager(img_dir)
-    self.sysnames = sysnames

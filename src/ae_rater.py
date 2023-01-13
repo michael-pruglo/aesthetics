@@ -27,10 +27,9 @@ def setup_logger(log_filename):
 
 
 class Controller:
-  def __init__(self, media_dir:str, refresh:bool) -> None:
+  def __init__(self, media_dir:str, refresh:bool, prioritizer_type=PrioritizerType.DEFAULT) -> None:
     self.competition = RatingCompetition()
-    self.db = DBAccess(media_dir, refresh)
-    self.db.set_sysnames(self.competition.get_sysnames())
+    self.db = DBAccess(media_dir, refresh, prioritizer_type, self.competition.get_rat_systems())
     self.analyzer = Analyzer()
 
   def process_match(self, match:MatchInfo):
@@ -50,9 +49,8 @@ class FromHistoryController(Controller):
 
 class InteractiveController(Controller, UserListener):
   def __init__(self, media_dir:str, refresh:bool, n_participants:int, prioritizer_type, mode:AppMode) -> None:
-    super().__init__(media_dir, refresh)
+    super().__init__(media_dir, refresh, prioritizer_type)
     self.n = n_participants
-    self.db.set_prioritizer(prioritizer_type)
     self.mode = mode
     self.gui = RaterGui(self, self.db.get_tags_vocab(), mode)
     self.participants = []
