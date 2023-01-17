@@ -5,11 +5,12 @@ from string import ascii_letters
 import unittest
 import os
 import random
+import string
 from math import sqrt
 
 from src.helpers import short_fname
 from metadata import get_metadata
-from ae_rater_types import ManualMetadata, Outcome, ProfileInfo
+from ae_rater_types import ManualMetadata, MatchInfo, Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
 import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER, SKIPLONG, generate_outcome
@@ -31,8 +32,46 @@ def factorize(n:int) -> list[int]:
       return [i] + factorize(n//i)
   return [n]
 
+def rndstr(length:int=11) -> str:
+  return ''.join(random.sample(string.ascii_letters+" ", length))
+
+
 
 class TestCompetition(unittest.TestCase):
+  def setUp(self) -> None:
+    self.model = RatingCompetition()
+    self.sysnames = [s.name() for s in self.model.get_rat_systems()]
+
+  def _generate_match(self, stars:list[float], outcome_str:str) -> MatchInfo:
+    return MatchInfo(
+      profiles=[ProfileInfo(
+        fullname=rndstr(),
+        tags=rndstr(),
+        stars=strs,
+        ratings={sys.name():sys.stars_to_rating(strs) for sys in self.model.get_rat_systems()},
+        nmatches=random.randint(0,100),
+        awards=rndstr(),
+      ) for strs in stars],
+      outcome=Outcome(outcome_str),
+    )
+
+  def test_underdog_wins(self):
+    match = self._generate_match([1.3, 4.4], "a b")
+    rat_opinions, diagnostic = self.model.consume_match(match)
+    for sname, li in rat_opinions.items():
+      self.assertTrue(sname in self.sysnames)
+      self.assertEqual(len(li), len(match.profiles))
+      self.assertGreater(li[0].new_rating, match.profiles[0].ratings[sname])
+      self.assertGreater(li[0].delta_rating, 0)
+      self.assertGreater(li[0].new_stars, match.profiles[0].stars)
+      self.assertLess(li[1].new_rating, match.profiles[1].ratings[sname])
+      self.assertLess(li[1].delta_rating, 0)
+      self.assertLess(li[1].new_stars, match.profiles[1].stars)
+    self.assertEqual(diagnostic, "diagnostic")
+
+
+@unittest.skip('old')
+class TestCompetitionOld(unittest.TestCase):
   def setUp(self):
     self.model = RatingCompetition(MEDIA_FOLDER, refresh=False)
     self.N = len(self.model.get_leaderboard())

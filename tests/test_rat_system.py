@@ -5,7 +5,7 @@ import copy
 import numpy as np
 
 from rating_backends import RatingBackend, ELO, Glicko
-from ae_rater_types import ProfileInfo, Outcome, RatChange, Rating
+from ae_rater_types import MatchInfo, ProfileInfo, Outcome, RatChange, Rating
 
 def make_testcase(system:RatingBackend):
   sname = system.name()
@@ -63,22 +63,22 @@ def make_testcase(system:RatingBackend):
 
     def test_matches_basic(self):
       a = b = construct_profile()
-      changes = system.process_match([a,b], Outcome("ab"))
+      changes = system.process_match(MatchInfo([a,b], Outcome("ab")))
       self._assertRatChange(changes[0], a, self.assertEqual)
       self._assertRatChange(changes[1], b, self.assertEqual)
 
-      changes = system.process_match([a,b], Outcome("a b"))
+      changes = system.process_match(MatchInfo([a,b], Outcome("a b")))
       self._assertRatChange(changes[0], a, self.assertGreater)
       self._assertRatChange(changes[1], b, self.assertLess)
 
-      changes = system.process_match([a,b], Outcome("b a"))
+      changes = system.process_match(MatchInfo([a,b], Outcome("b a")))
       self._assertRatChange(changes[0], a, self.assertLess)
       self._assertRatChange(changes[1], b, self.assertGreater)
 
     def test_matches_many(self):
       participants = sorted([construct_profile() for _ in range(10)],
                             key=lambda p:p.stars, reverse=True)
-      changes = system.process_match(participants, Outcome("f gc bdi h aj e"))
+      changes = system.process_match(MatchInfo(participants, Outcome("f gc bdi h aj e")))
       fidx = Outcome.let_to_idx('f')
       eidx = Outcome.let_to_idx('e')
       self._assertRatChange(changes[fidx], participants[fidx], self.assertGreater)
@@ -91,7 +91,7 @@ def make_testcase(system:RatingBackend):
         gaps, a_deltas, b_deltas = [], [], []
         for gap in range(5,2000,50):
           b.ratings[sname].points = a.ratings[sname].points + gap
-          ch = system.process_match([a, b], Outcome(outcome))
+          ch = system.process_match(MatchInfo([a, b], Outcome(outcome)))
           gaps.append(b.ratings[sname].points)
           a_deltas.append(ch[0].delta_rating)
           b_deltas.append(ch[1].delta_rating)
@@ -108,7 +108,7 @@ def make_testcase(system:RatingBackend):
       bully0 = construct_profile(system.stars_to_rating(bully0_stars), bully0_stars, matches)
       avenger0 = construct_profile(system.stars_to_rating(avenger0_stars), avenger0_stars, matches)
 
-      ch_bully1, ch_avenger1 = system.process_match([bully0, avenger0], Outcome("a b"))
+      ch_bully1, ch_avenger1 = system.process_match(MatchInfo([bully0, avenger0], Outcome("a b")))
       bully1 = construct_profile(ch_bully1.new_rating, ch_bully1.new_stars, matches)
       avenger1 = construct_profile(ch_avenger1.new_rating, ch_avenger1.new_stars, matches)
       self.assertGreaterEqual(ch_bully1.new_stars, bully0.stars)
@@ -120,7 +120,7 @@ def make_testcase(system:RatingBackend):
       self.assertLessEqual(ch_avenger1.new_rating.rd, avenger0.ratings[sname].rd)
       self.assertGreater(ch_avenger1.new_rating.timestamp, avenger0.ratings[sname].timestamp)
 
-      ch_bully2, ch_avenger2 = system.process_match([bully1, avenger1], Outcome("b a"))
+      ch_bully2, ch_avenger2 = system.process_match(MatchInfo([bully1, avenger1], Outcome("b a")))
       self.assertLess(ch_bully2.new_stars, bully1.stars)
       self.assertLess(ch_bully2.delta_rating, 0)
       self.assertLess(ch_bully2.new_rating, bully0.ratings[sname])
@@ -132,7 +132,7 @@ def make_testcase(system:RatingBackend):
 
     def test_scenario_draw_between_equals(self):
       p = construct_profile()
-      ch1, ch2 = system.process_match([p, p], Outcome("ab"))
+      ch1, ch2 = system.process_match(MatchInfo([p, p], Outcome("ab")))
       self.assertEqual(ch1, ch2)
       self.assertEqual(ch1.new_stars, p.stars)
       self.assertEqual(ch1.new_rating.points, p.ratings[sname].points)
@@ -143,7 +143,7 @@ def make_testcase(system:RatingBackend):
       weak = construct_profile(system.stars_to_rating(0), 0)
       strong = construct_profile(system.stars_to_rating(5), 5)
       weak.ratings[sname].rd = strong.ratings[sname].rd = 90
-      ch_weak, ch_strong = system.process_match([weak, strong], Outcome("ab"))
+      ch_weak, ch_strong = system.process_match(MatchInfo([weak, strong], Outcome("ab")))
       self.assertLess(ch_strong.delta_rating, 0)
       self.assertLessEqual(ch_strong.new_stars, strong.stars)
       self.assertLess(ch_strong.new_rating.points, strong.ratings[sname].points)
@@ -160,7 +160,7 @@ def make_testcase(system:RatingBackend):
       weak = construct_profile(system.stars_to_rating(0), 0)
       strong = construct_profile(system.stars_to_rating(5), 5)
       weak.ratings[sname].rd = strong.ratings[sname].rd = 90
-      ch_weak, ch_strong = system.process_match([weak, strong], Outcome("b a"))
+      ch_weak, ch_strong = system.process_match(MatchInfo([weak, strong], Outcome("b a")))
       self.assertEqual(ch_strong.delta_rating, 0)
       self.assertEqual(ch_strong.new_stars, strong.stars)
       self.assertEqual(ch_strong.new_rating.points, strong.ratings[sname].points)
@@ -173,6 +173,9 @@ def make_testcase(system:RatingBackend):
       self.assertLessEqual(ch_weak.new_rating.rd, weak.ratings[sname].rd)
       self.assertGreater(ch_weak.new_rating.timestamp, weak.ratings[sname].timestamp)
 
+    @unittest.skip('WIP')
+    def test_boosted_outcomes(self):
+      raise NotImplementedError()
 
   return TestRatingSystemImpl
 

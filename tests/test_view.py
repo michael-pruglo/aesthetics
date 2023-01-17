@@ -2,7 +2,7 @@ import os
 import random
 import unittest
 
-from ae_rater_types import ProfileInfo, RatChange, Rating, UserListener
+from ae_rater_types import ProfileInfo, Rating, UserListener
 from ae_rater_view import RaterGui
 from tests.helpers import MEDIA_FOLDER, SKIPLONG, get_initial_mediafiles
 
@@ -26,19 +26,9 @@ def generate_profiles(n:int) -> list[ProfileInfo]:
     if not shname.endswith((".mp4",".gif"))  # tkVideo needs mainloop with events
   ]
 
-def generate_ratchange(n:int) -> list[RatChange]:
-  return [RatChange(
-            new_rating=Rating(random.randint(1000,3000),random.randint(30,300)),
-            delta_rating=random.randint(-300,300),
-            new_stars=random.randint(0,500)/100,
-          )
-          for _ in range(n)]
-
-
 class MockListener(UserListener):
-  def consume_result(self, *args, **kwargs): pass
-  def give_boost(self, *args, **kwargs): pass
   def start_next_match(self): pass
+  def consume_result(self, *args, **kwargs): pass
   def update_meta(self, *args, **kwargs): pass
   def suggest_tags(self, *args, **kwargs): pass
   def search_for(self, *args, **kwargs): return []
@@ -65,8 +55,7 @@ class TestView(unittest.TestCase):
       gui.display_match(participants)
       gui.display_leaderboard(ldbrd, participants)
       gui.root.update()
-      opinions = {sname:generate_ratchange(n) for sname in ['ELO','Glicko']}
-      gui.conclude_match(opinions)
+      gui.conclude_match()
       gui.root.update()
       for id in gui.scheduled_jobs:
         gui.root.after_cancel(id)

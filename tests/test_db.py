@@ -16,6 +16,10 @@ def defgettr(stars) -> dict:
   return {"elo":1200+stars, "glicko":1500+stars, "tst":stars*10}
 
 
+class TestDBAccess(unittest.TestCase):
+  pass
+
+
 class TestMetadataManager(unittest.TestCase):
   def setUp(self) -> None:
     assert os.path.exists(MEDIA_FOLDER)
