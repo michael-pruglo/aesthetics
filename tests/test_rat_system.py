@@ -78,7 +78,8 @@ def make_testcase(system:RatingBackend):
     def test_matches_many(self):
       participants = sorted([construct_profile() for _ in range(10)],
                             key=lambda p:p.stars, reverse=True)
-      changes = system.process_match(MatchInfo(participants, Outcome("f gc bdi h aj e")))
+      changes = system.process_match(MatchInfo(participants, Outcome("f g---c+ bd++i h- aj e")))
+      self.assertEqual(len(changes), 10)
       fidx = Outcome.let_to_idx('f')
       eidx = Outcome.let_to_idx('e')
       self._assertRatChange(changes[fidx], participants[fidx], self.assertGreater)
@@ -173,9 +174,22 @@ def make_testcase(system:RatingBackend):
       self.assertLessEqual(ch_weak.new_rating.rd, weak.ratings[sname].rd)
       self.assertGreater(ch_weak.new_rating.timestamp, weak.ratings[sname].timestamp)
 
-    @unittest.skip('WIP')
     def test_boosted_outcomes(self):
-      raise NotImplementedError()
+      participants = [construct_profile() for _ in range(8)]
+      participants_backup = copy.deepcopy(participants)
+      boosted_chs = system.process_match(MatchInfo(participants, Outcome("a+ b++c d++--- e-f++g- h+++")))
+      self.assertEqual(participants, participants_backup)
+      boost_mults = [1, 2, 0, -1, -1, 2, -1, 3]
+      for i in range(len(participants)):
+        boost = system.get_boost(participants[i], boost_mults[i])
+        participants[i].ratings[sname] = boost.new_rating
+        participants[i].stars = boost.new_stars
+      regular_chs = system.process_match(MatchInfo(participants, Outcome("a bc d efg h")))
+      for reg_ch, bst_ch in zip(regular_chs, boosted_chs):
+        self.assertEqual(reg_ch.new_rating, bst_ch.new_rating)
+        self.assertEqual(reg_ch.new_stars, bst_ch.new_stars)
+
+
 
   return TestRatingSystemImpl
 

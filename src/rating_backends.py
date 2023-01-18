@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import math
+import copy
 import time
 from ae_rater_types import *
 
@@ -17,6 +18,7 @@ class RatingBackend(ABC):
   def process_match(self, match:MatchInfo) -> list[RatChange]:
     # print("\n ---- ")
     # print("initial: ", [p.ratings[self.name()] for p in match.profiles])
+    match = copy.deepcopy(match)
 
     boosts = []
     for i,p in enumerate(match.profiles):

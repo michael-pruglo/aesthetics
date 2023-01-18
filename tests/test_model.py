@@ -55,19 +55,32 @@ class TestCompetition(unittest.TestCase):
       outcome=Outcome(outcome_str),
     )
 
-  def test_underdog_wins(self):
-    match = self._generate_match([1.3, 4.4], "a b")
+  def _test_match(self, participants_stars:list[float], outcome_str:str):
+    match = self._generate_match(participants_stars, outcome_str)
     rat_opinions, diagnostic = self.model.consume_match(match)
     for sname, li in rat_opinions.items():
       self.assertTrue(sname in self.sysnames)
       self.assertEqual(len(li), len(match.profiles))
-      self.assertGreater(li[0].new_rating, match.profiles[0].ratings[sname])
-      self.assertGreater(li[0].delta_rating, 0)
-      self.assertGreater(li[0].new_stars, match.profiles[0].stars)
-      self.assertLess(li[1].new_rating, match.profiles[1].ratings[sname])
-      self.assertLess(li[1].delta_rating, 0)
-      self.assertLess(li[1].new_stars, match.profiles[1].stars)
+      win_idx = Outcome.let_to_idx(outcome_str[0])
+      los_idx = Outcome.let_to_idx(outcome_str[-1])
+      self.assertGreater(li[win_idx].new_rating, match.profiles[win_idx].ratings[sname])
+      self.assertGreater(li[win_idx].delta_rating, 0)
+      self.assertGreater(li[win_idx].new_stars, match.profiles[win_idx].stars)
+      self.assertLess(li[los_idx].new_rating, match.profiles[los_idx].ratings[sname])
+      self.assertLess(li[los_idx].delta_rating, 0)
+      self.assertLess(li[los_idx].new_stars, match.profiles[los_idx].stars)
     self.assertEqual(diagnostic, "diagnostic")
+
+  def test_underdog_wins(self):
+    self._test_match([1.3, 4.4], "a b")
+    self._test_match([3.9, 0.1], "b a")
+
+  def test_mixed(self):
+    self._test_match([3.4, 2.4, 1.7, 4.0, 1.3, 2.4, 0.8], "c f--a bd+e g")
+    self._test_match([1.1, 2.9, 0.1, 5.0, 4.9, 3.3], "a b c+ d e+ f")
+    self._test_match([2.7, 5.1, 0.9, 2.1, 2.2, 1.4, 1.1], "g++ ab d e f c")
+    self._test_match([3.4, 3.3, 1.1, 2.0, 4.1], "d ae- c b")
+    self._test_match([1.1, 4.1, 2.2], "c+ b++ a")
 
 
 @unittest.skip('old')
