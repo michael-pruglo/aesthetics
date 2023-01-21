@@ -8,23 +8,12 @@ import random
 import string
 from math import sqrt
 
-from src.helpers import short_fname
 from metadata import get_metadata
 from ae_rater_types import ManualMetadata, MatchInfo, Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
 import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER, SKIPLONG, generate_outcome
 
-
-def is_sorted(l:list[ProfileInfo]) -> bool:
-  for i, curr_prof in enumerate(l[:-1]):
-    next_prof = l[i+1]
-    if curr_prof.stars < next_prof.stars:
-      return False
-    if all(curr_prof.ratings[s].points < next_prof.ratings[s].points
-           for s in curr_prof.ratings.keys()):
-      return False
-  return True
 
 def factorize(n:int) -> list[int]:
   for i in range(2, int(sqrt(n)+1)):
@@ -89,70 +78,9 @@ class TestCompetitionOld(unittest.TestCase):
     self.model = RatingCompetition(MEDIA_FOLDER, refresh=False)
     self.N = len(self.model.get_leaderboard())
 
-  def tearDown(self):
-    hlp.disk_cleanup()
-
   def _get_leaderboard_line(self, fullname:str) -> ProfileInfo:
     ldbrd = self.model.get_leaderboard()
     return next(p for p in ldbrd if p.fullname==fullname)
-
-  def test_match_generation(self):
-    def all_unique(li):
-      seen = list()
-      return not any(i in seen or seen.append(i) for i in li)
-
-    for _ in range(15):
-      participants = self.model.generate_match()
-      self.assertTrue(all_unique(participants))
-      self.assertListEqual(self.model.get_curr_match(), participants)
-
-  def test_get_leaderboard(self):
-    ldbrd = self.model.get_leaderboard()
-    mediafiles = hlp.get_initial_mediafiles()
-    self.assertTrue(is_sorted(ldbrd))
-    self.assertSetEqual({short_fname(p.fullname) for p in ldbrd}, set(mediafiles))
-
-  def test_boost_generic(self):
-    p = self.model.generate_match()[0]
-    profile_before = self._get_leaderboard_line(p.fullname)
-    self.assertEqual(p, profile_before)
-    hlp.backup_files([p.fullname])
-    mult = 0
-    while mult ==0: mult = random.randint(-7, 7)
-    self.model.give_boost(short_fname(p.fullname), mult)
-    profile_after = self._get_leaderboard_line(p.fullname)
-    self.assertEqual(profile_after.tags, profile_after.tags)
-    self.assertEqual(profile_before.nmatches, profile_after.nmatches)
-    if mult > 0:
-      self.assertLessEqual(profile_before.stars, profile_after.stars)
-      ratop = operator.lt
-    else:
-      self.assertGreaterEqual(profile_before.stars, profile_after.stars)
-      ratop = operator.gt
-
-    self.assertTrue(all(ratop(profile_before.ratings[s].points,
-                              profile_after.ratings[s].points)
-                        for s in profile_before.ratings.keys()))
-
-  def test_boost_starchange(self):
-    hlp.backup_files([os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()])
-    for times in range(3):
-      prof = self.model.generate_match()[0]
-      stars_before = prof.stars
-      for iter in range(25):
-        self.model.give_boost(short_fname(prof.fullname), 1)
-        curr_stars_opinions = [s.get_boost(prof, 1).new_stars for s in self.model.rat_systems]
-        consensus_stars = statistics.mean(curr_stars_opinions)
-        self.assertGreater(consensus_stars, stars_before)
-        profile_after = self._get_leaderboard_line(prof.fullname)
-        dbg_info = f"curr profile: {prof},  profile_aftter: {profile_after}, opinions:{curr_stars_opinions}"
-        self.assertEqual(profile_after.stars, consensus_stars, dbg_info)
-        if consensus_stars<=5 and int(consensus_stars)!=int(stars_before):
-          self.assertEqual(int(consensus_stars), int(stars_before)+1, dbg_info)
-          disk_meta = get_metadata(prof.fullname)
-          self.assertEqual(disk_meta.stars, int(consensus_stars), dbg_info)
-          break
-        prof = profile_after
 
   def test_matches_affect_disk(self):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]

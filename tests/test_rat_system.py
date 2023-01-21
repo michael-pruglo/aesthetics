@@ -190,7 +190,6 @@ def make_testcase(system:RatingBackend):
         self.assertEqual(reg_ch.new_stars, bst_ch.new_stars)
 
 
-
   return TestRatingSystemImpl
 
 

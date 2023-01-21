@@ -3,13 +3,27 @@ import os
 import random
 import pandas as pd
 from pandas import testing as tm
-from ae_rater_types import ManualMetadata
+from ae_rater_model import DBAccess
+from ae_rater_types import ManualMetadata, ProfileInfo
+from prioritizers import PrioritizerType
+from rating_backends import ELO, Glicko
 
 from src.metadata import get_metadata
 from src.db_managers import MetadataManager
+from src.helpers import short_fname
 import tests.helpers as hlp
 from tests.helpers import BACKUP_INITIAL_FILE, MEDIA_FOLDER, METAFILE
 
+
+def is_sorted(l:list[ProfileInfo]) -> bool:
+  for i, curr_prof in enumerate(l[:-1]):
+    next_prof = l[i+1]
+    if curr_prof.stars < next_prof.stars:
+      return False
+    if all(curr_prof.ratings[s].points < next_prof.ratings[s].points
+           for s in curr_prof.ratings.keys()):
+      return False
+  return True
 
 def defgettr(stars) -> dict:
   stars = int(stars)
@@ -17,7 +31,34 @@ def defgettr(stars) -> dict:
 
 
 class TestDBAccess(unittest.TestCase):
-  pass
+  def setUp(self):
+    self.dba = DBAccess(MEDIA_FOLDER, refresh=False, prioritizer_type=PrioritizerType.DEFAULT, rat_systems=[Glicko(),ELO()])
+
+  def tearDown(self):
+    hlp.disk_cleanup()
+
+  def test_match_generation(self):
+    def all_unique(li):
+      seen = list()
+      return not any(i in seen or seen.append(i) for i in li)
+    for i in range(2,25):
+      participants = self.dba.get_next_match(i)
+      self.assertTrue(all_unique(participants))
+
+  def test_get_leaderboard(self):
+    ldbrd = self.dba.get_leaderboard()
+    mediafiles = hlp.get_initial_mediafiles()
+    self.assertTrue(is_sorted(ldbrd))
+    self.assertSetEqual({short_fname(p.fullname) for p in ldbrd}, set(mediafiles))
+
+  def test_get_match_history(self):
+    pass
+
+  def test_apply_opinions(self):
+    pass
+
+  def test_meta_update(self):
+    pass
 
 
 class TestMetadataManager(unittest.TestCase):
