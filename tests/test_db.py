@@ -1,10 +1,11 @@
+import string
 import unittest
 import os
 import random
 import pandas as pd
 from pandas import testing as tm
 from ae_rater_model import DBAccess
-from ae_rater_types import ManualMetadata, ProfileInfo
+from ae_rater_types import ManualMetadata, MatchInfo, Outcome, ProfileInfo
 from prioritizers import PrioritizerType
 from rating_backends import ELO, Glicko
 
@@ -52,7 +53,16 @@ class TestDBAccess(unittest.TestCase):
     self.assertSetEqual({short_fname(p.fullname) for p in ldbrd}, set(mediafiles))
 
   def test_get_match_history(self):
-    pass
+    mock_history = []
+    for _ in range(random.randint(4,21)):
+      n = random.randint(2,10)
+      participants = self.dba.get_next_match(n)
+      outcome_str = string.ascii_lowercase[:n] + " "*random.randint(n//2,n)
+      outcome_str = ''.join(random.sample(outcome_str, len(outcome_str)))
+      mock_history.append(MatchInfo(participants, Outcome(outcome_str)))
+    for match in mock_history:
+      self.dba.save_match(match)
+    self.assertListEqual(self.dba.get_match_history(), mock_history)
 
   def test_apply_opinions(self):
     pass

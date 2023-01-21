@@ -84,7 +84,14 @@ class DBAccess:
 
   def get_match_history(self) -> list[MatchInfo]:
     logging.info("exec")
-    return [MatchInfo(p,o,t) for t,p,o in self.history_mgr.get_match_history().iterrows()]
+    hist = []
+    for index, (timestamp, names, outcome_str) in self.history_mgr.get_match_history().iterrows():
+      assert isinstance(timestamp, float)
+      assert isinstance(names, list)
+      assert isinstance(outcome_str, str)
+      profiles = [self.get_profile(os.path.join(self.media_dir,shname)) for shname in names]
+      hist.append(MatchInfo(profiles, Outcome(outcome_str), timestamp))
+    return hist
 
   def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions) -> None:
     logging.info("exec")

@@ -80,6 +80,7 @@ class InteractiveController(Controller, UserListener):
   def consume_result(self, outcome:Outcome) -> None:
     logging.info("exec")
     assert self.n and len(self.participants) == self.n
+    assert self.n == len(outcome.tiers) - outcome.tiers.count(' ')
     match = MatchInfo(profiles=self.participants, outcome=outcome)
     self.process_match(match)
     self.db.save_match(match)
