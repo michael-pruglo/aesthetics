@@ -3,6 +3,7 @@ import string
 import unittest
 import os
 import random
+from math import sqrt
 import pandas as pd
 from pandas import testing as tm
 from ae_rater_model import DBAccess, RatingCompetition
@@ -30,6 +31,13 @@ def is_sorted(l:list[ProfileInfo]) -> bool:
 def defgettr(stars) -> dict:
   stars = int(stars)
   return {"elo":1200+stars, "glicko":1500+stars, "tst":stars*10}
+
+def factorize(n:int) -> list[int]:
+  for i in range(2, int(sqrt(n)+1)):
+    if n%i == 0:
+      return [i] + factorize(n//i)
+  return [n]
+
 
 
 class TestDBAccess(unittest.TestCase):
@@ -140,6 +148,44 @@ class TestDBAccess(unittest.TestCase):
         stars = random.randint(0, 5),
         awards = None,
     ))
+
+  def test_search_results(self):
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    assert len(all_files) > 9, "need more samples for this test"
+    test_files = random.sample(all_files, 10)
+    hlp.backup_files(test_files)
+    for i,fullname in enumerate(test_files):
+      searchable_meta = ManualMetadata(
+        tags=[f"tag{i}", f"factors{'#'.join(map(str, factorize(i)))}"],
+        stars=5-5*i//len(test_files),
+        awards=[f"awa{i}"],
+      )
+      self.dba.update_meta(fullname, searchable_meta)
+
+    def assert_searches(query, idxs, context=""):
+      self.assertListEqual(
+        self.dba.get_search_results(query),
+        [
+          self._get_leaderboard_line(test_files[i])
+          for i in idxs
+        ],
+        context,
+      )
+    assert_searches("tag9 awa9", [9], "AND, with results")
+    assert_searches("tag9 awa8", [], "AND, empty")
+    assert_searches("tag9|awa6", [6,9], "OR")
+    self.assertEqual(len(self.dba.get_search_results("-tag9")), len(all_files)-1)
+    self.assertSetEqual(
+      {p.fullname for p in self.dba.get_search_results("mp4")},
+      {fname for fname in all_files if fname.lower().endswith(".mp4")},
+      "search filenames"
+    )
+    assert_searches("factors2", [2,4,6,8])
+    assert_searches("2#2", [4,8])
+    assert_searches("#3", [6,9])
+    assert_searches("2# -#3 -3#", [4,8], "AND NOT")
+    assert_searches("3#|#3", [6,9], "OR")
+    assert_searches("factors7 | 2#2 -2#2#", [4,7], "complex")
 
 
 class TestMetadataManager(unittest.TestCase):
