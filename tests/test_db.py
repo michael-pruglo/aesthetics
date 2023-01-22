@@ -1,10 +1,11 @@
+import copy
 import string
 import unittest
 import os
 import random
 import pandas as pd
 from pandas import testing as tm
-from ae_rater_model import DBAccess
+from ae_rater_model import DBAccess, RatingCompetition
 from ae_rater_types import ManualMetadata, MatchInfo, Outcome, ProfileInfo
 from prioritizers import PrioritizerType
 from rating_backends import ELO, Glicko
@@ -55,9 +56,9 @@ class TestDBAccess(unittest.TestCase):
   def test_get_match_history(self):
     mock_history = []
     for _ in range(random.randint(4,21)):
-      n = random.randint(2,10)
-      participants = self.dba.get_next_match(n)
-      outcome_str = string.ascii_lowercase[:n] + " "*random.randint(n//2,n)
+      N = random.randint(2,10)
+      participants = self.dba.get_next_match(N)
+      outcome_str = string.ascii_lowercase[:N] + " "*random.randint(N//2,N)
       outcome_str = ''.join(random.sample(outcome_str, len(outcome_str)))
       mock_history.append(MatchInfo(participants, Outcome(outcome_str)))
     for match in mock_history:
@@ -67,8 +68,78 @@ class TestDBAccess(unittest.TestCase):
   def test_apply_opinions(self):
     pass
 
-  def test_meta_update(self):
-    pass
+  def _get_leaderboard_line(self, fullname:str) -> ProfileInfo:
+    ldbrd = self.dba.get_leaderboard()
+    return next(p for p in ldbrd if p.fullname==fullname)
+
+  def _test_meta_update_impl(self, usr_input:ManualMetadata):
+    N = random.randint(2,10)
+    testees = self.dba.get_next_match(N)
+    hlp.backup_files([p.fullname for p in testees])
+    model = RatingCompetition()
+    opinions, _ = model.consume_match(MatchInfo(
+      testees,
+      Outcome(' '.join(string.ascii_letters[:N]))  # to achieve fractional stars
+    ))
+    self.dba.apply_opinions(testees, opinions)
+    testees = [self._get_leaderboard_line(p.fullname) for p in testees]
+
+    same_stars = [True]*(N//2) + [False]*(N-N//2)  # if curr stars are 2.4, input 2 shouldn't change it
+    for prof, frac_int_test in zip(testees, same_stars):
+      meta_before = get_metadata(prof.fullname)
+      self.assertEqual(meta_before.stars, int(prof.stars))
+      self.assertSetEqual(meta_before.tags, set(prof.tags.split()))
+      if meta_before.awards:
+        self.assertSetEqual(meta_before.awards, set(prof.awards.split()), prof.fullname)
+      if frac_int_test and usr_input.stars is not None:
+        usr_input.stars = meta_before.stars
+
+      self.dba.update_meta(prof.fullname, copy.deepcopy(usr_input))  # input is allowed to be modified
+      exp_stars = meta_before.stars if usr_input.stars is None else usr_input.stars
+      exp_tags = meta_before.tags if usr_input.tags is None else set(usr_input.tags)
+      exp_awards = meta_before.awards if usr_input.awards is None else set(usr_input.awards)
+
+      dbg_info = f"{short_fname(prof.fullname)} frac_int:{frac_int_test}"
+      meta_after = get_metadata(prof.fullname)
+      self.assertEqual(meta_after.stars, exp_stars)
+      if usr_input.tags is not None:
+        self.assertNotEqual(meta_after.tags, meta_before.tags, dbg_info)
+      self.assertSetEqual(meta_after.tags, exp_tags, dbg_info)
+      if meta_after.awards:
+        self.assertSetEqual(meta_after.awards, exp_awards, dbg_info)
+      new_prof = self._get_leaderboard_line(prof.fullname)
+      self.assertEqual(int(new_prof.stars), exp_stars, dbg_info)
+      self.assertSetEqual(set(new_prof.tags.split()), exp_tags, dbg_info)
+      if new_prof.awards:
+        self.assertSetEqual(set(new_prof.awards.split()), exp_awards, dbg_info)
+
+  def test_meta_update_0(self):
+    self._test_meta_update_impl(ManualMetadata(
+        tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
+        stars = random.randint(0, 5),
+        awards = {"awa1", "awa2", "awa3"},
+    ))
+
+  def test_meta_update_1(self):
+    self._test_meta_update_impl(ManualMetadata(
+        tags = None,
+        stars = random.randint(0, 5),
+        awards = {"awa1", "awa2", "awa3"},
+    ))
+
+  def test_meta_update_2(self):
+    self._test_meta_update_impl(ManualMetadata(
+        tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
+        stars = None,
+        awards = {"awa1", "awa2", "awa3"},
+    ))
+
+  def test_meta_update_3(self):
+    self._test_meta_update_impl(ManualMetadata(
+        tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
+        stars = random.randint(0, 5),
+        awards = None,
+    ))
 
 
 class TestMetadataManager(unittest.TestCase):

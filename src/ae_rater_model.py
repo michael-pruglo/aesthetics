@@ -61,18 +61,19 @@ class DBAccess:
   def __init__(self, media_dir, refresh, prioritizer_type, rat_systems:list[RatingBackend]) -> None:
     self.media_dir = media_dir
     self.rat_systems = rat_systems
-    def default_values_getter(stars:float)->dict:
-      default_values = {}
-      for s in rat_systems:
-        def_rat = s.stars_to_rating(stars)
-        default_values.update({
-          s.name()+"_pts": def_rat.points,
-          s.name()+"_rd": def_rat.rd,
-          s.name()+"_time": def_rat.timestamp,
-        })
-      return default_values
-    self.meta_mgr = MetadataManager(media_dir, refresh, prioritizer_type, default_values_getter)
+    self.meta_mgr = MetadataManager(media_dir, refresh, prioritizer_type, self.default_values_getter)
     self.history_mgr = HistoryManager(media_dir)
+
+  def default_values_getter(self, stars:float)->dict:
+    default_values = {}
+    for s in self.rat_systems:
+      def_rat = s.stars_to_rating(stars)
+      default_values.update({
+        s.name()+"_pts": def_rat.points,
+        s.name()+"_rd": def_rat.rd,
+        s.name()+"_time": def_rat.timestamp,
+      })
+    return default_values
 
   def save_match(self, match:MatchInfo) -> None:
     logging.info("exec")
@@ -120,7 +121,7 @@ class DBAccess:
       upd['tags'] = ' '.join(sorted(meta.tags)).lower()
     if meta.stars is not None:
       upd['stars'] = meta.stars
-      upd |= self.def_gettr(meta.stars)
+      upd |= self.default_values_getter(meta.stars)
     if meta.awards is not None:
       upd['awards'] = ' '.join(sorted(meta.awards)).lower()
     self.meta_mgr.update(fullname, upd_data=upd)
