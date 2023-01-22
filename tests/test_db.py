@@ -15,7 +15,7 @@ from src.metadata import get_metadata
 from src.db_managers import MetadataManager
 from src.helpers import short_fname
 import tests.helpers as hlp
-from tests.helpers import BACKUP_INITIAL_FILE, MEDIA_FOLDER, METAFILE
+from tests.helpers import BACKUP_INITIAL_FILE, MEDIA_FOLDER, METAFILE, generate_outcome
 
 
 def is_sorted(l:list[ProfileInfo]) -> bool:
@@ -74,7 +74,31 @@ class TestDBAccess(unittest.TestCase):
     self.assertListEqual(self.dba.get_match_history(), mock_history)
 
   def test_apply_opinions(self):
-    pass
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    hlp.backup_files(all_files)
+
+    for _ in range(20):
+      n = random.randint(2, min(15,len(all_files)))
+      participants = self.dba.get_next_match(n)
+      metadata = [get_metadata(p.fullname) for p in participants]
+      outcome = generate_outcome(n)
+      opinions, _ = RatingCompetition().consume_match(MatchInfo(participants, outcome))
+      self.dba.apply_opinions(participants, opinions)
+      news = [self._get_leaderboard_line(p.fullname) for p in participants]
+      new_metadata = [get_metadata(p.fullname) for p in participants]
+
+      for old_p, old_meta, new_p, new_meta in zip(participants, metadata, news, new_metadata):
+        dbg_info = '\n'.join(map(str, [old_p, old_meta, new_p, new_meta]))
+        self.assertEqual(new_p.nmatches, old_p.nmatches+len(participants)-1, dbg_info)
+        self.assertSetEqual(old_meta.tags, new_meta.tags)
+        self.assertEqual(old_meta.awards, new_meta.awards)
+        self.assertEqual(int(old_p.stars), old_meta.stars)
+        self.assertEqual(int(new_p.stars), new_meta.stars)
+        for ratsys in old_p.ratings.keys():
+          old_rating = old_p.ratings[ratsys]
+          new_rating = new_p.ratings[ratsys]
+          self.assertLessEqual(new_rating.rd, old_rating.rd)
+          self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
 
   def _get_leaderboard_line(self, fullname:str) -> ProfileInfo:
     ldbrd = self.dba.get_leaderboard()

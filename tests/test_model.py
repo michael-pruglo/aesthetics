@@ -61,40 +61,14 @@ class TestCompetition(unittest.TestCase):
     self._test_match([1.1, 4.1, 2.2], "c+ b++ a")
 
 
+class TestLongTerm(unittest.TestCase):
+  pass
+
 @unittest.skip('old')
 class TestCompetitionOld(unittest.TestCase):
   def setUp(self):
     self.model = RatingCompetition(MEDIA_FOLDER, refresh=False)
     self.N = len(self.model.get_leaderboard())
-
-  def test_matches_affect_disk(self):
-    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
-    hlp.backup_files(all_files)
-
-    for _ in range(20):
-      n = random.randint(2, min(15,len(all_files)))
-      participants = self.model.generate_match(n)
-      metadata = [get_metadata(p.fullname) for p in participants]
-      outcome = generate_outcome(n)
-      self.model.consume_result(outcome)
-      self.assertEqual(len(self.model.get_curr_match()), 0)
-      news = [self._get_leaderboard_line(p.fullname) for p in participants]
-      new_metadata = [get_metadata(p.fullname) for p in participants]
-
-      for old_p, old_meta, new_p, new_meta in zip(participants, metadata, news, new_metadata):
-        dbg_info = '\n'.join(map(str, [old_p, old_meta, new_p, new_meta]))
-        self.assertEqual(new_p.nmatches, old_p.nmatches+len(participants)-1, dbg_info)
-        self.assertSetEqual(old_meta.tags, new_meta.tags)
-        self.assertEqual(old_meta.awards, new_meta.awards)
-        self.assertEqual(min(5, int(old_p.stars)), old_meta.stars)
-        self.assertEqual(min(5, int(new_p.stars)), new_meta.stars)
-        for ratsys in old_p.ratings.keys():
-          old_rating = old_p.ratings[ratsys]
-          new_rating = new_p.ratings[ratsys]
-          self.assertLessEqual(new_rating.rd, old_rating.rd)
-          self.assertGreaterEqual(new_rating.timestamp, old_rating.timestamp)
-
-
 
   def _long_term(self, n):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
@@ -165,7 +139,6 @@ class LongTermTester:
       sq_err += (expected_rating-given_rating)**2
     assert is_sorted(ldbrd)
     return sq_err / len(ldbrd)
-
 
 if __name__ == '__main__':
   unittest.main()
