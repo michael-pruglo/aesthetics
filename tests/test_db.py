@@ -18,16 +18,6 @@ import tests.helpers as hlp
 from tests.helpers import BACKUP_INITIAL_FILE, MEDIA_FOLDER, METAFILE, generate_outcome
 
 
-def is_sorted(l:list[ProfileInfo]) -> bool:
-  for i, curr_prof in enumerate(l[:-1]):
-    next_prof = l[i+1]
-    if curr_prof.stars < next_prof.stars:
-      return False
-    if all(curr_prof.ratings[s].points < next_prof.ratings[s].points
-           for s in curr_prof.ratings.keys()):
-      return False
-  return True
-
 def defgettr(stars) -> dict:
   stars = int(stars)
   return {"elo":1200+stars, "glicko":1500+stars, "tst":stars*10}
@@ -58,7 +48,7 @@ class TestDBAccess(unittest.TestCase):
   def test_get_leaderboard(self):
     ldbrd = self.dba.get_leaderboard()
     mediafiles = hlp.get_initial_mediafiles()
-    self.assertTrue(is_sorted(ldbrd))
+    self.assertTrue(hlp.is_sorted(ldbrd))
     self.assertSetEqual({short_fname(p.fullname) for p in ldbrd}, set(mediafiles))
 
   def test_get_match_history(self):

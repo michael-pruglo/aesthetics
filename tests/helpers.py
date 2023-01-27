@@ -3,7 +3,7 @@ import shutil
 import random
 import string
 from typing import Iterable
-from ae_rater_types import ManualMetadata, Outcome
+from ae_rater_types import Outcome, ProfileInfo
 
 from src.helpers import file_extension
 from src.metadata import get_metadata, write_metadata
@@ -81,3 +81,13 @@ def generate_outcome(n:int) -> Outcome:
   s = string.ascii_lowercase[:n] + ' '*random.randint(0,3*n)  # 3n to counteract bias towards draws
   s = ''.join(random.sample(s,len(s))).strip()
   return Outcome(s)
+
+def is_sorted(l:list[ProfileInfo]) -> bool:
+  for i, curr_prof in enumerate(l[:-1]):
+    next_prof = l[i+1]
+    if curr_prof.stars < next_prof.stars:
+      assert False, f"{curr_prof}   {next_prof}"
+    if all(curr_prof.ratings[s].points < next_prof.ratings[s].points
+           for s in curr_prof.ratings.keys()):
+      assert False, f"{curr_prof}   {next_prof}"
+  return True

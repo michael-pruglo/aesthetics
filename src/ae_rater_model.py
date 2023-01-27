@@ -129,7 +129,8 @@ class DBAccess:
   def get_leaderboard(self) -> list[ProfileInfo]:
     logging.info("exec")
     db = self.meta_mgr.get_db()
-    db.sort_values('stars', ascending=False, inplace=True)
+    sortpriorities = ['stars'] + [s.name()+'_pts' for s in self.rat_systems]
+    db.sort_values(sortpriorities, ascending=False, inplace=True)
     return [self._validate_and_convert_info(db.iloc[i]) for i in range(len(db))]
 
   def get_next_match(self, n:int) -> list[ProfileInfo]:

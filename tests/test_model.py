@@ -2,17 +2,16 @@ import unittest
 import os
 import random
 import string
+from ae_rater import Controller, FromHistoryController
 
-from metadata import get_metadata
 from ae_rater_types import MatchInfo, Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
 import tests.helpers as hlp
-from tests.helpers import MEDIA_FOLDER, SKIPLONG, generate_outcome
+from tests.helpers import MEDIA_FOLDER
 
 
 def rndstr(length:int=11) -> str:
   return ''.join(random.sample(string.ascii_letters+" ", length))
-
 
 
 class TestCompetition(unittest.TestCase):
@@ -62,41 +61,38 @@ class TestCompetition(unittest.TestCase):
 
 
 class TestLongTerm(unittest.TestCase):
-  pass
-
-@unittest.skip('old')
-class TestCompetitionOld(unittest.TestCase):
   def setUp(self):
-    self.model = RatingCompetition(MEDIA_FOLDER, refresh=False)
-    self.N = len(self.model.get_leaderboard())
-
-  def _long_term(self, n):
     all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
     hlp.backup_files(all_files)
 
-    losses = LongTermTester(self.model, num_participants=n, verbosity=1).run()
+  def tearDown(self):
+    hlp.disk_cleanup()
+
+  def _long_term(self, ctrl:Controller, n:int):
+    losses = LongTermTester(ctrl, n, verbosity=1).run()
     self.assertLess(losses[-1], 0.9, f"num_participants={n}")
     self.assertLess(losses[-1]/losses[0], 10)
 
-  @unittest.skipIf(*SKIPLONG)
-  def test_long_term_2(self):
-    self._long_term(2)
+  def test_regular_2(self):
+    self._long_term(Controller(MEDIA_FOLDER, refresh=False), 2)
 
-  @unittest.skipIf(*SKIPLONG)
-  def test_long_term_3plus(self):
-    hi = min(12, self.N-3)
-    if hi<3:
-      self.fail(f"{self.N} images is not enough")
-    else:
-      self._long_term(random.randint(3, hi))
+  def test_regular_3plus(self):
+    self._long_term(Controller(MEDIA_FOLDER, refresh=False), random.randint(3,12))
+
+  def test_history_short(self):
+    # self.ctrl = FromHistoryController(MEDIA_FOLDER)
+    pass
+
+  def test_history_repeats(self):
+    pass
 
 
 class LongTermTester:
-  def __init__(self, model:RatingCompetition, num_participants:int, verbosity=0):
-    self.model = model
+  def __init__(self, ctrl:Controller, num_participants:int, verbosity=0):
+    self.ctrl = ctrl
     self.num_participants = num_participants
     self.verbosity = verbosity
-    ldbrd = model.get_leaderboard()
+    ldbrd = ctrl.db.get_leaderboard()
     ranks = list(range(len(ldbrd)))
     random.shuffle(ranks)
     self.true_leaderboard = {p.fullname:rank for p,rank in zip(ldbrd,ranks)}
@@ -109,8 +105,9 @@ class LongTermTester:
       matches_in_iter = (self.num_participants-1) * self.num_participants
       num_of_iters = (matches_in_epoch+matches_in_iter-1)//matches_in_iter
       for _ in range(num_of_iters):
-        participants = self.model.generate_match(self.num_participants)
-        self.model.consume_result(self._simulate_outcome(participants))
+        participants = self.ctrl.db.get_next_match(self.num_participants)
+        minfo = MatchInfo(participants, self._simulate_outcome(participants))
+        self.ctrl.process_match(minfo)
       losses.append(self._loss())
       if self.verbosity: print(f"{epoch}: loss = {losses[-1]}")
       if self.verbosity>1: print("\n\n\n")
@@ -132,13 +129,14 @@ class LongTermTester:
 
   def _loss(self) -> float:
     sq_err = 0
-    ldbrd = self.model.get_leaderboard()
+    ldbrd = self.ctrl.db.get_leaderboard()
     for given_rating, p in enumerate(ldbrd):
       expected_rating = self.true_leaderboard[p.fullname]
       if self.verbosity>1: print(p, expected_rating)
-      sq_err += (expected_rating-given_rating)**2
-    assert is_sorted(ldbrd)
+      sq_err += (expected_rating-given_rating)**2 * (p.stars/5)
+    assert hlp.is_sorted(ldbrd)
     return sq_err / len(ldbrd)
+
 
 if __name__ == '__main__':
   unittest.main()
