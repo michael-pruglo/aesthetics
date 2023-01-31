@@ -58,11 +58,11 @@ class Analyzer:
 
 
 class DBAccess:
-  def __init__(self, media_dir, refresh, prioritizer_type, rat_systems:list[RatingBackend]) -> None:
+  def __init__(self, media_dir, refresh, prioritizer_type, rat_systems:list[RatingBackend], history_fname:str) -> None:
     self.media_dir = media_dir
     self.rat_systems = rat_systems
     self.meta_mgr = MetadataManager(media_dir, refresh, prioritizer_type, self.default_values_getter)
-    self.history_mgr = HistoryManager(media_dir)
+    self.history_mgr = HistoryManager(media_dir, history_fname)
 
   def default_values_getter(self, stars:float)->dict:
     default_values = {}
@@ -88,6 +88,7 @@ class DBAccess:
     hist = []
     for index, (timestamp, names, outcome_str) in self.history_mgr.get_match_history().iterrows():
       assert isinstance(timestamp, float)
+      names = eval(names)
       assert isinstance(names, list)
       assert isinstance(outcome_str, str)
       profiles = [self.get_profile(os.path.join(self.media_dir,shname)) for shname in names]

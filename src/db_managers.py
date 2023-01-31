@@ -211,8 +211,8 @@ class MetadataManager:
 
 
 class HistoryManager:
-  def __init__(self, img_dir:str):
-    self.matches_fname = os.path.join(img_dir, 'match_history.csv')
+  def __init__(self, img_dir:str, history_fname:str):
+    self.matches_fname = os.path.join(img_dir, history_fname)
     match_history_dtypes = {
       "timestamp": float,
       "names": str,

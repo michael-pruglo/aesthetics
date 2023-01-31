@@ -1,11 +1,14 @@
+import time
 import unittest
 import os
+import pandas as pd
 import random
 import string
 from ae_rater import Controller, FromHistoryController
 
 from ae_rater_types import MatchInfo, Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
+from metadata import get_metadata, write_metadata
 import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER
 
@@ -80,8 +83,57 @@ class TestLongTerm(unittest.TestCase):
     self._long_term(Controller(MEDIA_FOLDER, refresh=False), random.randint(3,12))
 
   def test_history_short(self):
-    # self.ctrl = FromHistoryController(MEDIA_FOLDER)
-    pass
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    assert len(all_files) > 9, "need more samples for this test"
+    test_files = random.sample(all_files, 10)
+    for i,fullname in enumerate(test_files):
+      meta = get_metadata(fullname)
+      meta.stars = 5 - 5*i//len(test_files)
+      write_metadata(fullname, meta, append=False)
+
+    HIST_FNAME = 'test_history_short.csv'
+    def p_names(ranks:list[int]):
+      return str([test_files[i] for i in ranks])
+
+    now = time.time()
+    df = pd.DataFrame(
+      [
+        [now+1.0, p_names([0,1]), "ab"],
+        [now+1.1, p_names([0,-1]), "b a"],
+        # [0.2, p_names([]), ""],
+        # [0.3, p_names([]), ""],
+        # [0.4, p_names([]), ""],
+        # [0.5, p_names([]), ""],
+        # [0.6, p_names([]), ""],
+        # [0.7, p_names([]), ""],
+      ],
+      columns=["timestamp","names","outcome"],
+    )
+    df.to_csv(os.path.join(MEDIA_FOLDER, HIST_FNAME), index=False)
+    print(df)
+
+    ctrl = FromHistoryController(MEDIA_FOLDER, HIST_FNAME)
+    ldbrd_pre = filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard())
+    for p in ldbrd_pre:
+      self.assertEqual(p.nmatches, 0)
+      print(p)
+
+    print()
+    ctrl.run()
+    print()
+
+    ldbrd_post = list(filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard()))
+    for p in ldbrd_post:
+      print(p)
+    self.assertListEqual(
+      [p.fullname for p in ldbrd_post],
+      [test_files[i] for i in [1,0,2,3,4,5,6,7,9,8]]
+    )
+    self.assertListEqual(
+      [p.nmatches for p in ldbrd_post],
+      [1,2,0,0,0,0,0,0,1,0]
+    )
+
 
   def test_history_repeats(self):
     pass

@@ -26,10 +26,12 @@ def setup_logger(log_filename):
   logging.info("Starting new session...")
 
 
+DEFAULT_HISTORY_FNAME = "match_history.csv"
+
 class Controller:
-  def __init__(self, media_dir:str, refresh:bool, prioritizer_type=PrioritizerType.DEFAULT) -> None:
+  def __init__(self, media_dir:str, refresh:bool, prioritizer_type=PrioritizerType.DEFAULT, history_fname=DEFAULT_HISTORY_FNAME) -> None:
     self.competition = RatingCompetition()
-    self.db = DBAccess(media_dir, refresh, prioritizer_type, self.competition.get_rat_systems())
+    self.db = DBAccess(media_dir, refresh, prioritizer_type, self.competition.get_rat_systems(), history_fname)
     self.analyzer = Analyzer()
 
   def process_match(self, match:MatchInfo):
@@ -39,12 +41,13 @@ class Controller:
     self.db.apply_opinions(match.profiles, opinions)
 
 class FromHistoryController(Controller):
-  def __init__(self, media_dir:str):
-    super().__init__(media_dir, False)
+  def __init__(self, media_dir:str, history_fname:str=DEFAULT_HISTORY_FNAME):
+    super().__init__(media_dir, refresh=False, history_fname=history_fname)
 
   def run(self):
     logging.info("exec")
     for match in self.db.get_match_history():
+      print(f"running match {match.outcome.tiers}")
       self.process_match(match)
 
 class InteractiveController(Controller, UserListener):
@@ -109,7 +112,7 @@ class InteractiveController(Controller, UserListener):
 def main(args):
   assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
   setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
-  interactive = True
+  interactive = False
   if interactive:
     InteractiveController(
       args.media_dir,
@@ -117,6 +120,10 @@ def main(args):
       args.num_participants,
       args.prioritizer_type,
       args.mode
+    ).run()
+  else:
+    FromHistoryController(
+      args.media_dir,
     ).run()
 
 
