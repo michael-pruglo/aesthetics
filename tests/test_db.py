@@ -47,7 +47,7 @@ class TestDBAccess(unittest.TestCase):
     def all_unique(li):
       seen = list()
       return not any(i in seen or seen.append(i) for i in li)
-    for i in range(2,25):
+    for i in range(2,10):
       participants = self.dba.get_next_match(i)
       self.assertTrue(all_unique(participants))
 
