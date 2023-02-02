@@ -8,6 +8,7 @@ from ae_rater import Controller, FromHistoryController
 
 from ae_rater_types import MatchInfo, Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
+from helpers import short_fname
 from metadata import get_metadata, write_metadata
 import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER
@@ -93,45 +94,39 @@ class TestLongTerm(unittest.TestCase):
 
     HIST_FNAME = 'test_history_short.csv'
     def p_names(ranks:list[int]):
-      return str([test_files[i] for i in ranks])
+      return str([short_fname(test_files[i]) for i in ranks])
 
     now = time.time()
     df = pd.DataFrame(
       [
-        [now+1.0, p_names([0,1]), "ab"],
+        [now+1.0, p_names([-2,1,0,-1]), "bc ad"],
         [now+1.1, p_names([0,-1]), "b a"],
-        # [0.2, p_names([]), ""],
-        # [0.3, p_names([]), ""],
-        # [0.4, p_names([]), ""],
-        # [0.5, p_names([]), ""],
-        # [0.6, p_names([]), ""],
-        # [0.7, p_names([]), ""],
+        [now+1.2, p_names([4,5]), "ab"],
+        [now+1.3, p_names([-2,-3,1]), "c b a"],
+        [now+1.4, p_names([3,4]), "a b"],
       ],
       columns=["timestamp","names","outcome"],
     )
     df.to_csv(os.path.join(MEDIA_FOLDER, HIST_FNAME), index=False)
-    print(df)
 
     ctrl = FromHistoryController(MEDIA_FOLDER, HIST_FNAME)
     ldbrd_pre = filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard())
     for p in ldbrd_pre:
       self.assertEqual(p.nmatches, 0)
-      print(p)
 
-    print()
     ctrl.run()
-    print()
 
     ldbrd_post = list(filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard()))
-    for p in ldbrd_post:
-      print(p)
+
+    expected_rankings = [1,0,3,2,5,4,7,6,9,8]
+    expected_nmatches = [5,4,1,0,1,2,2,0,4,5]
     self.assertListEqual(
       [p.fullname for p in ldbrd_post],
-      [test_files[i] for i in [1,0,2,3,4,5,6,7,9,8]]
+      [test_files[i] for i in expected_rankings]
     )
     self.assertListEqual(
       [p.nmatches for p in ldbrd_post],
-      [1,2,0,0,0,0,0,0,1,0]
+      expected_nmatches
     )
 
 

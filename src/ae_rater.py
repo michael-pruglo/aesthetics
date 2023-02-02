@@ -47,7 +47,6 @@ class FromHistoryController(Controller):
   def run(self):
     logging.info("exec")
     for match in self.db.get_match_history():
-      print(f"running match {match.outcome.tiers}")
       self.process_match(match)
 
 class InteractiveController(Controller, UserListener):
