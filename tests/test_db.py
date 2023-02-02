@@ -32,7 +32,13 @@ def factorize(n:int) -> list[int]:
 
 class TestDBAccess(unittest.TestCase):
   def setUp(self):
-    self.dba = DBAccess(MEDIA_FOLDER, refresh=False, prioritizer_type=PrioritizerType.DEFAULT, rat_systems=[Glicko(),ELO()])
+    self.dba = DBAccess(
+      MEDIA_FOLDER,
+      refresh=False,
+      prioritizer_type=PrioritizerType.DEFAULT,
+      rat_systems=[Glicko(),ELO()],
+      history_fname='tst_history.csv'
+    )
 
   def tearDown(self):
     hlp.disk_cleanup()
@@ -80,10 +86,10 @@ class TestDBAccess(unittest.TestCase):
       for old_p, old_meta, new_p, new_meta in zip(participants, metadata, news, new_metadata):
         dbg_info = '\n'.join(map(str, [old_p, old_meta, new_p, new_meta]))
         self.assertEqual(new_p.nmatches, old_p.nmatches+len(participants)-1, dbg_info)
-        self.assertSetEqual(old_meta.tags, new_meta.tags)
-        self.assertEqual(old_meta.awards, new_meta.awards)
-        self.assertEqual(int(old_p.stars), old_meta.stars)
-        self.assertEqual(int(new_p.stars), new_meta.stars)
+        self.assertSetEqual(old_meta.tags, new_meta.tags, dbg_info)
+        self.assertEqual(old_meta.awards, new_meta.awards, dbg_info)
+        self.assertEqual(int(old_p.stars), old_meta.stars, dbg_info)
+        self.assertEqual(int(new_p.stars), new_meta.stars, dbg_info)
         for ratsys in old_p.ratings.keys():
           old_rating = old_p.ratings[ratsys]
           new_rating = new_p.ratings[ratsys]

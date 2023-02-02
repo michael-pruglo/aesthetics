@@ -79,7 +79,7 @@ class DBAccess:
     logging.info("exec")
     self.history_mgr.save_match(
       match.timestamp,
-      [short_fname(p.fullname) for p in match.profiles],
+      str([short_fname(p.fullname) for p in match.profiles]),
       match.outcome.tiers,  # maybe save boosts as well?
     )
 
@@ -88,6 +88,8 @@ class DBAccess:
     hist = []
     for index, (timestamp, names, outcome_str) in self.history_mgr.get_match_history().iterrows():
       assert isinstance(timestamp, float)
+      assert isinstance(names, str), type(names)
+      assert names
       names = eval(names)
       assert isinstance(names, list)
       assert isinstance(outcome_str, str)
