@@ -66,8 +66,8 @@ class TestCompetition(unittest.TestCase):
 
 class TestLongTerm(unittest.TestCase):
   def setUp(self):
-    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
-    hlp.backup_files(all_files)
+    self.all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    hlp.backup_files(self.all_files)
 
   def tearDown(self):
     hlp.disk_cleanup()
@@ -84,39 +84,47 @@ class TestLongTerm(unittest.TestCase):
     self._long_term(Controller(MEDIA_FOLDER, refresh=False), random.randint(3,12))
 
   def test_history_short(self):
-    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
-    assert len(all_files) > 9, "need more samples for this test"
-    test_files = random.sample(all_files, 10)
-    for i,fullname in enumerate(test_files):
-      meta = get_metadata(fullname)
-      meta.stars = 5 - 5*i//len(test_files)
-      write_metadata(fullname, meta, append=False)
+    assert len(self.all_files) > 9, "need more samples for this test"
+    test_files = random.sample(self.all_files, 10)
+
+    def prepare_disk_files():
+      for i,fullname in enumerate(test_files):
+        meta = get_metadata(fullname)
+        meta.stars = 5 - 5*i//len(test_files)
+        write_metadata(fullname, meta, append=False)
 
     HIST_FNAME = 'test_history_short.csv'
     def p_names(ranks:list[int]):
       return str([short_fname(test_files[i]) for i in ranks])
 
-    now = time.time()
-    df = pd.DataFrame(
-      [
-        [now+1.0, p_names([-2,1,0,-1]), "bc ad"],
-        [now+1.1, p_names([0,-1]), "b a"],
-        [now+1.2, p_names([4,5]), "ab"],
-        [now+1.3, p_names([-2,-3,1]), "c b a"],
-        [now+1.4, p_names([3,4]), "a b"],
-      ],
-      columns=["timestamp","names","outcome"],
-    )
-    df.to_csv(os.path.join(MEDIA_FOLDER, HIST_FNAME), index=False)
+    def create_short_history():
+      now = time.time()
+      df = pd.DataFrame(
+        [
+          [now+1.0, p_names([-2,1,0,-1]), "bc ad"],
+          [now+1.1, p_names([0,-1]), "b a"],
+          [now+1.2, p_names([4,5]), "ab"],
+          [now+1.3, p_names([-2,-3,1]), "c b a"],
+          [now+1.4, p_names([3,4]), "a b"],
+        ],
+        columns=["timestamp","names","outcome"],
+      )
+      df.to_csv(os.path.join(MEDIA_FOLDER, HIST_FNAME), index=False)
 
-    ctrl = FromHistoryController(MEDIA_FOLDER, HIST_FNAME)
-    ldbrd_pre = filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard())
-    for p in ldbrd_pre:
-      self.assertEqual(p.nmatches, 0)
+    def run_history_replay():
+      ctrl = FromHistoryController(MEDIA_FOLDER, HIST_FNAME)
+      ldbrd_pre = filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard())
+      for p in ldbrd_pre:
+        self.assertEqual(p.nmatches, 0)
 
-    ctrl.run()
+      ctrl.run()
 
-    ldbrd_post = list(filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard()))
+      return list(filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard()))
+
+
+    prepare_disk_files()
+    create_short_history()
+    ldbrd_post = run_history_replay()
 
     expected_rankings = [1,0,3,2,5,4,7,6,9,8]
     expected_nmatches = [5,4,1,0,1,2,2,0,4,5]
@@ -131,7 +139,44 @@ class TestLongTerm(unittest.TestCase):
 
 
   def test_history_repeats(self):
-    pass
+    HIST_FNAME = 'test_history_long.csv'
+    def create_long_history():
+      start_time = time.time() + 100  # needs to cover 2 replays
+      hist_data = []
+      for i in range(random.randint(500,4000)):
+        n = random.randint(2,10)
+        hist_data.append([
+          start_time + 0.1*i,
+          random.sample(self.all_files, n),
+          hlp.generate_outcome(n).tiers
+        ])
+      df = pd.DataFrame(
+        hist_data,
+        columns=["timestamp","names","outcome"],
+      )
+      return df
+
+    def run_history_replay():
+      ctrl = FromHistoryController(MEDIA_FOLDER, HIST_FNAME)
+      ldbrd_pre = ctrl.db.get_leaderboard()
+      ctrl.run()
+      ldbrd_post = ctrl.db.get_leaderboard()
+      return ldbrd_pre, ldbrd_post
+
+
+    long_history = create_long_history()
+    long_history.to_csv(os.path.join(MEDIA_FOLDER, HIST_FNAME), index=False)
+    ldbrd_pre1, ldbrd_post1 = run_history_replay()
+
+    self.tearDown()
+    self.setUp()
+
+    long_history.to_csv(os.path.join(MEDIA_FOLDER, HIST_FNAME), index=False)
+    ldbrd_pre2, ldbrd_post2 = run_history_replay()
+
+    self.assertListEqual(ldbrd_pre1, ldbrd_pre2)
+    self.assertListEqual(ldbrd_post1, ldbrd_post2)
+
 
 
 class LongTermTester:
