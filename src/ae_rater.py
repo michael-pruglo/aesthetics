@@ -49,6 +49,7 @@ class FromHistoryController(Controller):
     logging.info("exec")
     for match in tqdm(self.db.get_match_history()):
       self.process_match(match)
+    self.analyzer.show_results()
 
 class InteractiveController(Controller, UserListener):
   def __init__(self, media_dir:str, refresh:bool, n_participants:int, prioritizer_type, mode:AppMode) -> None:
@@ -112,18 +113,17 @@ class InteractiveController(Controller, UserListener):
 def main(args):
   assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
   setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
-  interactive = True
-  if interactive:
+  if args.history_replay:
+    FromHistoryController(
+      args.media_dir,
+    ).run()
+  else:
     InteractiveController(
       args.media_dir,
       args.refresh,
       args.num_participants,
       args.prioritizer_type,
       args.mode
-    ).run()
-  else:
-    FromHistoryController(
-      args.media_dir,
     ).run()
 
 
@@ -132,6 +132,9 @@ if __name__ == "__main__":
   parser.add_argument('-r', '--refresh', dest='refresh', action='store_const',
                       const=True, default=False,
                       help="refresh db to incorporate folder updates")
+  parser.add_argument('--history_replay', dest='history_replay', action='store_const',
+                      const=True, default=False,
+                      help="replay matches from history instead of interactive matches")
   parser.add_argument('-p', '--prioritizer', dest='prioritizer_type', type=PrioritizerType,
                       choices=list(PrioritizerType), default=PrioritizerType.DEFAULT,
                       help="which media is prioritized for matches")
