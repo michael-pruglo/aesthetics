@@ -5,6 +5,7 @@ from typing import Iterable
 from dataclasses import dataclass, field
 from functools import total_ordering
 from numpy import interp
+from pandas import Series
 
 from helpers import truncate, short_fname
 
@@ -106,6 +107,7 @@ class ManualMetadata:
 
 RatSystemName = str
 RatingOpinions = dict[RatSystemName, list[RatChange]]
+DiagnosticInfo = Series
 
 
 class Outcome:

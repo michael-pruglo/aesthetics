@@ -2,6 +2,8 @@ import logging
 import os
 import statistics
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
@@ -19,13 +21,15 @@ class RatingCompetition:
   def get_rat_systems(self) -> list[RatingBackend]:
     return self.rat_systems
 
-  def consume_match(self, match:MatchInfo) -> tuple[RatingOpinions, str]:
+  def consume_match(self, match:MatchInfo) -> tuple[RatingOpinions, DiagnosticInfo]:
     logging.info("exec")
     logging.info("consume_match outcome = '%s'  boosts = %s", match.outcome.tiers, match.outcome.boosts)
     opinions = {s.name(): s.process_match(match)
                 for s in self.rat_systems}
     logging.info("opinions:\n%s", self._pretty_opinions(match.profiles, opinions, match.outcome))
-    return opinions, "diagnostic"
+    diagnostic = self._confidence_markers(match, opinions)
+    logging.info("diagnostic:\n%s", diagnostic)
+    return opinions, diagnostic
 
   def _pretty_opinions(self, participants:list[ProfileInfo], opinions:RatingOpinions, outcome:Outcome) -> str:
     s = ""
@@ -40,21 +44,32 @@ class RatingCompetition:
         s += "\n"
     return s
 
-  def _confidence_markers(self, opinions:RatingOpinions) -> str:
-    avg_changes = {sname: statistics.mean([abs(ch.delta_rating) for ch in changes])
-                   for sname,changes in opinions.items()}
-    rd_improvements = {}
-    for system, changes in opinions.items():
-        sys_rd = statistics.mean([prof.ratings[system].rd-change.new_rating.rd
-                                  for prof, change in zip(self.curr_match, changes)])
-        rd_improvements[system] = sys_rd
-    return f"average_changes: {avg_changes}\nrd_improvements: {rd_improvements}\n"
+  def _confidence_markers(self, match:MatchInfo, opinions:RatingOpinions) -> DiagnosticInfo:
+    info = {}
+    info['timestamp'] = match.timestamp
+    for sname,changes in opinions.items():
+      info['avg_change_'+sname] = statistics.mean([abs(ch.delta_rating) for ch in changes])
+      info['rd_improve_'+sname] = statistics.mean([prof.ratings[sname].rd-change.new_rating.rd
+                                  for prof, change in zip(match.profiles, changes)])
+    return pd.Series(info)
 
 
 class Analyzer:
-  def consume_diagnostic(self, diagnostic_info):
-    logging.info("exec %s", diagnostic_info)
-    pass
+  def __init__(self) -> None:
+    self.df = None
+
+  def consume_diagnostic(self, diagnostic_info:DiagnosticInfo):
+    if self.df is None:
+      self.df = pd.DataFrame([diagnostic_info])
+    else:
+      self.df.loc[len(self.df)] = diagnostic_info
+
+  def show_results(self):
+    if self.df is None:
+      return
+    self.df.plot(subplots=True, figsize=(10,10))
+    plt.title("Diagnostic of the replay")
+    plt.show()
 
 
 class DBAccess:
