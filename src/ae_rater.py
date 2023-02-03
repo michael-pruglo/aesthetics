@@ -3,6 +3,7 @@
 import os
 import logging
 import argparse
+from tqdm import tqdm
 
 from helpers import short_fname
 from ae_rater_types import AppMode, ManualMetadata, Outcome, UserListener, MatchInfo
@@ -21,7 +22,7 @@ def setup_logger(log_filename):
     ],
     # format = "%(created)d %(message)s",
     format = "[%(filename)20s:%(lineno)4s - %(funcName)20s() ] %(message)s",
-    level = logging.INFO
+    level = logging.WARNING
   )
   logging.info("Starting new session...")
 
@@ -46,7 +47,7 @@ class FromHistoryController(Controller):
 
   def run(self):
     logging.info("exec")
-    for match in self.db.get_match_history():
+    for match in tqdm(self.db.get_match_history()):
       self.process_match(match)
 
 class InteractiveController(Controller, UserListener):
@@ -111,7 +112,7 @@ class InteractiveController(Controller, UserListener):
 def main(args):
   assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
   setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
-  interactive = False
+  interactive = True
   if interactive:
     InteractiveController(
       args.media_dir,

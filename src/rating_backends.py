@@ -135,7 +135,8 @@ class Glicko(RatingBackend):
 
   def _update_rd(self, match_timestamp, rating:Rating) -> int:
     days_since_last_match = (match_timestamp-rating.timestamp)/86400
-    assert days_since_last_match >= 0
+    if days_since_last_match < 0:
+      days_since_last_match = 0  # either something's gone horribly wrong or we replay history - refactor
     c = days_since_last_match
     new_rd = round(math.sqrt(rating.rd**2 + c**2))
     return min(new_rd, self.MAX_RD)

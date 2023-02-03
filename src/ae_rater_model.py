@@ -86,6 +86,7 @@ class DBAccess:
   def get_match_history(self) -> list[MatchInfo]:
     logging.info("exec")
     hist = []
+    matches_unavailable = 0
     for index, (timestamp, names, outcome_str) in self.history_mgr.get_match_history().iterrows():
       assert isinstance(timestamp, float)
       assert isinstance(names, str), type(names)
@@ -93,8 +94,14 @@ class DBAccess:
       names = eval(names)
       assert isinstance(names, list)
       assert isinstance(outcome_str, str)
-      profiles = [self.get_profile(os.path.join(self.media_dir,shname)) for shname in names]
-      hist.append(MatchInfo(profiles, Outcome(outcome_str), timestamp))
+      try:
+        profiles = [self.get_profile(os.path.join(self.media_dir,shname)) for shname in names]
+        hist.append(MatchInfo(profiles, Outcome(outcome_str), timestamp))
+      except KeyError:
+        matches_unavailable += 1
+
+    if matches_unavailable:
+      logging.warning(f"get_match_history: couldn't reconstruct {matches_unavailable} matches")
     return hist
 
   def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions) -> None:
