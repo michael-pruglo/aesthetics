@@ -45,11 +45,12 @@ class FromHistoryController(Controller):
   def __init__(self, media_dir:str, history_fname:str=DEFAULT_HISTORY_FNAME):
     super().__init__(media_dir, refresh=False, history_fname=history_fname)
 
-  def run(self):
+  def run(self, with_diagnostics=True):
     logging.info("exec")
     for match in tqdm(self.db.get_match_history()):
       self.process_match(match)
-    self.analyzer.show_results()
+    if with_diagnostics:
+      self.analyzer.show_results()
 
 class InteractiveController(Controller, UserListener):
   def __init__(self, media_dir:str, refresh:bool, n_participants:int, prioritizer_type, mode:AppMode) -> None:

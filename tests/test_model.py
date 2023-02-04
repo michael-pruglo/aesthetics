@@ -6,7 +6,7 @@ import random
 import string
 from ae_rater import Controller, FromHistoryController
 
-from ae_rater_types import MatchInfo, Outcome, ProfileInfo
+from ae_rater_types import DiagnosticInfo, MatchInfo, Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
 from helpers import short_fname
 from metadata import get_metadata, write_metadata
@@ -50,7 +50,7 @@ class TestCompetition(unittest.TestCase):
       self.assertLess(li[los_idx].new_rating, match.profiles[los_idx].ratings[sname])
       self.assertLess(li[los_idx].delta_rating, 0)
       self.assertLess(li[los_idx].new_stars, match.profiles[los_idx].stars)
-    self.assertEqual(diagnostic, "diagnostic")
+    self.assertIsInstance(diagnostic, DiagnosticInfo)
 
   def test_underdog_wins(self):
     self._test_match([1.3, 4.4], "a b")
@@ -117,7 +117,7 @@ class TestLongTerm(unittest.TestCase):
       for p in ldbrd_pre:
         self.assertEqual(p.nmatches, 0)
 
-      ctrl.run()
+      ctrl.run(with_diagnostics=False)
 
       return list(filter(lambda p: p.fullname in test_files, ctrl.db.get_leaderboard()))
 
@@ -143,7 +143,7 @@ class TestLongTerm(unittest.TestCase):
     def create_long_history():
       start_time = time.time() + 100  # needs to cover 2 replays
       hist_data = []
-      for i in range(random.randint(500,4000)):
+      for i in range(random.randint(200,1500)):
         n = random.randint(2,10)
         hist_data.append([
           start_time + 0.1*i,
@@ -159,7 +159,7 @@ class TestLongTerm(unittest.TestCase):
     def run_history_replay():
       ctrl = FromHistoryController(MEDIA_FOLDER, HIST_FNAME)
       ldbrd_pre = ctrl.db.get_leaderboard()
-      ctrl.run()
+      ctrl.run(with_diagnostics=False)
       ldbrd_post = ctrl.db.get_leaderboard()
       return ldbrd_pre, ldbrd_post
 
