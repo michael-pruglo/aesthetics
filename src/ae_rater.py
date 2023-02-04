@@ -104,8 +104,9 @@ class InteractiveController(Controller, UserListener):
 
   def search_for(self, query:str) -> None:
     logging.info("exec")
-    N = 8
-    res = self.db.get_search_results(query)[:N]
+    N = 10
+    PAGE = 1
+    res = self.db.get_search_results(query)[N*(PAGE-1) : N*PAGE]
     self.gui.display_leaderboard(self.db.get_leaderboard(), res)
     self.gui.display_match(res, N)
 

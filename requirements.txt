@@ -6,3 +6,4 @@ numpy
 pillow
 screeninfo
 yt-dlp
+fastai
