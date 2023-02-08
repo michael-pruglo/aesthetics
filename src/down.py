@@ -43,7 +43,7 @@ def untagged_files(dir:str):
         yield fullname
 
 def online_usher_files(dir:str):
-  """catch downloads that come outside dshell"""
+  """catch downloads that come from the outside"""
   def _get_mtime():
     return os.stat(dir).st_mtime
   def _get_listdir():
@@ -51,16 +51,19 @@ def online_usher_files(dir:str):
 
   last_mtime = _get_mtime()
   last_listdir = _get_listdir()
+  print("Usher is ready. Listening...")
   while True:
     curr_mtime = _get_mtime()
     if curr_mtime == last_mtime:
-      time.sleep(1)
+      time.sleep(2)
     elif curr_mtime > last_mtime:
       curr_listdir = _get_listdir()
       new_files = curr_listdir-last_listdir
       logging.info("observed folder got %d new files: %s",
                    len(new_files), '\n\t'.join(new_files))
       for shname in new_files:
+        if hlp.file_extension(shname) in ['crdownload', 'part']:
+          continue
         yield os.path.join(dir, shname)
       last_listdir = curr_listdir
       last_mtime = curr_mtime

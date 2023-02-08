@@ -36,6 +36,7 @@ class UDownloader:
 
     dwnl_opts = {
       "restrictfilenames": True,
+      # "usenetrc": True,  # yt-dlp does not authenticate IG properly
       "windowsfilenames": True,
       "paths": {'home': self.cfg.dir_ready},
       "progress_hooks": [monitor_name],
