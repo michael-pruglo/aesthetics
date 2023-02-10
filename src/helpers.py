@@ -27,4 +27,4 @@ def start_file(fname:str) -> None:
 
 def amnesic_input(*args, **kwargs):
   tcflush(sys.stdin, TCIFLUSH)
-  return input(*args, **kwargs)
+  return input(*args, **kwargs).strip()

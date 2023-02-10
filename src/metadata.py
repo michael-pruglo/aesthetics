@@ -64,6 +64,10 @@ def get_metadata(fullname:str, vocab:list[str]=None) -> ManualMetadata:
   )
 
 
+def has_metadata(fullname:str) -> bool:
+  return get_metadata(fullname) != ManualMetadata()
+
+
 def write_metadata(fullname:str, metadata:ManualMetadata, append:bool=True) -> None:
   xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
   xmp = xmpfile.get_xmp()
