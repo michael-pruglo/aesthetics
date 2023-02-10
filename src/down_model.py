@@ -24,23 +24,23 @@ class Converter:
   def can_convert(self, fname:str) -> bool:
     return hlp.file_extension(fname) in self.conversion_map
 
-  def convert(self, fullname) -> str:
+  def convert(self, fullname:str, keep_original:bool=True) -> str:
     assert os.path.exists(fullname)
     ext = hlp.file_extension(fullname)
     converted_name = self.conversion_map[ext](fullname)
     assert os.path.exists(converted_name)
-    send2trash(fullname)
+    if not keep_original:
+      send2trash(fullname)
     return converted_name
 
   def convert_png(self, fullname) -> str:
-    self._exec(f"mogrify -format jpg {fullname}", fullname)
+    self._exec(f"mogrify -format jpg '{fullname}'", fullname)
     return self._get_converted_fname(fullname, "jpg")
 
   def convert_heic(self, fullname) -> str:
     conv_fname = self._get_converted_fname(fullname, "jpg")
-    self._exec(f"heif-convert -q 100 {fullname} {conv_fname}", fullname)
+    self._exec(f"heif-convert -q 100 '{fullname}' '{conv_fname}'", fullname)
     return conv_fname
-    # heif-convert -q 100 IMG_4301.HEIC IMG_4301q100.jpg
 
   def convert_gif(self, fullname) -> str:
     pass
@@ -49,12 +49,15 @@ class Converter:
   def convert_webp_img(self, fullname) -> str:
     pass
 
-  def _exec(cmd:str, fullname:str) -> None:
+  def _exec(self, cmd:str, fullname:str) -> None:
     assert os.path.exists(fullname)
-    working_dir = os.path.dirname(fullname)
-    if os.getcwd() != working_dir:
-      os.chdir(working_dir)
+    tmp_wd = os.path.dirname(fullname)
+    global_wd = os.getcwd()
+    if global_wd != tmp_wd:
+      os.chdir(tmp_wd)
     os.system(cmd)
+    if global_wd != tmp_wd:
+      os.chdir(global_wd)
 
   def _get_converted_fname(self, fullname:str, out_ext:str) -> str:
     return f"{os.path.splitext(fullname)[0]}.{out_ext}"
@@ -89,7 +92,9 @@ class Usher:
         last_mtime = curr_mtime
 
   def process_recent_files(self, n_interactive:int) -> None:
-    for fullname in sorted(Path(self.cfg.buffer_dir).iterdir(), key=os.path.getmtime):
+    buffer_files = [os.path.join(self.cfg.buffer_dir, f) for f in os.listdir(self.cfg.buffer_dir)]
+    buffer_files = filter(os.path.isfile, buffer_files)
+    for fullname in sorted(buffer_files, key=os.path.getmtime, reverse=True):
       if n_interactive == 0:
         break
       n_interactive -= self.process_file(fullname)
@@ -99,9 +104,7 @@ class Usher:
 
     if self.converter.needs_conversion(fullname):
       if self.converter.can_convert(fullname):
-        pre_conversion_fname = fullname
-        fullname = self.converter.convert(fullname)
-        send2trash(pre_conversion_fname)
+        fullname = self.converter.convert(fullname, keep_original=False)
       else:
         print(f"unsupported file extension '{fullname}'")
         print(f"moving file to '{self.cfg.uncateg_dir}'")
