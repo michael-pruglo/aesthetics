@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from down_model import Usher
-from secretcfg import USHER_CFG
+from downcfg import USHER_CFG
 
 
 if __name__ == "__main__":
