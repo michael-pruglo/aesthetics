@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
+import logging
+
 from down_model import Usher
 from downcfg import USHER_CFG
 
+logging.basicConfig(
+  level = logging.INFO
+)
+
 
 if __name__ == "__main__":
-  usher = Usher(USHER_CFG)
-
-  catch_up = 3
-  usher.process_recent_files(catch_up)
-
-  usher.idle()
+  Usher(USHER_CFG).idle()

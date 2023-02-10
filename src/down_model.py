@@ -1,6 +1,6 @@
 import os
 import shutil
-from pathlib import Path
+import logging
 import time
 from dataclasses import dataclass
 from send2trash import send2trash
@@ -55,6 +55,7 @@ class Converter:
     global_wd = os.getcwd()
     if global_wd != tmp_wd:
       os.chdir(tmp_wd)
+    logging.info("executing command:\n\t%s\n\tworking_dir=%s", cmd, os.getcwd())
     os.system(cmd)
     if global_wd != tmp_wd:
       os.chdir(global_wd)
@@ -82,14 +83,14 @@ class Usher:
     self.converter = Converter()
 
   def idle(self) -> None:
+    last_mtime = None
     while True:
-      curr_mtime = os.stat(self.cfg.buffer_dir).st_mtime
-      if curr_mtime == last_mtime:
+      if last_mtime == os.stat(self.cfg.buffer_dir).st_mtime:
         time.sleep(2)
       else:
         catch_up = 1
         self.process_recent_files(1+catch_up)
-        last_mtime = curr_mtime
+        last_mtime = os.stat(self.cfg.buffer_dir).st_mtime
 
   def process_recent_files(self, n_interactive:int) -> None:
     buffer_files = [os.path.join(self.cfg.buffer_dir, f) for f in os.listdir(self.cfg.buffer_dir)]
@@ -100,20 +101,22 @@ class Usher:
       n_interactive -= self.process_file(fullname)
 
   def process_file(self, fullname) -> bool:
+    logging.info("process_file '%s'", fullname)
     was_interactive = False
 
     if self.converter.needs_conversion(fullname):
       if self.converter.can_convert(fullname):
+        logging.info("Converting...")
         fullname = self.converter.convert(fullname, keep_original=False)
       else:
-        print(f"unsupported file extension '{fullname}'")
-        print(f"moving file to '{self.cfg.uncateg_dir}'")
+        logging.warning("unsupported file extension '%s'", fullname)
+        logging.warning("moving file to '%s'", self.cfg.uncateg_dir)
         shutil.move(fullname, self.cfg.uncateg_dir)
         return False
 
     conflict_fname = os.path.join(self.cfg.dest_dir, os.path.basename(fullname))
     if os.path.exists(conflict_fname):
-      print("file already exists:")
+      print("File already exists:")
       print(f"\t{conflict_fname}")
       print(f"\t{get_metadata(conflict_fname)}")
       while True:
@@ -129,7 +132,10 @@ class Usher:
     if not has_metadata(fullname):
       self.gui.show_editor(fullname)
       was_interactive = True
+    else:
+      logging.info("file already has metadata:\n\t%s", get_metadata(fullname))
 
+    logging.info("Processing done. Moving file...\n\n\n")
     shutil.move(fullname, self.cfg.dest_dir)
 
     return was_interactive
