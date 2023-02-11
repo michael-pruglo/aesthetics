@@ -14,8 +14,11 @@ class Converter:
   def __init__(self) -> None:
     self.acceptable_ext = ["jpg", "jpeg", "mp4", "jfif", "mov"]
     self.conversion_map = {
-      "png": self.convert_png,
-      "heic": self.convert_heic,
+      "png":  ("jpg", lambda fin,fout: f"mogrify -format jpg '{fin}'"),
+      "heic": ("jpg", lambda fin,fout: f"heif-convert -q 100 '{fin}' '{fout}'"),
+      "webp": ("jpg", lambda fin,fout: f"dwebp {fin} -o {fout}"),
+      "gif":  ("mp4", lambda fin,fout: f'ffmpeg -loglevel warning -i {fin} -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}'),
+      # webp_vid might be: f'convert {fin} frames.png && ffmpeg -i frames-%0d.png -c:v libx264 -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}; rm frames*png'
     }
 
   def needs_conversion(self, fname:str) -> bool:
@@ -26,28 +29,16 @@ class Converter:
 
   def convert(self, fullname:str, keep_original:bool=True) -> str:
     assert os.path.exists(fullname)
-    ext = hlp.file_extension(fullname)
-    converted_name = self.conversion_map[ext](fullname)
-    assert os.path.exists(converted_name)
+    assert self.can_convert(fullname)
+    out_ext, get_conv_cmd = self.conversion_map[hlp.file_extension(fullname)]
+    converted_name = f"{os.path.splitext(fullname)[0]}.{out_ext}"
+    assert not os.path.exists(converted_name)
+    conv_cmd = get_conv_cmd(fullname, converted_name)
+    self._exec(conv_cmd, fullname)
+    assert os.path.exists(converted_name), f"could not convert file using the following command:\n\t{conv_cmd}"
     if not keep_original:
       send2trash(fullname)
     return converted_name
-
-  def convert_png(self, fullname) -> str:
-    self._exec(f"mogrify -format jpg '{fullname}'", fullname)
-    return self._get_converted_fname(fullname, "jpg")
-
-  def convert_heic(self, fullname) -> str:
-    conv_fname = self._get_converted_fname(fullname, "jpg")
-    self._exec(f"heif-convert -q 100 '{fullname}' '{conv_fname}'", fullname)
-    return conv_fname
-
-  def convert_gif(self, fullname) -> str:
-    pass
-  def convert_webp_vid(self, fullname) -> str:
-    pass
-  def convert_webp_img(self, fullname) -> str:
-    pass
 
   def _exec(self, cmd:str, fullname:str) -> None:
     assert os.path.exists(fullname)
@@ -59,9 +50,6 @@ class Converter:
     os.system(cmd)
     if global_wd != tmp_wd:
       os.chdir(global_wd)
-
-  def _get_converted_fname(self, fullname:str, out_ext:str) -> str:
-    return f"{os.path.splitext(fullname)[0]}.{out_ext}"
 
 
 @dataclass
@@ -105,20 +93,18 @@ class Usher:
     was_interactive = False
 
     if self.converter.needs_conversion(fullname):
-      if self.converter.can_convert(fullname):
-        logging.info("Converting...")
+      logging.info("Converting...")
+      try:
         fullname = self.converter.convert(fullname, keep_original=False)
-      else:
-        logging.warning("unsupported file extension '%s'", fullname)
+      except AssertionError as ex:
+        logging.warning("could not convert '%s', assertion error: %s", fullname, ex)
         logging.warning("moving file to '%s'", self.cfg.uncateg_dir)
         shutil.move(fullname, self.cfg.uncateg_dir)
         return False
 
     conflict_fname = os.path.join(self.cfg.dest_dir, os.path.basename(fullname))
     if os.path.exists(conflict_fname):
-      print("File already exists:")
-      print(f"\t{conflict_fname}")
-      print(f"\t{get_metadata(conflict_fname)}")
+      logging.error("File already exists:\n\t%s\n\t%s", conflict_fname, get_metadata(conflict_fname))
       while True:
         usr_input = hlp.amnesic_input("do you want to skip and remove the contender? [y/n]: ").lower()
         if usr_input in ["y", "yes"]:

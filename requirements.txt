@@ -8,5 +8,3 @@ screeninfo
 fastai
 
 send2trash
-mogrify
-heif-convert
