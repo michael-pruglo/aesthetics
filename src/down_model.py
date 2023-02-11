@@ -16,7 +16,7 @@ class Converter:
     self.conversion_map = {
       "png":  ("jpg", lambda fin,fout: f"mogrify -format jpg '{fin}'"),
       "heic": ("jpg", lambda fin,fout: f"heif-convert -q 100 '{fin}' '{fout}'"),
-      "webp": ("jpg", lambda fin,fout: f"dwebp '{fin}' -o '{fout}'"),
+      "webp": ("jpg", lambda fin,fout: f"ffmpeg -loglevel error -i '{fin}' '{fout}'"),
       "gif":  ("mp4", lambda fin,fout: f"ffmpeg -loglevel warning -i '{fin}' -movflags faststart -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" '{fout}'"),
       # webp_vid might be: f'convert '{fin}' frames.png && ffmpeg -i frames-%0d.png -c:v libx264 -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}; rm frames*png'
     }
@@ -36,6 +36,9 @@ class Converter:
     conv_cmd = get_conv_cmd(fullname, converted_name)
     self._exec(conv_cmd, fullname)
     assert os.path.exists(converted_name), f"could not convert file using the following command:\n\t{conv_cmd}"
+    if not can_write_metadata(converted_name):
+      send2trash(converted_name)
+      assert False, f"bad conversion: metadata not writable"
     if not keep_original:
       send2trash(fullname)
     return converted_name
@@ -79,6 +82,7 @@ class Usher:
         catch_up = 1
         self.process_recent_files(1+catch_up)
         last_mtime = os.stat(self.cfg.buffer_dir).st_mtime
+        print("\n"*16)
 
   def process_recent_files(self, n_interactive:int) -> None:
     buffer_files = [os.path.join(self.cfg.buffer_dir, f) for f in os.listdir(self.cfg.buffer_dir)]
@@ -87,7 +91,7 @@ class Usher:
       if n_interactive == 0:
         break
       n_interactive -= self.process_file(fullname)
-      logging.info("Processing done.\n\n\n\n")
+      logging.info("Processing done.\n\n")
 
   def process_file(self, fullname) -> bool:
     logging.info("process_file '%s'", fullname)
@@ -119,14 +123,9 @@ class Usher:
           return self.process_file(new_fullname)
 
     if not has_metadata(fullname):
-      if can_write_metadata(fullname):
-        self.gui.show_editor(fullname)
-        was_interactive = True
-      else:
-        logging.error("Metadata not writable '%s'", fullname)
-        logging.warning("Moving file to '%s'", self.cfg.uncateg_dir)
-        shutil.move(fullname, self.cfg.uncateg_dir)
-        return False
+      assert can_write_metadata(fullname)
+      self.gui.show_editor(fullname)
+      was_interactive = True
     else:
       logging.info("File already has metadata:\n\t%s", get_metadata(fullname))
 
