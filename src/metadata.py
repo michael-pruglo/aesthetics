@@ -68,6 +68,12 @@ def has_metadata(fullname:str) -> bool:
   return get_metadata(fullname) != ManualMetadata()
 
 
+def can_write_metadata(fullname:str) -> bool:
+  xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
+  xmp = xmpfile.get_xmp()
+  return xmp and xmpfile.can_put_xmp(xmp)
+
+
 def write_metadata(fullname:str, metadata:ManualMetadata, append:bool=True) -> None:
   xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
   xmp = xmpfile.get_xmp()

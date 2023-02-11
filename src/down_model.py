@@ -7,7 +7,7 @@ from send2trash import send2trash
 
 import helpers as hlp
 from down_gui import DownGui
-from metadata import get_metadata, has_metadata
+from metadata import can_write_metadata, get_metadata, has_metadata
 
 
 class Converter:
@@ -16,9 +16,9 @@ class Converter:
     self.conversion_map = {
       "png":  ("jpg", lambda fin,fout: f"mogrify -format jpg '{fin}'"),
       "heic": ("jpg", lambda fin,fout: f"heif-convert -q 100 '{fin}' '{fout}'"),
-      "webp": ("jpg", lambda fin,fout: f"dwebp {fin} -o {fout}"),
-      "gif":  ("mp4", lambda fin,fout: f'ffmpeg -loglevel warning -i {fin} -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}'),
-      # webp_vid might be: f'convert {fin} frames.png && ffmpeg -i frames-%0d.png -c:v libx264 -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}; rm frames*png'
+      "webp": ("jpg", lambda fin,fout: f"dwebp '{fin}' -o '{fout}'"),
+      "gif":  ("mp4", lambda fin,fout: f"ffmpeg -loglevel warning -i '{fin}' -movflags faststart -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" '{fout}'"),
+      # webp_vid might be: f'convert '{fin}' frames.png && ffmpeg -i frames-%0d.png -c:v libx264 -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}; rm frames*png'
     }
 
   def needs_conversion(self, fname:str) -> bool:
@@ -87,6 +87,7 @@ class Usher:
       if n_interactive == 0:
         break
       n_interactive -= self.process_file(fullname)
+      logging.info("Processing done.\n\n\n\n")
 
   def process_file(self, fullname) -> bool:
     logging.info("process_file '%s'", fullname)
@@ -97,8 +98,8 @@ class Usher:
       try:
         fullname = self.converter.convert(fullname, keep_original=False)
       except AssertionError as ex:
-        logging.warning("could not convert '%s', assertion error: %s", fullname, ex)
-        logging.warning("moving file to '%s'", self.cfg.uncateg_dir)
+        logging.warning("Could not convert '%s', assertion error: %s", fullname, ex)
+        logging.warning("Moving file to '%s'", self.cfg.uncateg_dir)
         shutil.move(fullname, self.cfg.uncateg_dir)
         return False
 
@@ -106,22 +107,30 @@ class Usher:
     if os.path.exists(conflict_fname):
       logging.error("File already exists:\n\t%s\n\t%s", conflict_fname, get_metadata(conflict_fname))
       while True:
-        usr_input = hlp.amnesic_input("do you want to skip and remove the contender? [y/n]: ").lower()
+        usr_input = hlp.amnesic_input("Do you want to skip and remove the contender? [y/n]: ").lower()
         if usr_input in ["y", "yes"]:
+          logging.info("Moving '%s' to trash", fullname)
           send2trash(fullname)
           return False
         elif usr_input in ["n", "no"]:
+          logging.info("Ok, we'll just rename the file and continue")
           new_fullname = '_contend'.join(os.path.splitext(fullname))
           os.rename(fullname, new_fullname)
           return self.process_file(new_fullname)
 
     if not has_metadata(fullname):
-      self.gui.show_editor(fullname)
-      was_interactive = True
+      if can_write_metadata(fullname):
+        self.gui.show_editor(fullname)
+        was_interactive = True
+      else:
+        logging.error("Metadata not writable '%s'", fullname)
+        logging.warning("Moving file to '%s'", self.cfg.uncateg_dir)
+        shutil.move(fullname, self.cfg.uncateg_dir)
+        return False
     else:
-      logging.info("file already has metadata:\n\t%s", get_metadata(fullname))
+      logging.info("File already has metadata:\n\t%s", get_metadata(fullname))
 
-    logging.info("Processing done. Moving file...\n\n\n")
+    logging.info("Moving file to '%s'", self.cfg.dest_dir)
     shutil.move(fullname, self.cfg.dest_dir)
 
     return was_interactive
