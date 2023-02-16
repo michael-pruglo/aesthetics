@@ -46,7 +46,7 @@ class TagEditor(ttk.Frame):
       if self.hits:
         self.dehighlight_prev()
 
-      entered = self.parent.content_tag_entry.get()
+      entered = self.parent.content_tag_entry.get().lower()
       if entered and not (entered[-1].isalpha() or entered[-1] in "_|2"):
         entered = entered[:-1]
         self.parent.content_tag_entry.set(entered)
