@@ -86,10 +86,11 @@ class Usher:
 
   def process_recent_files(self, n_interactive:int) -> None:
     buffer_files = [os.path.join(self.cfg.buffer_dir, f) for f in os.listdir(self.cfg.buffer_dir)]
-    buffer_files = filter(os.path.isfile, buffer_files)
     for fullname in sorted(buffer_files, key=os.path.getmtime, reverse=True):
       if n_interactive == 0:
         break
+      if not os.path.isfile(fullname) or hlp.file_extension(fullname) in ['crdownload', 'part']:
+        continue
       n_interactive -= self.process_file(fullname)
       logging.info("Processing done.\n\n")
 
@@ -123,7 +124,7 @@ class Usher:
           return self.process_file(new_fullname)
 
     if not has_metadata(fullname):
-      assert can_write_metadata(fullname)
+      assert can_write_metadata(fullname), fullname
       self.gui.show_editor(fullname)
       was_interactive = True
     else:
