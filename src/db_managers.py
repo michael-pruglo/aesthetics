@@ -80,9 +80,9 @@ class MetadataManager:
         return fname.find('.')>0 and not fname.endswith(('.csv', '.pkl'))
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
-      if is_first_run:
-        logging.info("first run: creating metadata backup")
-        backup_initial_metadata = os.path.join(img_dir, 'backup_initial_metadata.csv')
+      backup_initial_metadata = os.path.join(img_dir, 'backup_initial_metadata.csv')
+      if not os.path.exists(backup_initial_metadata):
+        logging.info("creating metadata backup")
         fresh_tagrat.to_csv(backup_initial_metadata)
       original_dtypes = self.df.dtypes
       joined = self.df.join(fresh_tagrat, how='right', lsuffix='_old')
