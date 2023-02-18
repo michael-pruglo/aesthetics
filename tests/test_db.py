@@ -7,11 +7,11 @@ from math import sqrt
 import pandas as pd
 from pandas import testing as tm
 from ae_rater_model import DBAccess, RatingCompetition
-from ae_rater_types import ManualMetadata, MatchInfo, Outcome, ProfileInfo
+from ae_rater_types import MatchInfo, Outcome, ProfileInfo
 from prioritizers import PrioritizerType
 from rating_backends import ELO, Glicko
 
-from src.metadata import get_metadata
+from src.metadata import ManualMetadata, get_metadata
 from src.db_managers import MetadataManager
 from src.helpers import short_fname
 import tests.helpers as hlp
@@ -115,31 +115,19 @@ class TestDBAccess(unittest.TestCase):
     same_stars = [True]*(N//2) + [False]*(N-N//2)  # if curr stars are 2.4, input 2 shouldn't change it
     for prof, frac_int_test in zip(testees, same_stars):
       meta_before = get_metadata(prof.fullname)
-      self.assertEqual(meta_before.stars, int(prof.stars))
-      self.assertSetEqual(meta_before.tags, set(prof.tags.split()))
-      if meta_before.awards:
-        self.assertSetEqual(meta_before.awards, set(prof.awards.split()), prof.fullname)
-      if frac_int_test and usr_input.stars is not None:
+      prof_meta = ManualMetadata.from_str(prof.tags, int(prof.stars), prof.awards)
+      self.assertEqual(meta_before, prof_meta)
+      if frac_int_test:
         usr_input.stars = meta_before.stars
 
-      self.dba.update_meta(prof.fullname, copy.deepcopy(usr_input))  # input is allowed to be modified
-      exp_stars = meta_before.stars if usr_input.stars is None else usr_input.stars
-      exp_tags = meta_before.tags if usr_input.tags is None else set(usr_input.tags)
-      exp_awards = meta_before.awards if usr_input.awards is None else set(usr_input.awards)
+      self.dba.update_meta(prof.fullname, usr_input)
 
       dbg_info = f"{short_fname(prof.fullname)} frac_int:{frac_int_test}"
       meta_after = get_metadata(prof.fullname)
-      self.assertEqual(meta_after.stars, exp_stars)
-      if usr_input.tags is not None:
-        self.assertNotEqual(meta_after.tags, meta_before.tags, dbg_info)
-      self.assertSetEqual(meta_after.tags, exp_tags, dbg_info)
-      if meta_after.awards:
-        self.assertSetEqual(meta_after.awards, exp_awards, dbg_info)
+      self.assertEqual(meta_after, usr_input, dbg_info)
       new_prof = self._get_leaderboard_line(prof.fullname)
-      self.assertEqual(int(new_prof.stars), exp_stars, dbg_info)
-      self.assertSetEqual(set(new_prof.tags.split()), exp_tags, dbg_info)
-      if new_prof.awards:
-        self.assertSetEqual(set(new_prof.awards.split()), exp_awards, dbg_info)
+      new_prof_meta = ManualMetadata.from_str(new_prof.tags, int(new_prof.stars), new_prof.awards)
+      self.assertEqual(new_prof_meta, usr_input, dbg_info)
 
   def test_meta_update_0(self):
     self._test_meta_update_impl(ManualMetadata(
@@ -150,7 +138,6 @@ class TestDBAccess(unittest.TestCase):
 
   def test_meta_update_1(self):
     self._test_meta_update_impl(ManualMetadata(
-        tags = None,
         stars = random.randint(0, 5),
         awards = {"awa1", "awa2", "awa3"},
     ))
@@ -158,7 +145,6 @@ class TestDBAccess(unittest.TestCase):
   def test_meta_update_2(self):
     self._test_meta_update_impl(ManualMetadata(
         tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
-        stars = None,
         awards = {"awa1", "awa2", "awa3"},
     ))
 
@@ -166,7 +152,6 @@ class TestDBAccess(unittest.TestCase):
     self._test_meta_update_impl(ManualMetadata(
         tags = {"nonsense", "sks", "u3jm69ak2m6jo"},
         stars = random.randint(0, 5),
-        awards = None,
     ))
 
   def test_search_results(self):
@@ -230,11 +215,7 @@ class TestMetadataManager(unittest.TestCase):
     fname = os.path.join(MEDIA_FOLDER, short_name)
     self.assertTrue(os.path.exists(fname))
     expected_metadata = get_metadata(fname)
-    given_metadata = ManualMetadata(
-      {t for t in row['tags'].split()} or None,
-      int(row['stars']),
-      {a for a in row['awards'].split()} or None,
-    )
+    given_metadata = ManualMetadata.from_str(row['tags'], int(row['stars']), row['awards'])
     self.assertEqual(given_metadata, expected_metadata, short_name)
 
   def _check_db(self, db:pd.DataFrame, expected_len:int) -> None:

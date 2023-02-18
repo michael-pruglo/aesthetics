@@ -32,9 +32,8 @@ def factorize_good_ratio(n):
 
 
 class RaterGui:
-  def __init__(self, user_listener:UserListener, tags_vocab:list[str], mode:AppMode=AppMode.MATCH):
+  def __init__(self, user_listener:UserListener, mode:AppMode=AppMode.MATCH):
     self.user_listener = user_listener
-    self.tags_vocab = tags_vocab
     self.mode = mode
     self.root = tk.Tk()
     self.root.geometry(build_geometry(.87))
@@ -100,7 +99,7 @@ class RaterGui:
         col, row = i%COLS, i//COLS
         checkers_color = (col+row)%2
         card = ProfileCard(i, checkers_color, self.root)
-        card.set_meta_editor(self.tags_vocab, self.user_listener)
+        card.set_meta_editor(self.user_listener)
         card.place(relx=col*SINGLE_W, rely=row*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)

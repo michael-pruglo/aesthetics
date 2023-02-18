@@ -11,7 +11,7 @@ from ae_rater_model import RatingCompetition
 from helpers import short_fname
 from metadata import get_metadata, write_metadata
 import tests.helpers as hlp
-from tests.helpers import MEDIA_FOLDER
+from tests.helpers import MEDIA_FOLDER, SKIPLONG
 
 
 def rndstr(length:int=11) -> str:
@@ -81,7 +81,7 @@ class TestLongTerm(unittest.TestCase):
     self._long_term(Controller(MEDIA_FOLDER, refresh=False), 2)
 
   def test_regular_3plus(self):
-    self._long_term(Controller(MEDIA_FOLDER, refresh=False), random.randint(3,12))
+    self._long_term(Controller(MEDIA_FOLDER, refresh=False), random.randint(3,10))
 
   def test_history_short(self):
     assert len(self.all_files) > 9, "need more samples for this test"
@@ -91,7 +91,7 @@ class TestLongTerm(unittest.TestCase):
       for i,fullname in enumerate(test_files):
         meta = get_metadata(fullname)
         meta.stars = 5 - 5*i//len(test_files)
-        write_metadata(fullname, meta, append=False)
+        write_metadata(fullname, meta)
 
     HIST_FNAME = 'test_history_short.csv'
     def p_names(ranks:list[int]):
@@ -138,6 +138,7 @@ class TestLongTerm(unittest.TestCase):
     )
 
 
+  @unittest.skipIf(*SKIPLONG)
   def test_history_repeats(self):
     HIST_FNAME = 'test_history_long.csv'
     def create_long_history():

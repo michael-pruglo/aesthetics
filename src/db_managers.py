@@ -2,31 +2,19 @@ import logging
 import os
 import pandas as pd
 from typing import Callable
-from ae_rater_types import ManualMetadata
 
-from metadata import get_metadata, write_metadata
-from helpers import short_fname
+from metadata import ManualMetadata, get_metadata, write_metadata
+import helpers as hlp
 from prioritizers import make_prioritizer, PrioritizerType
 
 
-def get_vocab(fname="./tags_vocab.txt") -> list[str]:
-  fname = os.path.abspath(fname)
-  if not os.path.exists(fname):
-    return None
-  with open(fname, "r") as vocab_file:
-    return vocab_file.read().split()
+def stringify(iterable):
+  return ' '.join(sorted(iterable)).lower() if iterable else ""
 
 def _db_row(fname):
-  try:
-    meta = get_metadata(fname, get_vocab())
-  except:
-    meta = ManualMetadata()
-    logging.warning("error reading metadata of %s", short_fname(fname))
-
-  def stringify(iterable):
-    return ' '.join(sorted(iterable)).lower() if iterable else ""
+  meta = get_metadata(fname)
   return {
-    'name': short_fname(fname),
+    'name': hlp.short_fname(fname),
     'tags': stringify(meta.tags),
     'stars': meta.stars,
     'awards': stringify(meta.awards),
@@ -55,7 +43,9 @@ class MetadataManager:
                prioritizer_type:PrioritizerType=PrioritizerType.DEFAULT,
                defaults_getter:Callable[[int], dict]=None):
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
-    self.matches_since_last_save = 0
+    self.initial_metadata_fname = os.path.join(img_dir, 'backup_initial_metadata.csv')
+    self.media_dir = img_dir
+    self.profile_updates_since_last_save = 0
     metadata_dtypes = {
       'name': str,
       'tags': str,
@@ -80,10 +70,9 @@ class MetadataManager:
         return fname.find('.')>0 and not fname.endswith(('.csv', '.pkl'))
       fnames = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if is_media(f)]
       fresh_tagrat = pd.DataFrame(_db_row(fname) for fname in fnames).set_index('name')
-      backup_initial_metadata = os.path.join(img_dir, 'backup_initial_metadata.csv')
-      if not os.path.exists(backup_initial_metadata):
+      if not os.path.exists(self.initial_metadata_fname):
         logging.info("creating metadata backup")
-        fresh_tagrat.to_csv(backup_initial_metadata)
+        fresh_tagrat.to_csv(self.initial_metadata_fname)
       original_dtypes = self.df.dtypes
       joined = self.df.join(fresh_tagrat, how='right', lsuffix='_old')
 
@@ -105,6 +94,16 @@ class MetadataManager:
     self.prioritizer = make_prioritizer(prioritizer_type)
     self.df = self.df.apply(self.prioritizer.calc, axis=1)
 
+  def reset_meta_to_initial(self):
+    df = pd.read_csv(self.initial_metadata_fname)
+    for _, row in df.iterrows():
+      initial_meta = ManualMetadata.from_str(row['tags'], int(row['stars']), "" if row.isna()['awards'] else row['awards'])
+      fullname = os.path.join(self.media_dir, row['name'])
+      print(fullname, initial_meta)
+      write_metadata(fullname, initial_meta)
+      defacto = get_metadata(fullname)
+      assert defacto == initial_meta, f"\ndefacto:  {defacto}\nexpected: {initial_meta}"
+
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
     logging.info("exec")
     if min_tag_freq:
@@ -117,10 +116,6 @@ class MetadataManager:
       return dfc
 
     return self.df
-
-  def get_tags_vocab(self) -> list[str]:
-    logging.info("exec")
-    return get_vocab()
 
   def get_file_info(self, short_name:str) -> pd.Series:
     logging.info("exec")
@@ -159,29 +154,11 @@ class MetadataManager:
 
   def update(self, fullname:str, upd_data:dict, matches_each:int=0) -> None:
     logging.info("exec\n%s\n%s\nmatches_each=%d\n", fullname, upd_data, matches_each)
-    short_name = short_fname(fullname)
+    short_name = hlp.short_fname(fullname)
     row = self.df.loc[short_name].copy()
 
-    # updates on disk
-    new_disk_tags = None
-    if 'tags' in upd_data:
-      new_disk_tags = upd_data['tags'].split()
-    new_disk_awards = None
-    if 'awards' in upd_data:
-      new_disk_awards = upd_data['awards'].split()
-    new_disk_stars = None
     if 'stars' in upd_data:
-      if upd_data['stars'] < 0:
-        raise ValueError(f"inappropriate consensus_stars: {upd_data['stars']}")
-      prev_stars = row['stars']
-      new_disk_stars = min(5, int(upd_data['stars']))
-      if min(5, int(prev_stars)) != new_disk_stars:
-        logging.info("file %s updated stars on disk: %f -> %f",
-                      short_name, prev_stars, new_disk_stars)
-      else:
-        new_disk_stars = None
-    new_disk_meta = ManualMetadata(new_disk_tags, new_disk_stars, new_disk_awards)
-    write_metadata(fullname, new_disk_meta, append=False)
+      assert upd_data['stars'] >= 0, upd_data
 
     # updates in df
     if upd_data:
@@ -191,10 +168,18 @@ class MetadataManager:
     self.df.loc[short_name] = row
     logging.debug("updated db: %s", row)
 
-    self.matches_since_last_save += 1
-    if self.matches_since_last_save > 7:
+    # updates on disk
+    # TODO: to improve performance,
+    # maybe queue all write_metadata calls (create a set of changed fullnames),
+    # and only do the disk write operations on _commit()
+    # in that case, be careful that the whole program uses the freshest info from the DF, and not disk
+    new_disk_meta = ManualMetadata.from_str(row['tags'], int(row['stars']), row['awards'])
+    write_metadata(fullname, new_disk_meta)
+
+    self.profile_updates_since_last_save += 1
+    if self.profile_updates_since_last_save > 20:
       self._commit()
-      self.matches_since_last_save = 0
+      self.profile_updates_since_last_save = 0
 
   def on_exit(self):
     logging.info("exec")

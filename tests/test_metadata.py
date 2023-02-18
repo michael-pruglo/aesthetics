@@ -40,22 +40,11 @@ class TestWritingMetadata(unittest.TestCase):
 
   def test_sweep(self):
     for st in range(6):
-      for tg in [None, {"blah", "blah|hierarchical", "another"}, {"mood", "mood|smile", "color"}]:
-        for aw in [None, {"e_awa", "e_22"}, {"perfect", "daily"}]:
-          self.tearDown()
-          self.setUp()
+      for tg in [set(), {"blah", "blah|hierarchical", "another"}, {"mood", "mood|smile", "color"}]:
+        for aw in [set(), {"e_awa", "e_22"}, {"perfect", "daily"}]:
           meta = ManualMetadata(tg, st, aw)
           write_metadata(self.fname, meta)
           self.assertEqual(get_metadata(self.fname), meta)
-
-  def test_append(self):
-    tgs1 = {"a", "b|_c", "b|_d", "b"}
-    tgs2 = {"m", "m|n", "m|n|o", "p"}
-    meta1 = ManualMetadata(tgs1, 4)
-    write_metadata(self.fname, meta1)
-    self.assertEqual(get_metadata(self.fname), meta1)
-    write_metadata(self.fname, ManualMetadata(tgs2, 1), append=True)
-    self.assertEqual(get_metadata(self.fname), ManualMetadata(tgs1|tgs2, 1))
 
   def test_overwrite(self):
     tgs1 = {"a", "b|_c", "b|_d", "b"}
@@ -64,7 +53,7 @@ class TestWritingMetadata(unittest.TestCase):
     meta2 = ManualMetadata(tgs2, 4)
     write_metadata(self.fname, meta1)
     self.assertEqual(get_metadata(self.fname), meta1)
-    write_metadata(self.fname, meta2, append=False)
+    write_metadata(self.fname, meta2)
     self.assertEqual(get_metadata(self.fname), meta2)
 
 

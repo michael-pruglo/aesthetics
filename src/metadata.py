@@ -1,113 +1,122 @@
 import logging
+from dataclasses import dataclass, field
 from libxmp import XMPFiles, consts, XMPError
 
-from ae_rater_types import ManualMetadata
-import helpers as hlp
+from tags_vocab import VOCAB
 
 
-PROP_TAGS_HIERARCHICAL = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
-PROP_TAGS_BACKUP = (consts.XMP_NS_DC, "subject")
-PROP_STARS = (consts.XMP_NS_XMP, "Rating")
-PROP_AWARDS = (consts.XMP_NS_XMP, "Label")
+@dataclass
+class ManualMetadata:
+  tags : set[str] = field(default_factory=set)
+  stars : int = 0
+  awards : set[str] = field(default_factory=set)
+
+  @classmethod
+  def from_str(cls, tagsstr:str, stars:int, awardsstr:str):
+    return cls(set(tagsstr.split()), stars, set(awardsstr.split()))
 
 
-def get_metadata(fullname:str, vocab:list[str]=None) -> ManualMetadata:
-  xmpfile = XMPFiles(file_path=fullname)
-  xmp = xmpfile.get_xmp()
-  if xmp is None:
-    return ManualMetadata()
-  xmpfile.close_file()
-
-  def get_tags():
-    no_hierarchical = False
-    propname = PROP_TAGS_HIERARCHICAL
-    if not xmp.does_property_exist(*propname):
-      propname = PROP_TAGS_BACKUP
-      if not xmp.does_property_exist(*propname):
-        logging.warning("No tags in metadata of %s", hlp.short_fname(fullname))
-        return None
-      no_hierarchical = True
-      logging.warning("No hierarchical tags in %s", hlp.short_fname(fullname))
-    n = xmp.count_array_items(*propname)
-    if n==0:
-      logging.warning("ZERO tags in %s", hlp.short_fname(fullname))
-    ret = set()
-    for i in range(n):
-      tag = xmp.get_array_item(*propname, i+1)
-      if no_hierarchical and vocab is not None:
-        for voc_tag in vocab:
-          if voc_tag.endswith(tag):
-            tag = voc_tag
-            break
-      ret.add(tag)
-    return ret or None
-
-  def get_stars():
-    propname = PROP_STARS
-    if not xmp.does_property_exist(*propname):
-      return 0
-
-    return xmp.get_property_int(*propname)
-
-  def get_awards():
-    propname = PROP_AWARDS
-    if not xmp.does_property_exist(*propname):
-      return None
-
-    awards = xmp.get_property(*propname)
-    return set(awards.split())
-
-  return ManualMetadata(
-    tags=get_tags(),
-    stars=get_stars(),
-    awards=get_awards(),
-  )
-
+def get_metadata(fullname:str) -> ManualMetadata:
+  with MetadataIO(fullname, 'r') as mio:
+    return mio.read()
 
 def has_metadata(fullname:str) -> bool:
-  return get_metadata(fullname) != ManualMetadata()
-
+  meta = get_metadata(fullname)
+  return meta and meta != ManualMetadata()
 
 def can_write_metadata(fullname:str) -> bool:
-  xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
-  xmp = xmpfile.get_xmp()
-  return xmp and xmpfile.can_put_xmp(xmp)
+  with MetadataIO(fullname, 'w') as mio:
+    return mio.can_write()
+
+def write_metadata(fullname:str, metadata:ManualMetadata) -> None:
+  with MetadataIO(fullname, 'w') as mio:
+    assert mio.can_write()
+    mio.write(metadata)
 
 
-def write_metadata(fullname:str, metadata:ManualMetadata, append:bool=True) -> None:
-  xmpfile = XMPFiles(file_path=fullname, open_forupdate=True)
-  xmp = xmpfile.get_xmp()
-  if not xmp or not xmpfile.can_put_xmp(xmp):
-    raise RuntimeError(f"file {fullname}: metadata not writable")
 
-  def write_tag(property, tag):
-    if not xmp.does_array_item_exist(*property, tag):
-      xmp.append_array_item(*property, tag, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
-  if metadata.tags:
-    hier_tag_prop = PROP_TAGS_HIERARCHICAL
-    subj_tag_prop = PROP_TAGS_BACKUP
+class MetadataIO:
+  PROP_TAGS_HIERARCHICAL = (consts.XMP_NS_Lightroom, "hierarchicalSubject")
+  PROP_TAGS_BACKUP = (consts.XMP_NS_DC, "subject")
+  PROP_STARS = (consts.XMP_NS_XMP, "Rating")
+  PROP_AWARDS = (consts.XMP_NS_XMP, "Label")
+
+  def __init__(self, fullname:str, mode:str) -> None:
+    self.fullname = fullname
+    self.mode = mode
+    self.xmpfile = None
+    self.xmp = None
+
+  def __enter__(self):
+    self.xmpfile = XMPFiles(file_path=self.fullname, open_forupdate='w' in self.mode)
+    self.xmp = self.xmpfile.get_xmp()
+    return self
+
+  def __exit__(self, exc_type, exc_value, exc_traceback):
+    self.xmpfile.close_file()
+
+  def read(self) -> ManualMetadata:
+    if self.xmp is None:
+      return None
+    return ManualMetadata.from_str(self._read_tags(), self._read_stars(), self._read_awards())
+
+  def _read_tags(self) -> str:
+    tag_prop = self.PROP_TAGS_HIERARCHICAL
+    if not self.xmp.does_property_exist(*tag_prop):
+      logging.warning("No hierarchical tags in %s", self.fullname)
+      tag_prop = self.PROP_TAGS_BACKUP
+      if not self.xmp.does_property_exist(*tag_prop):
+        logging.error("No tags in metadata of %s", self.fullname)
+        return ""
+    n = self.xmp.count_array_items(*tag_prop)
+    if n==0:
+      logging.warning("ZERO tags in %s", self.fullname)
+    return ' '.join([self._read_one_tag(i, tag_prop) for i in range(n)])
+
+  def _read_one_tag(self, i, propname):
+    tag = self.xmp.get_array_item(*propname, i+1)
+    if propname==self.PROP_TAGS_BACKUP:
+      return next(voc_tag for voc_tag in VOCAB if voc_tag.endswith(tag))
+    return tag
+
+  def _read_stars(self) -> int:
+    if not self.xmp.does_property_exist(*self.PROP_STARS):
+      return 0
+    return self.xmp.get_property_int(*self.PROP_STARS)
+
+  def _read_awards(self) -> str:
+    if not self.xmp.does_property_exist(*self.PROP_AWARDS):
+      return ""
+    return self.xmp.get_property(*self.PROP_AWARDS)
+
+  def can_write(self) -> bool:
+    return bool(self.xmp) and self.xmpfile.can_put_xmp(self.xmp)
+
+  def write(self, meta) -> None:
+    tag_prop = self.PROP_TAGS_HIERARCHICAL
+    if self._register_namespace(tag_prop[0]) is None:
+      tag_prop = self.PROP_TAGS_BACKUP
+      if self._register_namespace(tag_prop[0]) is None:
+        raise RuntimeError(f"file {self.fullname}: couldn't register neither primary nor backup namespaces")
+    self.xmp.delete_property(*self.PROP_TAGS_HIERARCHICAL)
+    self.xmp.delete_property(*self.PROP_TAGS_BACKUP)
+    for tag in meta.tags:
+      if tag_prop == self.PROP_TAGS_BACKUP:
+        tag = tag.split('|')[-1]
+      if not self.xmp.does_array_item_exist(*tag_prop, tag):
+        self.xmp.append_array_item(*tag_prop, tag, {'prop_array_is_ordered': False, 'prop_value_is_array': True})
+
+    self.xmp.set_property_int(*self.PROP_STARS, meta.stars)
+    self.xmp.set_property(*self.PROP_AWARDS, ' '.join(meta.awards))
+
+    self.xmpfile.put_xmp(self.xmp)
+
+  def _register_namespace(self, namespace:str) -> str:
     try:
-      xmp.register_namespace(hier_tag_prop[0], "pref1")
-      xmp.register_namespace(subj_tag_prop[1], "pref2")
-    except:
-      logging.warning("problems registering namespace")
-    if not append:
+      return self.xmp.get_prefix_for_namespace(namespace)
+    except XMPError as not_registered_yet_ex:
       try:
-        xmp.delete_property(*hier_tag_prop)
-        xmp.delete_property(*subj_tag_prop)
-      except XMPError as e:
-        logging.warning("Could not delete property: ^s", e)
-    for tag in metadata.tags:
-      write_tag(hier_tag_prop, tag)
-      write_tag(subj_tag_prop, tag.split('|')[-1])
-
-  if metadata.stars is not None:
-    r_prop = PROP_STARS
-    xmp.set_property_int(*r_prop, metadata.stars)
-
-  if metadata.awards is not None:
-    awa_prop = PROP_AWARDS
-    xmp.set_property(*awa_prop, ' '.join(metadata.awards))
-
-  xmpfile.put_xmp(xmp)
-  xmpfile.close_file()
+        return self.xmp.register_namespace(namespace, "sugg_pref")
+      except XMPError as registration_ex:
+        logging.warning("couldn't register namespace '%s': exeption '%s'", namespace, registration_ex)
+        return None

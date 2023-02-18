@@ -3,7 +3,9 @@ from tkinter import ttk
 import tkinter.font
 from typing import Callable
 
-from ae_rater_types import ManualMetadata, ProfileInfo, UserListener
+from ae_rater_types import  ProfileInfo, UserListener
+from metadata import ManualMetadata
+from tags_vocab import VOCAB
 from gui.media_frame import MediaFrame
 from gui.guicfg import *
 import helpers as hlp
@@ -71,11 +73,10 @@ class TagEditor(ttk.Frame):
       return "break"
 
 
-  def __init__(self, vocab:list[str], curr_prof:ProfileInfo, suggested_tags:list[str],
+  def __init__(self, curr_prof:ProfileInfo, suggested_tags:list[str],
                on_commit_cb:Callable[[ManualMetadata],None], style, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.style = style
-    self.vocab = vocab
     self.states = {}
     self.chk_btns = {}
     self.curr_prof = curr_prof
@@ -94,7 +95,7 @@ class TagEditor(ttk.Frame):
                          background=BTFL_DARK_BG, font=(None, 18))  # just WHY will it not inherit style?
     self.stars_lbl = ttk.Label(self, justify=tk.CENTER, style="G.IHateTkinter.TLabel")  # just WHY will it not justify?
     self._update_stars()
-    for i in range(6):
+    for i in range(7):
       self.bind_all(str(i), self._update_stars)
 
     commit_button = ttk.Button(self, text="COMMIT", command=self._on_commit_pressed, style="IHateTkinter.TButton")
@@ -139,7 +140,7 @@ class TagEditor(ttk.Frame):
     self.tag_container_canvas.config(scrollregion=self.tag_container_canvas.bbox(tk.ALL))
 
   def _populate_checkboxes(self, master):
-    self.states = {tag:tk.IntVar(self, int(self._should_be_set(tag))) for tag in sorted(self.vocab)}
+    self.states = {tag:tk.IntVar(self, int(self._should_be_set(tag))) for tag in sorted(VOCAB)}
 
     for tag in self.states:
       stylename = "IHateTkinter.TCheckbutton"
@@ -184,21 +185,20 @@ class TagEditor(ttk.Frame):
 
   def _on_commit_pressed(self):
     input_meta = ManualMetadata(
-      tags = [tag for tag, var in self.states.items() if var.get()],
-      stars = self.stars,
-      awards = self.content_award_entry.get().split(),
+      tags={tag for tag, var in self.states.items() if var.get()},
+      stars=self.stars,
+      awards=set(self.content_award_entry.get().split()),
     )
     self.on_commit_cb(input_meta)
 
   def cleanup(self):
-    for i in range(6):
+    for i in range(7):
       self.unbind_all(str(i))
 
 
 class MetaEditor:
-  def __init__(self, master, vocab:list[str], user_listener:UserListener):
+  def __init__(self, master, user_listener:UserListener):
     self.master = master
-    self.vocab = vocab if vocab[0] else vocab[1:]  # TODO: fix
     self.user_listener = user_listener
     self.curr_prof = None
     self.win = None
@@ -226,7 +226,7 @@ class MetaEditor:
     self._configure_style()
 
     self.media_panel = MediaFrame(self.win)
-    self.tag_editor = TagEditor(self.vocab, self.curr_prof, suggested_tags,
+    self.tag_editor = TagEditor(self.curr_prof, suggested_tags,
                                 self._on_commit_pressed, self.style, self.win)
     sugg_panel = tk.Text(self.win, padx=0, pady=10, bd=0, cursor="arrow", spacing1=8,
                           foreground=BTFL_LIGHT_GRAY, background=BTFL_DARK_BG,

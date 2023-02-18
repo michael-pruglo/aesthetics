@@ -1,0 +1,5 @@
+VOCAB = [
+  "animal",
+  "mood",
+  "outfit",
+]

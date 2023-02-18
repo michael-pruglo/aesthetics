@@ -8,6 +8,7 @@ from numpy import interp
 from pandas import Series
 
 from helpers import truncate, short_fname
+from metadata import ManualMetadata
 
 
 @dataclass
@@ -96,13 +97,6 @@ class RatChange:
         delta_color, f"{f'[{self.delta_rating:+}]':>5} ",
         COLOR_RESET
       ])
-
-
-@dataclass
-class ManualMetadata:
-  tags : Iterable[str] = None
-  stars : int = 0
-  awards : Iterable[str] = None
 
 
 RatSystemName = str

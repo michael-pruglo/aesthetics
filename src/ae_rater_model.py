@@ -98,6 +98,9 @@ class DBAccess:
       match.outcome.tiers,  # maybe save boosts as well?
     )
 
+  def reset_meta_to_initial(self) -> None:
+    self.meta_mgr.reset_meta_to_initial()
+
   def get_match_history(self) -> list[MatchInfo]:
     logging.info("exec")
     hist = []
@@ -138,18 +141,15 @@ class DBAccess:
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
     logging.info("exec")
     db_prof = self.get_profile(fullname)
-    if int(db_prof.stars) == meta.stars:
-      meta.stars = None
-
-    upd = {}
-    if meta.tags is not None:
-      upd['tags'] = ' '.join(sorted(meta.tags)).lower()
-    if meta.stars is not None:
-      upd['stars'] = meta.stars
+    starchange = int(db_prof.stars)!=meta.stars
+    upd = {
+      'tags': ' '.join(meta.tags).lower(),
+      'stars': meta.stars if starchange else db_prof.stars,
+      'awards': ' '.join(meta.awards).lower(),
+    }
+    if starchange:
       upd |= self.default_values_getter(meta.stars)
-    if meta.awards is not None:
-      upd['awards'] = ' '.join(sorted(meta.awards)).lower()
-    self.meta_mgr.update(fullname, upd_data=upd)
+    self.meta_mgr.update(fullname, upd)
 
   def get_leaderboard(self) -> list[ProfileInfo]:
     logging.info("exec")
@@ -174,10 +174,6 @@ class DBAccess:
     logging.info("exec")
     info = self.meta_mgr.get_file_info(short_fname(fullname))
     return self._validate_and_convert_info(info)
-
-  def get_tags_vocab(self) -> list[str]:
-    logging.info("exec")
-    return self.meta_mgr.get_tags_vocab()
 
   def on_exit(self) -> None:
     logging.info("exec")

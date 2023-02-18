@@ -1,10 +1,10 @@
 import tkinter as tk
 
 from gui.meta_editor import MetaEditor
-from ae_rater_types import ManualMetadata, ProfileInfo, UserListener
+from ae_rater_types import ProfileInfo, UserListener
 from db_managers import get_vocab
 from ai_assistant import Assistant
-from metadata import write_metadata
+from metadata import ManualMetadata, write_metadata
 
 
 class MockListener(UserListener):
@@ -16,7 +16,7 @@ class MockListener(UserListener):
     return Assistant().suggest_tags(fullname)
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
     print("update_meta: ", fullname, meta)
-    write_metadata(fullname, meta, append=False)
+    write_metadata(fullname, meta)
 
 class DownGui:
   def __init__(self) -> None:

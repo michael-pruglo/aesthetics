@@ -6,7 +6,8 @@ import argparse
 from tqdm import tqdm
 
 from helpers import short_fname
-from ae_rater_types import AppMode, ManualMetadata, Outcome, UserListener, MatchInfo
+from ae_rater_types import AppMode, Outcome, UserListener, MatchInfo
+from metadata import ManualMetadata
 from ae_rater_view import RaterGui
 from ae_rater_model import Analyzer, DBAccess, RatingCompetition
 from ai_assistant import Assistant
@@ -22,11 +23,12 @@ def setup_logger(log_filename):
     ],
     # format = "%(created)d %(message)s",
     format = "[%(filename)20s:%(lineno)4s - %(funcName)20s() ] %(message)s",
-    level = logging.WARNING
+    level = logging.DEBUG
   )
   logging.info("Starting new session...")
 
 
+INITIAL_METADATA_FNAME = "backup_initial_metadata.csv"
 DEFAULT_HISTORY_FNAME = "match_history.csv"
 
 class Controller:
@@ -47,6 +49,8 @@ class FromHistoryController(Controller):
 
   def run(self, with_diagnostics=True):
     logging.info("exec")
+    # self.db.reset_meta_to_initial()
+    # return
     for match in tqdm(self.db.get_match_history()):
       self.process_match(match)
     if with_diagnostics:
@@ -57,7 +61,7 @@ class InteractiveController(Controller, UserListener):
     super().__init__(media_dir, refresh, prioritizer_type)
     self.n = n_participants
     self.mode = mode
-    self.gui = RaterGui(self, self.db.get_tags_vocab(), mode)
+    self.gui = RaterGui(self, mode)
     self.participants = []
     self.ai_assistant = Assistant()
 
