@@ -23,7 +23,7 @@ def setup_logger(log_filename):
     ],
     # format = "%(created)d %(message)s",
     format = "[%(filename)20s:%(lineno)4s - %(funcName)20s() ] %(message)s",
-    level = logging.DEBUG
+    level = logging.INFO
   )
   logging.info("Starting new session...")
 
@@ -48,9 +48,8 @@ class FromHistoryController(Controller):
     super().__init__(media_dir, refresh=False, history_fname=history_fname)
 
   def run(self, with_diagnostics=True):
-    logging.info("exec")
-    # self.db.reset_meta_to_initial()
-    # return
+    logging.info("preparing to re-run history: resetting meta to initial...")
+    self.db.reset_meta_to_initial()
     for match in tqdm(self.db.get_match_history()):
       self.process_match(match)
     if with_diagnostics:

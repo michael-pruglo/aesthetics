@@ -2,7 +2,6 @@ import tkinter as tk
 
 from gui.meta_editor import MetaEditor
 from ae_rater_types import ProfileInfo, UserListener
-from db_managers import get_vocab
 from ai_assistant import Assistant
 from metadata import ManualMetadata, write_metadata
 
@@ -24,7 +23,7 @@ class DownGui:
     self.root.withdraw()
 
   def show_editor(self, fullname:str):
-    meditor = MetaEditor(self.root, get_vocab(), MockListener())
+    meditor = MetaEditor(self.root, MockListener())
     meditor.set_curr_profile(ProfileInfo(fullname))
     window = meditor.open(None)
 

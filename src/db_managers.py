@@ -41,11 +41,12 @@ def _default_init(row, default_values_getter):
 class MetadataManager:
   def __init__(self, img_dir:str, refresh:bool=False,
                prioritizer_type:PrioritizerType=PrioritizerType.DEFAULT,
-               defaults_getter:Callable[[int], dict]=None):
+               defaults_getter:Callable=None):
     self.db_fname = os.path.join(img_dir, 'metadata_db.csv')
     self.initial_metadata_fname = os.path.join(img_dir, 'backup_initial_metadata.csv')
     self.media_dir = img_dir
     self.profile_updates_since_last_save = 0
+    self.defaults_getter = defaults_getter
     metadata_dtypes = {
       'name': str,
       'tags': str,
@@ -82,7 +83,7 @@ class MetadataManager:
             row['stars'] = row['stars_old']
         return row
       self.df = joined.apply(refresh_row, axis=1)[self.df.columns]
-      self.df = self.df.apply(_default_init, axis=1, args=(defaults_getter,))
+      self.df = self.df.apply(_default_init, axis=1, args=(self.defaults_getter,))
       self.df = self.df.astype(original_dtypes)
       self.df.sort_values('stars', ascending=False, inplace=True)
       self._commit()
@@ -97,12 +98,17 @@ class MetadataManager:
   def reset_meta_to_initial(self):
     df = pd.read_csv(self.initial_metadata_fname)
     for _, row in df.iterrows():
-      initial_meta = ManualMetadata.from_str(row['tags'], int(row['stars']), "" if row.isna()['awards'] else row['awards'])
       fullname = os.path.join(self.media_dir, row['name'])
-      print(fullname, initial_meta)
-      write_metadata(fullname, initial_meta)
-      defacto = get_metadata(fullname)
-      assert defacto == initial_meta, f"\ndefacto:  {defacto}\nexpected: {initial_meta}"
+      if not os.path.exists(fullname):
+        continue
+      reset_data = {
+        'tags': row['tags'],
+        'stars': row['stars'],
+        'awards': row['awards'],
+        'nmatches': 0,
+      }
+      reset_data |= self.defaults_getter(row['stars'])
+      self.update(fullname, reset_data)
 
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
     logging.info("exec")
@@ -153,7 +159,9 @@ class MetadataManager:
     return self.df[self.df.apply(is_match, axis=1)]
 
   def update(self, fullname:str, upd_data:dict, matches_each:int=0) -> None:
-    logging.info("exec\n%s\n%s\nmatches_each=%d\n", fullname, upd_data, matches_each)
+    # TODO: to improve performance,
+    # accept updates in bulk - in dataframes (from apply_opinions and reset_meta)
+    logging.debug("exec\n%s\n%s\nmatches_each=%d\n", fullname, upd_data, matches_each)
     short_name = hlp.short_fname(fullname)
     row = self.df.loc[short_name].copy()
 

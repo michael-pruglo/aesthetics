@@ -40,7 +40,7 @@ class TagEditor(ttk.Frame):
         self.prev_style = self.parent.chk_btns[tag].cget('style')
         self.parent.chk_btns[tag].configure(style="Entered.IHateTkinter.TCheckbutton")
         self.parent.tag_entry.configure(background=BTFL_DARK_BG)
-        i = sorted(self.parent.vocab).index(tag)
+        i = sorted(VOCAB).index(tag)
         percent = i/len(self.parent.states)
         self.parent.tag_container_canvas.yview_moveto(percent-.1)
 
@@ -55,7 +55,7 @@ class TagEditor(ttk.Frame):
 
       self.hits = []
       if entered:
-        for tag in self.parent.vocab:
+        for tag in VOCAB:
           if entered in tag.rsplit('|', maxsplit=1)[-1]:
             if not self.hits:
               self.highlight(tag)
