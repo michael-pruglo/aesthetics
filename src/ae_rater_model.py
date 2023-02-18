@@ -95,7 +95,7 @@ class DBAccess:
     self.history_mgr.save_match(
       match.timestamp,
       str([short_fname(p.fullname) for p in match.profiles]),
-      match.outcome.tiers,  # maybe save boosts as well?
+      match.outcome.rawstr
     )
 
   def reset_meta_to_initial(self) -> None:

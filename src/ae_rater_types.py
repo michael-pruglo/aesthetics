@@ -109,6 +109,7 @@ class Outcome:
     if not self.is_valid(s):
       raise ValueError(f"cannot parse outcome from '{s}'")
 
+    self.rawstr = s
     self.boosts = self._parse_boosts(s)
     self.tiers = s.translate({ord(i):None for i in "+-"})
 
