@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+import sys
+import os
 import tkinter as tk
 
 from gui.meta_editor import MetaEditor
@@ -32,3 +36,11 @@ class DownGui:
         self.root.quit()
     window.bind('<Destroy>', on_destroy)
     window.mainloop()
+
+
+if __name__ == "__main__":
+  gui = DownGui()
+  for fullname in sys.argv[1:]:
+    fullname = os.path.realpath(fullname)
+    assert os.path.exists(fullname)
+    gui.show_editor(fullname)
