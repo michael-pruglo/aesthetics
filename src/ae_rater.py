@@ -21,8 +21,7 @@ def setup_logger(log_filename):
       logging.StreamHandler(),
       logging.FileHandler(log_filename, encoding="utf-8")
     ],
-    # format = "%(created)d %(message)s",
-    format = "[%(filename)20s:%(lineno)4s - %(funcName)20s() ] %(message)s",
+    format = "%(created)d %(message)s",
     level = logging.INFO
   )
   logging.info("Starting new session...")
@@ -65,7 +64,6 @@ class InteractiveController(Controller, UserListener):
     self.ai_assistant = Assistant()
 
   def run(self) -> None:
-    logging.info("exec")
     try:
       if self.mode == AppMode.MATCH:
         self.start_next_match()
@@ -80,13 +78,11 @@ class InteractiveController(Controller, UserListener):
       self.db.on_exit()
 
   def start_next_match(self):
-    logging.info("exec")
     self.participants = self.db.get_next_match(self.n)
     self.gui.display_leaderboard(self.db.get_leaderboard(), self.participants)
     self.gui.display_match(self.participants)
 
   def consume_result(self, outcome:Outcome) -> None:
-    logging.info("exec")
     assert self.n and len(self.participants) == self.n
     assert self.n == len(outcome.tiers) - outcome.tiers.count(' ')
     match = MatchInfo(profiles=self.participants, outcome=outcome)
@@ -97,7 +93,6 @@ class InteractiveController(Controller, UserListener):
     self.participants = []
 
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
-    logging.info("exec")
     self.db.update_meta(fullname, meta)
     updated_prof = self.db.get_profile(fullname)
     self.participants = [updated_prof if p.fullname==fullname else p for p in self.participants]
@@ -105,11 +100,9 @@ class InteractiveController(Controller, UserListener):
     self.gui.refresh_profile(updated_prof)
 
   def suggest_tags(self, fullname:str) -> list:
-    logging.info("exec")
     return self.ai_assistant.suggest_tags(fullname)
 
   def search_for(self, query:str) -> None:
-    logging.info("exec")
     N = 10
     PAGE = 1
     res = self.db.get_search_results(query)[N*(PAGE-1) : N*PAGE]

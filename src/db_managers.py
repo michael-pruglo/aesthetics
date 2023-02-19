@@ -91,7 +91,6 @@ class MetadataManager:
     self.set_prioritizer(prioritizer_type)
 
   def set_prioritizer(self, prioritizer_type) -> None:
-    logging.info("exec")
     self.prioritizer = make_prioritizer(prioritizer_type)
     self.df = self.df.apply(self.prioritizer.calc, axis=1)
 
@@ -111,7 +110,6 @@ class MetadataManager:
       self.update(fullname, reset_data)
 
   def get_db(self, min_tag_freq:int=0) -> pd.DataFrame:
-    logging.info("exec")
     if min_tag_freq:
       freq_tags = self._get_frequent_tags(min_tag_freq)
       logging.debug("frequency of tags (threshold %d):\n%s", min_tag_freq, freq_tags)
@@ -124,15 +122,12 @@ class MetadataManager:
     return self.df
 
   def get_file_info(self, short_name:str) -> pd.Series:
-    logging.info("exec")
     return self.df.loc[short_name]
 
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
-    logging.info("exec")
     return self.df.sample(n, weights='priority')
 
   def get_search_results(self, query:str) -> pd.DataFrame:
-    logging.info("exec")
     query = query.strip()
     if query == "":
       return self.df
@@ -190,7 +185,6 @@ class MetadataManager:
       self.profile_updates_since_last_save = 0
 
   def on_exit(self):
-    logging.info("exec")
     self._commit()
 
   def _get_frequent_tags(self, min_tag_freq):

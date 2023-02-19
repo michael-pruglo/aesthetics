@@ -22,7 +22,6 @@ class RatingCompetition:
     return self.rat_systems
 
   def consume_match(self, match:MatchInfo) -> tuple[RatingOpinions, DiagnosticInfo]:
-    logging.info("exec")
     logging.info("consume_match outcome = '%s'  boosts = %s", match.outcome.tiers, match.outcome.boosts)
     opinions = {s.name(): s.process_match(match)
                 for s in self.rat_systems}
@@ -91,7 +90,6 @@ class DBAccess:
     return default_values
 
   def save_match(self, match:MatchInfo) -> None:
-    logging.info("exec")
     self.history_mgr.save_match(
       match.timestamp,
       str([short_fname(p.fullname) for p in match.profiles]),
@@ -102,7 +100,6 @@ class DBAccess:
     self.meta_mgr.reset_meta_to_initial()
 
   def get_match_history(self) -> list[MatchInfo]:
-    logging.info("exec")
     hist = []
     matches_unavailable = 0
     for index, (timestamp, names, outcome_str) in self.history_mgr.get_match_history().iterrows():
@@ -123,7 +120,6 @@ class DBAccess:
     return hist
 
   def apply_opinions(self, profiles:list[ProfileInfo], opinions:RatingOpinions) -> None:
-    logging.info("exec")
     for i,prof in enumerate(profiles):
       new_ratings = {}
       proposed_stars = []
@@ -139,7 +135,6 @@ class DBAccess:
       self.meta_mgr.update(prof.fullname, new_ratings, len(profiles)-1)
 
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
-    logging.info("exec")
     db_prof = self.get_profile(fullname)
     starchange = int(db_prof.stars)!=meta.stars
     upd = {
@@ -152,31 +147,26 @@ class DBAccess:
     self.meta_mgr.update(fullname, upd)
 
   def get_leaderboard(self) -> list[ProfileInfo]:
-    logging.info("exec")
     db = self.meta_mgr.get_db()
     sortpriorities = ['stars'] + [s.name()+'_pts' for s in self.rat_systems] + ['awards']
     db.sort_values(sortpriorities, ascending=False, inplace=True)
     return [self._validate_and_convert_info(db.iloc[i]) for i in range(len(db))]
 
   def get_next_match(self, n:int) -> list[ProfileInfo]:
-    logging.info("exec")
     sample = self.meta_mgr.get_rand_files_info(n)
     return [self._validate_and_convert_info(sample.iloc[i])
             for i in range(len(sample))]
 
   def get_search_results(self, query:str) -> list[ProfileInfo]:
-    logging.info("exec")
     hits = self.meta_mgr.get_search_results(query)
     return [self._validate_and_convert_info(hits.iloc[i])
             for i in range(len(hits))]
 
   def get_profile(self, fullname:str) -> ProfileInfo:
-    logging.info("exec")
     info = self.meta_mgr.get_file_info(short_fname(fullname))
     return self._validate_and_convert_info(info)
 
   def on_exit(self) -> None:
-    logging.info("exec")
     self.meta_mgr.on_exit()
 
   def _validate_and_convert_info(self, info) -> ProfileInfo:

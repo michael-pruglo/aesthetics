@@ -68,7 +68,6 @@ class ELO(RatingBackend):
     return max((rat.points-self.BASE_RATING)/self.STD, 0.0)
 
   def _process_match_strategy(self, match):
-    logging.info("exec")
     changes = [0] * len(match.profiles)
     for curr, matches in match.outcome.as_dict().items():
       for opponent, sr in matches:
@@ -119,7 +118,6 @@ class Glicko(RatingBackend):
 
   # http://glicko.net/glicko/glicko.pdf
   def _process_match_strategy(self, match):
-    logging.info("exec")
     for i in match.outcome.as_dict().keys():
       currat = match.profiles[i].ratings[self.name()]
       assert self.MIN_RD <= currat.rd <= self.MAX_RD
