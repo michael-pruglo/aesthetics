@@ -78,6 +78,10 @@ class RaterGui:
                           feature:list[ProfileInfo]=None) -> None:
     self.leaderboard.display(leaderboard, feature)
 
+  def refresh_profile(self, prof:ProfileInfo) -> None:
+    card = next(c for c in self.cards if c.get_curr_profile().fullname==prof.fullname)
+    card.show_profile(prof)
+
   def mainloop(self):
     self.root.mainloop()
     for id in self.scheduled_jobs:

@@ -40,6 +40,9 @@ class ProfileCard(tk.Frame):
     self._show_rating(profile)
     self.media.show_media(profile.fullname)
 
+  def get_curr_profile(self) -> ProfileInfo:
+    return self.meta_editor.get_curr_profile()
+
   def reset_style(self) -> None:
     self.set_style(self.bg)
 

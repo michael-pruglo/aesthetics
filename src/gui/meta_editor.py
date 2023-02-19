@@ -207,6 +207,9 @@ class MetaEditor:
   def set_curr_profile(self, prof:ProfileInfo):
     self.curr_prof = prof
 
+  def get_curr_profile(self) -> ProfileInfo:
+    return self.curr_prof
+
   def open(self, event) -> tk.Toplevel:
     assert self.curr_prof
     try:

@@ -99,8 +99,10 @@ class InteractiveController(Controller, UserListener):
   def update_meta(self, fullname:str, meta:ManualMetadata) -> None:
     logging.info("exec")
     self.db.update_meta(fullname, meta)
+    updated_prof = self.db.get_profile(fullname)
+    self.participants = [updated_prof if p.fullname==fullname else p for p in self.participants]
     self.gui.display_leaderboard(self.db.get_leaderboard(), self.participants)
-    self.gui.refresh_profile(self.db.get_profile(fullname))
+    self.gui.refresh_profile(updated_prof)
 
   def suggest_tags(self, fullname:str) -> list:
     logging.info("exec")
