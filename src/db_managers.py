@@ -156,7 +156,7 @@ class MetadataManager:
   def update(self, fullname:str, upd_data:dict, matches_each:int=0) -> None:
     # TODO: to improve performance,
     # accept updates in bulk - in dataframes (from apply_opinions and reset_meta)
-    logging.debug("exec\n%s\n%s\nmatches_each=%d\n", fullname, upd_data, matches_each)
+    logging.debug("DB update():\n%s\n%s\nmatches_each=%d\n", fullname, upd_data, matches_each)
     short_name = hlp.short_fname(fullname)
     row = self.df.loc[short_name].copy()
 

@@ -10,9 +10,6 @@ from db_managers import MetadataManager, HistoryManager
 from rating_backends import RatingBackend, ELO, Glicko
 from helpers import short_fname
 
-# make history replay work
-# add diagnostic info
-
 
 class RatingCompetition:
   def __init__(self):

@@ -16,8 +16,8 @@ class RatingBackend(ABC):
     pass
 
   def process_match(self, match:MatchInfo) -> list[RatChange]:
-    # print("\n ---- ")
-    # print("initial: ", [p.ratings[self.name()] for p in match.profiles])
+    logging.info("\n ---- %s ---- ", self.name())
+    logging.info("initial: %s", [p.ratings[self.name()] for p in match.profiles])
     match = copy.deepcopy(match)
 
     boosts = []
@@ -27,16 +27,16 @@ class RatingBackend(ABC):
       boosts.append(boost)
       match.profiles[i].ratings[self.name()].points += boost
 
-    # print("after:   ", [p.ratings[self.name()] for p in match.profiles])
+    logging.info("after:   %s", [p.ratings[self.name()] for p in match.profiles])
 
     changes = self._process_match_strategy(match)
     ret = [RatChange(ch.new_rating, ch.delta_rating+boost, ch.new_stars)
             for ch,boost in zip(changes, boosts)]
 
-    # print("boosts:  ", boosts)
-    # print("changes: ", changes)
-    # print("ret:     ", ret)
-    # print(" ---- \n")
+    logging.info("boosts:  %s", boosts)
+    logging.info("changes: %s", changes)
+    logging.info("ret:     %s", ret)
+    logging.info(" ---- ")
 
     return ret
 

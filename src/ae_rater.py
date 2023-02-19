@@ -37,7 +37,6 @@ class Controller:
     self.analyzer = Analyzer()
 
   def process_match(self, match:MatchInfo):
-    logging.info("exec %s", str(match))
     opinions,diagnostic_info = self.competition.consume_match(match)
     self.analyzer.consume_diagnostic(diagnostic_info)
     self.db.apply_opinions(match.profiles, opinions)
