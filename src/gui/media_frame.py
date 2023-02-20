@@ -34,7 +34,7 @@ class MediaFrame(tk.Frame): # tk and not ttk, because the former supports .confi
       self.img_frame.bind('<Button-1>', self._open_media_in_new_window)
     self.img = Image.open(fname)
     selfsize = (self.winfo_width(), self.winfo_height())
-    assert selfsize > (10,10)
+    assert all(px>10 for px in selfsize), selfsize
     self.img = ImageOps.contain(self.img, selfsize)
     self.img = ImageTk.PhotoImage(self.img)
     self.img_frame.config(image=self.img)
