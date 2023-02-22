@@ -85,12 +85,15 @@ class Usher:
         print("\n"*16)
 
   def process_recent_files(self, n_interactive:int) -> None:
-    buffer_files = [os.path.join(self.cfg.buffer_dir, f) for f in os.listdir(self.cfg.buffer_dir)]
+    buffer_files = []
+    for f in os.listdir(self.cfg.buffer_dir):
+      fullname = os.path.join(self.cfg.buffer_dir, f)
+      if not os.path.isfile(fullname) or hlp.file_extension(fullname) in ['crdownload', 'part']:
+        continue
+      buffer_files.append(fullname)
     for fullname in sorted(buffer_files, key=os.path.getmtime, reverse=True):
       if n_interactive == 0:
         break
-      if not os.path.isfile(fullname) or hlp.file_extension(fullname) in ['crdownload', 'part']:
-        continue
       n_interactive -= self.process_file(fullname)
       logging.info("Processing done.\n\n")
 
