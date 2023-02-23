@@ -9,17 +9,20 @@ import helpers as hlp
 from down_gui import DownGui
 from metadata import can_write_metadata, get_metadata, has_metadata
 
+CATCH_UP_N = 3
+
 
 class Converter:
   def __init__(self) -> None:
     self.acceptable_ext = ["jpg", "jpeg", "mp4", "jfif", "mov"]
+    FFVIDOPTS = " -movflags faststart -pix_fmt yuv420p -vf scale='trunc(iw/2)*2:trunc(ih/2)*2' -loglevel warning "
     self.conversion_map = {
-      "png":  ("jpg", lambda fin,fout: f"mogrify -format jpg '{fin}'"),
-      "heic": ("jpg", lambda fin,fout: f"heif-convert -q 100 '{fin}' '{fout}'"),
-      "webp": ("jpg", lambda fin,fout: f"ffmpeg -loglevel error -i '{fin}' '{fout}'"),
-      "webm": ("mp4", lambda fin,fout: f"ffmpeg -loglevel warning -i '{fin}' '{fout}'"),
-      "gif":  ("mp4", lambda fin,fout: f"ffmpeg -loglevel warning -i '{fin}' -movflags faststart -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" '{fout}'"),
-      # webp_vid might be: f'convert '{fin}' frames.png && ffmpeg -i frames-%0d.png -c:v libx264 -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}; rm frames*png'
+      "png":  [("jpg", lambda fin,fout: f"mogrify -format jpg '{fin}'")],
+      "heic": [("jpg", lambda fin,fout: f"heif-convert -q 100 '{fin}' '{fout}'")],
+      "webp": [("jpg", lambda fin,fout: f"ffmpeg -loglevel error -i '{fin}' '{fout}'"),
+               ("mp4", lambda fin,fout: f"mkdir tmpcnv; dur=$(webpinfo '{fin}' | grep -oP '(?<=Duration: )[0-9]+' | tail -n1); convert '{fin}' tmpcnv/frames.png && ffmpeg ${{dur:+-framerate 1000/$((dur>100?100:dur))}} -i tmpcnv/frames-%0d.png -c:v libx264 {FFVIDOPTS} '{fout}'; rm -r tmpcnv")],
+      "webm": [("mp4", lambda fin,fout: f"ffmpeg -i '{fin}' {FFVIDOPTS} '{fout}'")],
+      "gif":  [("mp4", lambda fin,fout: f"ffmpeg -i '{fin}' {FFVIDOPTS} '{fout}'")],
     }
 
   def needs_conversion(self, fname:str) -> bool:
@@ -31,18 +34,24 @@ class Converter:
   def convert(self, fullname:str, keep_original:bool=True) -> str:
     assert os.path.exists(fullname)
     assert self.can_convert(fullname)
-    out_ext, get_conv_cmd = self.conversion_map[hlp.file_extension(fullname)]
-    converted_name = f"{os.path.splitext(fullname)[0]}.{out_ext}"
-    assert not os.path.exists(converted_name)
-    conv_cmd = get_conv_cmd(fullname, converted_name)
-    self._exec(conv_cmd, fullname)
-    assert os.path.exists(converted_name), f"could not convert file using the following command:\n\t{conv_cmd}"
+    converted_name = self._convert_impl(fullname)
     if not can_write_metadata(converted_name):
       send2trash(converted_name)
-      assert False, f"bad conversion: metadata not writable"
+      raise RuntimeError(f"bad conversion: metadata not writable")
     if not keep_original:
       send2trash(fullname)
     return converted_name
+
+  def _convert_impl(self, fullname):
+    for out_ext, get_conv_cmd in self.conversion_map[hlp.file_extension(fullname)]:
+      converted_name = f"{os.path.splitext(fullname)[0]}.{out_ext}"
+      assert not os.path.exists(converted_name)
+      conv_cmd = get_conv_cmd(fullname, converted_name)
+      self._exec(conv_cmd, fullname)
+      if os.path.exists(converted_name):
+        return converted_name
+      logging.warning(f"Could not convert {hlp.short_fname(fullname)} to {out_ext} using the following command:\n\t{conv_cmd}\nTrying backup...")
+    raise RuntimeError(f"Could not convert file {fullname}")
 
   def _exec(self, cmd:str, fullname:str) -> None:
     assert os.path.exists(fullname)
@@ -80,8 +89,7 @@ class Usher:
       if last_mtime == os.stat(self.cfg.buffer_dir).st_mtime:
         time.sleep(2)
       else:
-        catch_up = 1
-        self.process_recent_files(1+catch_up)
+        self.process_recent_files(1 + CATCH_UP_N)
         last_mtime = os.stat(self.cfg.buffer_dir).st_mtime
         print("\n"*16)
 
@@ -106,8 +114,8 @@ class Usher:
       logging.info("Converting...")
       try:
         fullname = self.converter.convert(fullname, keep_original=False)
-      except AssertionError as ex:
-        logging.warning("Could not convert '%s', assertion error: %s", fullname, ex)
+      except RuntimeError as ex:
+        logging.warning("Could not convert '%s', runtime error: %s", fullname, ex)
         logging.warning("Moving file to '%s'", self.cfg.uncateg_dir)
         shutil.move(fullname, self.cfg.uncateg_dir)
         return False
