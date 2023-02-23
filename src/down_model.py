@@ -17,6 +17,7 @@ class Converter:
       "png":  ("jpg", lambda fin,fout: f"mogrify -format jpg '{fin}'"),
       "heic": ("jpg", lambda fin,fout: f"heif-convert -q 100 '{fin}' '{fout}'"),
       "webp": ("jpg", lambda fin,fout: f"ffmpeg -loglevel error -i '{fin}' '{fout}'"),
+      "webm": ("mp4", lambda fin,fout: f"ffmpeg -loglevel warning -i '{fin}' '{fout}'"),
       "gif":  ("mp4", lambda fin,fout: f"ffmpeg -loglevel warning -i '{fin}' -movflags faststart -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" '{fout}'"),
       # webp_vid might be: f'convert '{fin}' frames.png && ffmpeg -i frames-%0d.png -c:v libx264 -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" {fout}; rm frames*png'
     }
