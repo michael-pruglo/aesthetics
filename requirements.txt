@@ -3,6 +3,7 @@ python-xmp-toolkit
 pandas
 numpy
 pillow
+imageio
 screeninfo
 fastai
 
