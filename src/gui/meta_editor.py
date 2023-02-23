@@ -245,6 +245,11 @@ class MetaEditor:
     self.win.update()
     self.tag_editor.create_children()
     self.media_panel.show_media(self.curr_prof.fullname)
+    self.anim_update()
+
+  def anim_update(self):
+    self.media_panel.anim_update()
+    self.win.after(10, self.anim_update)
 
   def _display_suggestions(self, suggested_tags, sugg_panel:tk.Text):
     sugg_panel.configure(state=tk.NORMAL)
@@ -272,6 +277,6 @@ class MetaEditor:
 
   def _cleanup(self):
     if self.media_panel:
-      self.media_panel.unpack()
+      self.media_panel.anim_pause()
     self.tag_editor.cleanup()
     self.win.destroy()

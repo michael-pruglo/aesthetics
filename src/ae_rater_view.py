@@ -8,6 +8,7 @@ import numpy as np
 import logging
 
 from ae_rater_types import *
+from gui.animated_element import AnimElementsManager
 import helpers as hlp
 from gui.guicfg import *
 from gui.leaderboard import Leaderboard
@@ -39,14 +40,13 @@ class RaterGui:
     self.root.geometry(build_geometry(.87))
     self.root.title("aesthetics")
     self.root.update()
-    self.root.bind('<FocusOut>', self._on_focus_event)
-    self.root.bind('<FocusIn>', self._on_focus_event)
 
     self.style = ttk.Style(self.root)
     self.style.configure('.', background=BTFL_DARK_BG)
 
     self.curr_prof_shnames:list[str] = []
     self.cards:list[ProfileCard] = []
+    self.animmgr = None
     self.leaderboard = Leaderboard(self.root)
 
     self.content_outcome = tk.StringVar()
@@ -64,9 +64,11 @@ class RaterGui:
     if len(self.cards) != len(profiles):
       self._prepare_layout(n)
     self.root.update()
+    self.animmgr.stop()
     for card,profile in zip(self.cards, profiles):
       card.show_profile(profile)
       card.reset_style()
+    self.animmgr.run()
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
     self._enable_input(True, n)
 
@@ -106,6 +108,7 @@ class RaterGui:
         card.set_meta_editor(self.user_listener)
         card.place(relx=col*SINGLE_W, rely=row*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
         self.cards.append(card)
+      self.animmgr = AnimElementsManager(self.root, self.cards)
       self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
       self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H-INP_LBL_H, relwidth=LDBRD_W)
@@ -113,14 +116,6 @@ class RaterGui:
       self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
     else:
       raise NotImplementedError(f"cannot show gui for {n} cards")
-
-  def _on_focus_event(self, event):
-    if str(event.widget) == ".":
-      for card in self.cards:
-        if "out" in str(event).lower():
-          card.pause()
-        else:
-          card.unpause()
 
   def _highlight_curr_outcome(self, n:int):
     for card in self.cards:

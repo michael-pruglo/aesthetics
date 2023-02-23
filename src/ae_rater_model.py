@@ -141,6 +141,7 @@ class DBAccess:
     }
     if starchange:
       upd |= self.default_values_getter(meta.stars)
+    logging.info("update_meta %s\n  starchange: %s\n  upd=%s", fullname, starchange, upd)
     self.meta_mgr.update(fullname, upd)
 
   def get_leaderboard(self) -> list[ProfileInfo]:

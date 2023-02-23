@@ -2,15 +2,16 @@ import tkinter as tk
 from tkinter import ttk
 
 from ae_rater_types import ProfileInfo, Outcome
+from gui.animated_element import AnimElement
 from gui.meta_editor import MetaEditor
 from gui.media_frame import MediaFrame
 from gui.guicfg import *
 import helpers as hlp
 
 
-class ProfileCard(tk.Frame):
+class ProfileCard(AnimElement, tk.Frame):
   def __init__(self, idx:int, checkers_color:bool, *args, **kwargs):
-    super().__init__(*args, **kwargs)
+    tk.Frame.__init__(self, *args, **kwargs)
     self.idx = idx
     self.bg = RIGHT_COLORBG if checkers_color else LEFT_COLORBG
     self.fg = RIGHT_COLORFG if checkers_color else LEFT_COLORFG
@@ -50,11 +51,9 @@ class ProfileCard(tk.Frame):
     for item in self, self.tags, self.media, self.name, self.rating:
       item.configure(background=color)
 
-  def pause(self):
-    self.media.pause()
-
-  def unpause(self):
-    self.media.unpause()
+  def anim_update(self):  self.media.anim_update()
+  def anim_pause(self):   self.media.anim_pause()
+  def anim_unpause(self): self.media.anim_unpause()
 
   def _show_tags(self, tags):
     tags = sorted(tags.split(' '))

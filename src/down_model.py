@@ -114,6 +114,7 @@ class Usher:
     conflict_fname = os.path.join(self.cfg.dest_dir, os.path.basename(fullname))
     if os.path.exists(conflict_fname):
       logging.error("File already exists:\n\t%s\n\t%s", conflict_fname, get_metadata(conflict_fname))
+      hlp.start_file(conflict_fname)
       while True:
         usr_input = hlp.amnesic_input("Do you want to skip and remove the contender? [y/n]: ").lower()
         if usr_input in ["y", "yes"]:
@@ -133,7 +134,10 @@ class Usher:
     else:
       logging.info("File already has metadata:\n\t%s", get_metadata(fullname))
 
-    logging.info("Moving file to '%s'", self.cfg.dest_dir)
-    shutil.move(fullname, self.cfg.dest_dir)
+    if has_metadata(fullname):
+      logging.info("Moving file to '%s'", self.cfg.dest_dir)
+      shutil.move(fullname, self.cfg.dest_dir)
+    else:
+      logging.warning("At the end, still no metadata in %s", fullname)
 
     return was_interactive
