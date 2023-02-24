@@ -20,7 +20,9 @@ class Converter:
       "png":  [("jpg", lambda fin,fout: f"mogrify -format jpg '{fin}'")],
       "heic": [("jpg", lambda fin,fout: f"heif-convert -q 100 '{fin}' '{fout}'")],
       "webp": [("jpg", lambda fin,fout: f"ffmpeg -loglevel error -i '{fin}' '{fout}'"),
-               ("mp4", lambda fin,fout: f"mkdir tmpcnv; dur=$(webpinfo '{fin}' | grep -oP '(?<=Duration: )[0-9]+' | tail -n1); convert '{fin}' tmpcnv/frames.png && ffmpeg ${{dur:+-framerate 1000/$((dur>100?100:dur))}} -i tmpcnv/frames-%0d.png -c:v libx264 {FFVIDOPTS} '{fout}'; rm -r tmpcnv")],
+               ("mp4", lambda fin,fout: f"magick '{fin}' '{fin}.gif' && ffmpeg -i '{fin}.gif' {FFVIDOPTS} '{fout}' && rm '{fin}.gif'"),
+               ("mp4", lambda fin,fout: f"mkdir tmpcnv; dur=$(webpinfo '{fin}' | grep -oP '(?<=Duration: )[0-9]+' | tail -n1); magick '{fin}' tmpcnv/frames.png && ffmpeg ${{dur:+-framerate 1000/$((dur>100?100:dur))}} -i tmpcnv/frames-%0d.png -c:v libx264 {FFVIDOPTS} '{fout}'; rm -r tmpcnv"),  # Note: magick produces artifacts extracting frames. Consider switching to anim_dump
+              ],
       "webm": [("mp4", lambda fin,fout: f"ffmpeg -i '{fin}' {FFVIDOPTS} '{fout}'")],
       "gif":  [("mp4", lambda fin,fout: f"ffmpeg -i '{fin}' {FFVIDOPTS} '{fout}'")],
     }
@@ -35,9 +37,6 @@ class Converter:
     assert os.path.exists(fullname)
     assert self.can_convert(fullname)
     converted_name = self._convert_impl(fullname)
-    if not can_write_metadata(converted_name):
-      send2trash(converted_name)
-      raise RuntimeError(f"bad conversion: metadata not writable")
     if not keep_original:
       send2trash(fullname)
     return converted_name
@@ -48,9 +47,14 @@ class Converter:
       assert not os.path.exists(converted_name)
       conv_cmd = get_conv_cmd(fullname, converted_name)
       self._exec(conv_cmd, fullname)
-      if os.path.exists(converted_name):
-        return converted_name
-      logging.warning(f"Could not convert {hlp.short_fname(fullname)} to {out_ext} using the following command:\n\t{conv_cmd}\nTrying backup...")
+      if not os.path.exists(converted_name):
+        logging.warning("Could not convert %s to .%s", hlp.short_fname(fullname), out_ext)
+        continue
+      if not can_write_metadata(converted_name):
+        logging.warning("Bad conversion: metadata not writable")
+        send2trash(converted_name)
+        continue
+      return converted_name
     raise RuntimeError(f"Could not convert file {fullname}")
 
   def _exec(self, cmd:str, fullname:str) -> None:
@@ -92,6 +96,7 @@ class Usher:
         self.process_recent_files(1 + CATCH_UP_N)
         last_mtime = os.stat(self.cfg.buffer_dir).st_mtime
         print("\n"*16)
+        print(f"Buffer still has {len(os.listdir(self.cfg.buffer_dir))} items.")
 
   def process_recent_files(self, n_interactive:int) -> None:
     buffer_files = []
