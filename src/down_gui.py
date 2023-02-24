@@ -7,7 +7,7 @@ import tkinter as tk
 from gui.meta_editor import MetaEditor
 from ae_rater_types import ProfileInfo, UserListener
 from ai_assistant import Assistant
-from metadata import ManualMetadata, write_metadata
+from metadata import ManualMetadata, get_metadata, write_metadata
 
 
 class MockListener(UserListener):
@@ -28,7 +28,14 @@ class DownGui:
 
   def show_editor(self, fullname:str):
     meditor = MetaEditor(self.root, MockListener())
-    meditor.set_curr_profile(ProfileInfo(fullname))
+    existing_meta = get_metadata(fullname)
+    prof = ProfileInfo(
+      fullname=fullname,
+      tags=' '.join(existing_meta.tags),
+      stars=existing_meta.stars,
+      awards=' '.join(existing_meta.awards),
+    )
+    meditor.set_curr_profile(prof)
     window = meditor.open(None)
 
     def on_destroy(e):
