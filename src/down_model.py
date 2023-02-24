@@ -9,8 +9,6 @@ import helpers as hlp
 from down_gui import DownGui
 from metadata import can_write_metadata, get_metadata, has_metadata
 
-CATCH_UP_N = 3
-
 
 class Converter:
   def __init__(self) -> None:
@@ -82,8 +80,9 @@ class UsherCfg:
 
 
 class Usher:
-  def __init__(self, cfg:UsherCfg) -> None:
+  def __init__(self, cfg:UsherCfg, catch_up_n:int) -> None:
     self.cfg = cfg
+    self.catch_up_n = catch_up_n
     self.gui = DownGui()
     self.converter = Converter()
 
@@ -93,7 +92,7 @@ class Usher:
       if last_mtime == os.stat(self.cfg.buffer_dir).st_mtime:
         time.sleep(2)
       else:
-        self.process_recent_files(1 + CATCH_UP_N)
+        self.process_recent_files(1 + self.catch_up_n)
         last_mtime = os.stat(self.cfg.buffer_dir).st_mtime
         print("\n"*16)
         print(f"Buffer still has {len(os.listdir(self.cfg.buffer_dir))} items.")
