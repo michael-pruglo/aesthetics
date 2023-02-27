@@ -21,7 +21,7 @@ class Converter:
                ("mp4", lambda fin,fout: f"magick '{fin}' '{fin}.gif' && ffmpeg -i '{fin}.gif' {FFVIDOPTS} '{fout}' && rm '{fin}.gif'"),
                ("mp4", lambda fin,fout: f"mkdir tmpcnv; dur=$(webpinfo '{fin}' | grep -oP '(?<=Duration: )[0-9]+' | tail -n1); magick '{fin}' tmpcnv/frames.png && ffmpeg ${{dur:+-framerate 1000/$((dur>100?100:dur))}} -i tmpcnv/frames-%0d.png -c:v libx264 {FFVIDOPTS} '{fout}'; rm -r tmpcnv"),  # Note: magick produces artifacts extracting frames. Consider switching to anim_dump
               ],
-      "webm": [("mp4", lambda fin,fout: f"ffmpeg -i '{fin}' {FFVIDOPTS} '{fout}'")],
+      "webm": [("mp4", lambda fin,fout: f"ffmpeg -fflags +genpts -i '{fin}' {FFVIDOPTS} -r 24 '{fout}'")],
       "gif":  [("mp4", lambda fin,fout: f"ffmpeg -i '{fin}' {FFVIDOPTS} '{fout}'")],
     }
 
