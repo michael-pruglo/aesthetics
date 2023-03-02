@@ -118,8 +118,8 @@ class Usher:
       logging.info("Converting...")
       try:
         fullname = self.converter.convert(fullname, keep_original=False)
-      except RuntimeError as ex:
-        logging.warning("Could not convert '%s', runtime error: %s", fullname, ex)
+      except Exception as ex:
+        logging.warning("Could not convert '%s', exception: %s", fullname, ex)
         logging.warning("Moving file to '%s'", self.cfg.uncateg_dir)
         shutil.move(fullname, self.cfg.uncateg_dir)
         return False
