@@ -169,7 +169,7 @@ class TestDBAccess(unittest.TestCase):
 
     def assert_searches(query, idxs, context=""):
       self.assertListEqual(
-        self.dba.get_search_results(query),
+        self.dba.get_search_results(query, 999, 1),
         [
           self._get_leaderboard_line(test_files[i])
           for i in idxs
@@ -179,9 +179,11 @@ class TestDBAccess(unittest.TestCase):
     assert_searches("tag9 awa9", [9], "AND, with results")
     assert_searches("tag9 awa8", [], "AND, empty")
     assert_searches("tag9|awa6", [6,9], "OR")
-    self.assertEqual(len(self.dba.get_search_results("-tag9")), len(all_files)-1)
+    self.assertEqual(len(self.dba.get_search_results("-tag9", 999, 1)), len(all_files)-1)
+    self.assertEqual(len(self.dba.get_search_results("-tag9", 4, 1)), 4, "pagenized")
+    self.assertEqual(len(self.dba.get_search_results("-tag9", 4, 2)), 4, "pagenized not first")
     self.assertSetEqual(
-      {p.fullname for p in self.dba.get_search_results("mp4")},
+      {p.fullname for p in self.dba.get_search_results("mp4", 999, 1)},
       {fname for fname in all_files if fname.lower().endswith(".mp4")},
       "search filenames"
     )
