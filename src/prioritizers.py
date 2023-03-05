@@ -5,8 +5,8 @@ from typing import Callable
 import statistics
 
 
-def match_coef(maxmat, row):
-  return max(0.0, (maxmat-row['nmatches'])/maxmat)
+def match_coef(maxmat, p, row):
+  return max(0.0, (maxmat**p-row['nmatches']**p)/maxmat**p)
 
 def star_coef(p, row):
   MAXSTARS = 6.5
@@ -32,7 +32,7 @@ class PrioritizerType(Enum):
 def make_prioritizer(type:PrioritizerType):
   if type == PrioritizerType.FRESH:
     return Prioritizer([
-      partial(match_coef, 50),
+      partial(match_coef, 50, 4),
     ])
 
   if type == PrioritizerType.TOP:
@@ -46,7 +46,7 @@ def make_prioritizer(type:PrioritizerType):
     ])
 
   return Prioritizer([
-    partial(match_coef, 40),
+    partial(match_coef, 40, 2),
     partial(star_coef, 1.5),
   ])
 
