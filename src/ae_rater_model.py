@@ -155,8 +155,9 @@ class DBAccess:
     return [self._validate_and_convert_info(sample.iloc[i])
             for i in range(len(sample))]
 
-  def get_search_results(self, query:str) -> list[ProfileInfo]:
-    hits = self.meta_mgr.get_search_results(query)
+  def get_search_results(self, query:str, n_per_page:int, page:int) -> list[ProfileInfo]:
+    hits = self.meta_mgr.get_search_results(query, n_per_page, page)
+    assert len(hits) <= n_per_page, f"query returned {len(hits)} elems, expected no more than {n_per_page}"
     return [self._validate_and_convert_info(hits.iloc[i])
             for i in range(len(hits))]
 

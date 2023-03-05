@@ -102,7 +102,7 @@ class InteractiveController(Controller, UserListener):
     return self.ai_assistant.suggest_tags(fullname)
 
   def search_for(self, query:str, page:int=1) -> None:
-    res = self.db.get_search_results(query)[self.n*(page-1) : self.n*page]
+    res = self.db.get_search_results(query, self.n, page)
     self.gui.display_leaderboard(self.db.get_leaderboard(), res)
     self.gui.display_match(res, self.n)
 

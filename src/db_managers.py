@@ -127,10 +127,11 @@ class MetadataManager:
   def get_rand_files_info(self, n:int) -> pd.DataFrame:
     return self.df.sample(n, weights='priority')
 
-  def get_search_results(self, query:str) -> pd.DataFrame:
+  def get_search_results(self, query:str, n_per_page:int, page:int=1) -> pd.DataFrame:
     query = query.strip()
+    hit_idx = 0
     if query == "":
-      return self.df
+      return self.df[n_per_page*(page-1):n_per_page*page]
 
     def negpos(subquery:str) -> tuple:
       neg, pos = [], []
@@ -142,13 +143,17 @@ class MetadataManager:
       return neg, pos
     subqueries = [negpos(sub) for sub in query.split('|')]
     def is_match(row:pd.Series) -> bool:
+      nonlocal hit_idx
+      if hit_idx > n_per_page*page:
+        return False
       row['name'] = row.name
       strrow = row.astype(str).str
       for neg_filters, pos_filters in subqueries:
         pos = [strrow.contains(word).any() for word in pos_filters]
         neg = [strrow.contains(word).any() for word in neg_filters]
         if all(pos) and not any(neg):
-          return True
+          hit_idx += 1
+          return n_per_page*(page-1) < hit_idx <= n_per_page*page
       return False
 
     return self.df[self.df.apply(is_match, axis=1)]
