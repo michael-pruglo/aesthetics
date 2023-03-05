@@ -32,7 +32,7 @@ def factorize_good_ratio(n):
   return (cols,rows) if cols<n else factorize_good_ratio(n+1)
 
 
-class RaterGui:
+class RaterGui:  # TODO: refactor out MatchGui and SearchGui
   def __init__(self, user_listener:UserListener, mode:AppMode=AppMode.MATCH):
     self.user_listener = user_listener
     self.mode = mode
@@ -58,6 +58,12 @@ class RaterGui:
     self.input_outcome.configure(highlightthickness=0)
     self.scheduled_jobs:list[str] = []
 
+    if self.mode == AppMode.SEARCH:
+      self.search_page = 1
+      for arrow in ["<Up>", "<Down>"]:
+        self.root.bind(arrow, self._on_arrow)
+      self._enable_input(True)
+
   def display_match(self, profiles:list[ProfileInfo], n:int=None) -> None:
     if n is None:
       n = len(profiles)
@@ -70,7 +76,10 @@ class RaterGui:
       card.reset_style()
     self.animmgr.run()
     self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
-    self._enable_input(True, n)
+    if self.mode == AppMode.MATCH:
+      self._enable_input(True, n)
+    elif self.mode == AppMode.SEARCH:
+      self.label_outcome.configure(text=f"[page #{self.search_page}] search query:")
 
   def conclude_match(self) -> None:
     job_id = self.root.after(CHANGE_MATCH_DELAY, self.user_listener.start_next_match)
@@ -113,7 +122,8 @@ class RaterGui:
       self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
       self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H-INP_LBL_H, relwidth=LDBRD_W)
       self.input_outcome.focus()
-      self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
+      if self.mode == AppMode.MATCH:
+        self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
     else:
       raise NotImplementedError(f"cannot show gui for {n} cards")
 
@@ -150,10 +160,21 @@ class RaterGui:
       self.input_outcome.config(state=tk.DISABLED)
       self.input_outcome.unbind('<Return>')
 
+  def _on_arrow(self, event):
+    if event.keysym == "Up":
+      if self.search_page == 1:
+        return
+      self.search_page -= 1
+    else:
+      self.search_page += 1
+    self._on_input_received(None, None)
+
   def _on_input_received(self, event, n):
     s = self.input_outcome.get()
     if self.mode == AppMode.SEARCH:
-      self.user_listener.search_for(s)
+      if event is not None:
+        self.search_page = 1
+      self.user_listener.search_for(s, self.search_page)
     elif self.mode == AppMode.MATCH:
       logging.info("usr input '%s'", s)
       if Outcome.is_valid(s, n):

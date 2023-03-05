@@ -247,7 +247,7 @@ class UserListener:
   def suggest_tags(self, fullname:str) -> list:
     raise NotImplementedError()
 
-  def search_for(self, query:str) -> None:
+  def search_for(self, query:str, page:int=1) -> None:
     raise NotImplementedError()
 
 
