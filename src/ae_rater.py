@@ -8,7 +8,7 @@ from tqdm import tqdm
 from helpers import short_fname
 from ae_rater_types import AppMode, Outcome, UserListener, MatchInfo
 from metadata import ManualMetadata
-from ae_rater_view import RaterGui
+from ae_rater_view import MatchGui, SearchGui
 from ae_rater_model import Analyzer, DBAccess, RatingCompetition
 from ai_assistant import Assistant
 from prioritizers import PrioritizerType
@@ -58,7 +58,7 @@ class InteractiveController(Controller, UserListener):
     super().__init__(media_dir, refresh, prioritizer_type)
     self.n = n_participants
     self.mode = mode
-    self.gui = RaterGui(self, mode)
+    self.gui = MatchGui(self) if mode==AppMode.MATCH else SearchGui(self)
     self.participants = []
     self.ai_assistant = Assistant()
 
@@ -69,7 +69,7 @@ class InteractiveController(Controller, UserListener):
       elif self.mode == AppMode.SEARCH:
         self.search_for("", page=1)
       else:
-        raise RuntimeError(f"cannot start mode {self.mode}")
+        raise RuntimeError(f"cannot run mode {self.mode}")
       self.gui.mainloop()
     except Exception:
       logging.exception("")

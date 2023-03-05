@@ -1,5 +1,6 @@
 from functools import partial
 from itertools import filterfalse
+from abc import ABC, abstractmethod
 import math
 import tkinter as tk
 from tkinter import ttk
@@ -9,7 +10,6 @@ import logging
 
 from ae_rater_types import *
 from gui.animated_element import AnimElementsManager
-import helpers as hlp
 from gui.guicfg import *
 from gui.leaderboard import Leaderboard
 from gui.profile_card import ProfileCard
@@ -32,10 +32,9 @@ def factorize_good_ratio(n):
   return (cols,rows) if cols<n else factorize_good_ratio(n+1)
 
 
-class RaterGui:  # TODO: refactor out MatchGui and SearchGui
-  def __init__(self, user_listener:UserListener, mode:AppMode=AppMode.MATCH):
+class RaterGui(ABC):
+  def __init__(self, user_listener:UserListener):
     self.user_listener = user_listener
-    self.mode = mode
     self.root = tk.Tk()
     self.root.geometry(build_geometry(.87))
     self.root.title("aesthetics")
@@ -44,25 +43,17 @@ class RaterGui:  # TODO: refactor out MatchGui and SearchGui
     self.style = ttk.Style(self.root)
     self.style.configure('.', background=BTFL_DARK_BG)
 
-    self.curr_prof_shnames:list[str] = []
     self.cards:list[ProfileCard] = []
     self.animmgr = None
     self.leaderboard = Leaderboard(self.root)
 
     self.content_outcome = tk.StringVar()
-    self.label_outcome = ttk.Label(self.root, anchor="center", text="enter outcome string:")
+    self.label_outcome = ttk.Label(self.root, anchor="center")
     self.input_outcome = tk.Entry(self.root, fg="#ddd", insertbackground="#ddd", insertwidth=4,
                                   font=("Arial", 14, "bold"), justify="center",
                                   textvariable=self.content_outcome, border=0,
                                   disabledbackground=BTFL_DARK_BG)
     self.input_outcome.configure(highlightthickness=0)
-    self.scheduled_jobs:list[str] = []
-
-    if self.mode == AppMode.SEARCH:
-      self.search_page = 1
-      for arrow in ["<Up>", "<Down>"]:
-        self.root.bind(arrow, self._on_arrow)
-      self._enable_input(True)
 
   def display_match(self, profiles:list[ProfileInfo], n:int=None) -> None:
     if n is None:
@@ -75,19 +66,9 @@ class RaterGui:  # TODO: refactor out MatchGui and SearchGui
       card.show_profile(profile)
       card.reset_style()
     self.animmgr.run()
-    self.curr_prof_shnames = [hlp.short_fname(p.fullname) for p in profiles]
-    if self.mode == AppMode.MATCH:
-      self._enable_input(True, n)
-    elif self.mode == AppMode.SEARCH:
-      self.label_outcome.configure(text=f"[page #{self.search_page}] search query:")
 
-  def conclude_match(self) -> None:
-    job_id = self.root.after(CHANGE_MATCH_DELAY, self.user_listener.start_next_match)
-    self.scheduled_jobs.append(job_id)
-
-  def display_leaderboard(self, leaderboard:list[ProfileInfo],
-                          feature:list[ProfileInfo]=None) -> None:
-    self.leaderboard.display(leaderboard, feature)
+  def display_leaderboard(self, leaderboard:list[ProfileInfo], feat:list[ProfileInfo]=None) -> None:
+    self.leaderboard.display(leaderboard, feat)
 
   def refresh_profile(self, prof:ProfileInfo) -> None:
     card = next(c for c in self.cards if c.get_curr_profile().fullname==prof.fullname)
@@ -95,8 +76,6 @@ class RaterGui:  # TODO: refactor out MatchGui and SearchGui
 
   def mainloop(self):
     self.root.mainloop()
-    for id in self.scheduled_jobs:
-      self.root.after_cancel(id)
 
   def _prepare_layout(self, n:int):
     assert 1 < n <= 26, f"cannot show gui for {n} cards"
@@ -121,8 +100,34 @@ class RaterGui:  # TODO: refactor out MatchGui and SearchGui
     self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
     self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H-INP_LBL_H, relwidth=LDBRD_W)
     self.input_outcome.focus()
-    if self.mode == AppMode.MATCH:
-      self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
+
+  def _enable_input(self, enable:bool, n:int=0):
+    if enable:
+      self.input_outcome.config(state=tk.NORMAL, background="#444")
+      self.input_outcome.delete(0, tk.END)
+      self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n))
+    else:
+      self.input_outcome.config(state=tk.DISABLED)
+      self.input_outcome.unbind('<Return>')
+
+  @abstractmethod
+  def _on_input_received(self, event, n):
+    pass
+
+
+class MatchGui(RaterGui):
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.scheduled_jobs:list[str] = []
+
+  def display_match(self, profiles, n=None):
+    super().display_match(profiles, n)
+    self.label_outcome.configure(text="enter outcome string:")
+    self._enable_input(True, n)
+
+  def _prepare_layout(self, n):
+    super()._prepare_layout(n)
+    self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
 
   def _highlight_curr_outcome(self, n:int):
     for card in self.cards:
@@ -148,14 +153,33 @@ class RaterGui:  # TODO: refactor out MatchGui and SearchGui
 
     self.input_outcome.configure(background=bgcolor)
 
-  def _enable_input(self, enable:bool, n:int=0):
-    if enable:
-      self.input_outcome.config(state=tk.NORMAL, background="#444")
-      self.input_outcome.delete(0, tk.END)
-      self.input_outcome.bind('<Return>', partial(self._on_input_received, n=n))
+  def _on_input_received(self, event, n):
+    s = self.input_outcome.get()
+    logging.info("usr input '%s'", s)
+    if Outcome.is_valid(s, n):
+      self._enable_input(False)
+      self.user_listener.consume_result(Outcome(s))
     else:
-      self.input_outcome.config(state=tk.DISABLED)
-      self.input_outcome.unbind('<Return>')
+      self.input_outcome.config(background=RED_ERR)
+
+  def conclude_match(self) -> None:
+    job_id = self.root.after(CHANGE_MATCH_DELAY, self.user_listener.start_next_match)
+    self.scheduled_jobs.append(job_id)
+
+  def mainloop(self):
+    super().mainloop()
+    for id in self.scheduled_jobs:
+      self.root.after_cancel(id)
+
+
+
+class SearchGui(RaterGui):
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.search_page = 1
+    for arrow in ["<Up>", "<Down>"]:
+      self.root.bind(arrow, self._on_arrow)
+    self._enable_input(True)
 
   def _on_arrow(self, event):
     if event.keysym == "Up":
@@ -167,15 +191,10 @@ class RaterGui:  # TODO: refactor out MatchGui and SearchGui
     self._on_input_received(None, None)
 
   def _on_input_received(self, event, n):
-    s = self.input_outcome.get()
-    if self.mode == AppMode.SEARCH:
-      if event is not None:
-        self.search_page = 1
-      self.user_listener.search_for(s, self.search_page)
-    elif self.mode == AppMode.MATCH:
-      logging.info("usr input '%s'", s)
-      if Outcome.is_valid(s, n):
-        self._enable_input(False)
-        self.user_listener.consume_result(Outcome(s))
-      else:
-        self.input_outcome.config(background=RED_ERR)
+    if event is not None:
+      self.search_page = 1
+    self.user_listener.search_for(self.input_outcome.get(), self.search_page)
+
+  def display_match(self, profiles, n=None):
+    super().display_match(profiles, n)
+    self.label_outcome.configure(text=f"[page #{self.search_page}] search query:")
