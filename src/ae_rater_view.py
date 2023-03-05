@@ -99,33 +99,30 @@ class RaterGui:  # TODO: refactor out MatchGui and SearchGui
       self.root.after_cancel(id)
 
   def _prepare_layout(self, n:int):
+    assert 1 < n <= 26, f"cannot show gui for {n} cards"
     for c in self.cards:
       c.destroy()
     self.cards = []
-
-    if 1 < n <= 26:
-      self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
-      COLS, ROWS = factorize_good_ratio(n)
-      LDBRD_W = 0.24 if False else 0.125  # TODO: make profiles for 1080p and 4k
-      SINGLE_W = (1-LDBRD_W)/COLS
-      INP_H = 0.055
-      INP_LBL_H = INP_H*0.35
-      for i in range(n):
-        col, row = i%COLS, i//COLS
-        checkers_color = (col+row)%2
-        card = ProfileCard(i, checkers_color, self.root)
-        card.set_meta_editor(self.user_listener)
-        card.place(relx=col*SINGLE_W, rely=row*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
-        self.cards.append(card)
-      self.animmgr = AnimElementsManager(self.root, self.cards)
-      self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
-      self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
-      self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H-INP_LBL_H, relwidth=LDBRD_W)
-      self.input_outcome.focus()
-      if self.mode == AppMode.MATCH:
-        self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
-    else:
-      raise NotImplementedError(f"cannot show gui for {n} cards")
+    self.style.configure('TLabel', font=("Arial", 9), foreground="#ccc")
+    COLS, ROWS = factorize_good_ratio(n)
+    LDBRD_W = 0.24 if False else 0.125  # TODO: make profiles for 1080p and 4k
+    SINGLE_W = (1-LDBRD_W)/COLS
+    INP_H = 0.055
+    INP_LBL_H = INP_H*0.35
+    for i in range(n):
+      col, row = i%COLS, i//COLS
+      checkers_color = (col+row)%2
+      card = ProfileCard(i, checkers_color, self.root)
+      card.set_meta_editor(self.user_listener)
+      card.place(relx=col*SINGLE_W, rely=row*(1/ROWS), relwidth=SINGLE_W, relheight=1/ROWS)
+      self.cards.append(card)
+    self.animmgr = AnimElementsManager(self.root, self.cards)
+    self.leaderboard.place(relx=1-LDBRD_W, relheight=1-INP_H, relwidth=LDBRD_W)
+    self.label_outcome.place(relx=1-LDBRD_W, rely=1-INP_H, relheight=INP_LBL_H, relwidth=LDBRD_W)
+    self.input_outcome.place(relx=1-LDBRD_W, rely=1-INP_H+INP_LBL_H, relheight=INP_H-INP_LBL_H, relwidth=LDBRD_W)
+    self.input_outcome.focus()
+    if self.mode == AppMode.MATCH:
+      self.content_outcome.trace_add("write", lambda a,b,c: self._highlight_curr_outcome(n))
 
   def _highlight_curr_outcome(self, n:int):
     for card in self.cards:
