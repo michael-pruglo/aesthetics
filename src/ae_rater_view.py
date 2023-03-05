@@ -170,6 +170,7 @@ class MatchGui(RaterGui):
     super().mainloop()
     for id in self.scheduled_jobs:
       self.root.after_cancel(id)
+    self.scheduled_jobs = []
 
 
 

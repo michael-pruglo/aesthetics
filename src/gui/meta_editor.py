@@ -203,6 +203,7 @@ class MetaEditor:
     self.curr_prof = None
     self.win = None
     self.tag_editor:TagEditor = None
+    self.job_id = ""
 
   def set_curr_profile(self, prof:ProfileInfo):
     self.curr_prof = prof
@@ -249,7 +250,7 @@ class MetaEditor:
 
   def anim_update(self):
     self.media_panel.anim_update()
-    self.win.after(10, self.anim_update)
+    self.job_id = self.win.after(10, self.anim_update)
 
   def _display_suggestions(self, suggested_tags, sugg_panel:tk.Text):
     sugg_panel.configure(state=tk.NORMAL)
@@ -278,5 +279,8 @@ class MetaEditor:
   def _cleanup(self):
     if self.media_panel:
       self.media_panel.anim_pause()
+    if self.job_id:
+      self.win.after_cancel(self.job_id)
+      self.job_id = ""
     self.tag_editor.cleanup()
     self.win.destroy()

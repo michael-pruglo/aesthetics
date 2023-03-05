@@ -17,7 +17,7 @@ class AnimElementsManager:
   def __init__(self, root:Misc, elements:list[AnimElement]=None) -> None:
     self.root = root
     self.elems = elements or []
-    self.job_id = None
+    self.job_id = ""
     self.root.bind('<FocusOut>', self._on_focus_event)
     self.root.bind('<FocusIn>', self._on_focus_event)
 
@@ -42,4 +42,4 @@ class AnimElementsManager:
   def stop(self) -> None:
     if self.job_id:
       self.root.after_cancel(self.job_id)
-      self.job_id = None
+      self.job_id = ""

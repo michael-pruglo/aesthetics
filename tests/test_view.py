@@ -3,7 +3,7 @@ import random
 import unittest
 
 from ae_rater_types import ProfileInfo, Rating, UserListener
-from ae_rater_view import RaterGui
+from ae_rater_view import MatchGui
 from tests.helpers import MEDIA_FOLDER, SKIPLONG, get_initial_mediafiles
 
 
@@ -36,7 +36,7 @@ class MockListener(UserListener):
 
 def can_create_window() -> bool:
   try:
-    gui = RaterGui(MockListener(), ["a","b","c"])
+    gui = MatchGui(MockListener())
     gui.root.destroy()
     return True
   except Exception as e:
@@ -48,7 +48,7 @@ def can_create_window() -> bool:
 @unittest.skipUnless(can_create_window(), "cannot create tk interface")
 class TestView(unittest.TestCase):
   def _test_competition_window(self, n:int):
-    gui = RaterGui(MockListener(), ["a","b","c"])
+    gui = MatchGui(MockListener())
     ldbrd = generate_profiles(random.randint(10,6000))
     for _ in range(10):
       participants = random.sample(ldbrd, n)
