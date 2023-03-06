@@ -1,4 +1,3 @@
-import copy
 import string
 import unittest
 import os
@@ -13,7 +12,6 @@ from rating_backends import ELO, Glicko
 
 from src.metadata import ManualMetadata, get_metadata
 from src.db_managers import MetadataManager
-from src.helpers import short_fname
 import tests.helpers as hlp
 from tests.helpers import BACKUP_INITIAL_FILE, MEDIA_FOLDER, METAFILE, generate_outcome
 
@@ -55,7 +53,7 @@ class TestDBAccess(unittest.TestCase):
     ldbrd = self.dba.get_leaderboard()
     mediafiles = hlp.get_initial_mediafiles()
     self.assertTrue(hlp.is_sorted(ldbrd))
-    self.assertSetEqual({short_fname(p.fullname) for p in ldbrd}, set(mediafiles))
+    self.assertSetEqual({os.path.basename(p.fullname) for p in ldbrd}, set(mediafiles))
 
   def test_get_match_history(self):
     mock_history = []
@@ -122,7 +120,7 @@ class TestDBAccess(unittest.TestCase):
 
       self.dba.update_meta(prof.fullname, usr_input)
 
-      dbg_info = f"{short_fname(prof.fullname)} frac_int:{frac_int_test}"
+      dbg_info = f"{os.path.basename(prof.fullname)} frac_int:{frac_int_test}"
       meta_after = get_metadata(prof.fullname)
       self.assertEqual(meta_after, usr_input, dbg_info)
       new_prof = self._get_leaderboard_line(prof.fullname)

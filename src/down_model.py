@@ -46,7 +46,7 @@ class Converter:
       conv_cmd = get_conv_cmd(fullname, converted_name)
       self._exec(conv_cmd, fullname)
       if not os.path.exists(converted_name):
-        logging.warning("Could not convert %s to .%s", hlp.short_fname(fullname), out_ext)
+        logging.warning("Could not convert %s to .%s", os.path.basename(fullname), out_ext)
         continue
       if not can_write_metadata(converted_name):
         logging.warning("Bad conversion: metadata not writable")
@@ -113,6 +113,14 @@ class Usher:
   def process_file(self, fullname) -> bool:
     logging.info("process_file '%s'", fullname)
     was_interactive = False
+
+    robust_name = hlp.better_fname(os.path.basename(fullname))
+    robust_name = os.path.join(os.path.dirname(fullname), robust_name)
+    if robust_name != fullname:
+      assert not os.path.exists(robust_name)
+      logging.info("Renaming:\n  %s\n  %s", fullname, robust_name)
+      os.rename(fullname, robust_name)
+      fullname = robust_name
 
     if self.converter.needs_conversion(fullname):
       logging.info("Converting...")

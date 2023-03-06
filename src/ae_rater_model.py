@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from ae_rater_types import *
 from db_managers import MetadataManager, HistoryManager
 from rating_backends import RatingBackend, ELO, Glicko
-from helpers import short_fname
 
 
 class RatingCompetition:
@@ -89,7 +88,7 @@ class DBAccess:
   def save_match(self, match:MatchInfo) -> None:
     self.history_mgr.save_match(
       match.timestamp,
-      str([short_fname(p.fullname) for p in match.profiles]),
+      str([os.path.basename(p.fullname) for p in match.profiles]),
       match.outcome.rawstr
     )
 
@@ -162,7 +161,7 @@ class DBAccess:
             for i in range(len(hits))]
 
   def get_profile(self, fullname:str) -> ProfileInfo:
-    info = self.meta_mgr.get_file_info(short_fname(fullname))
+    info = self.meta_mgr.get_file_info(os.path.basename(fullname))
     return self._validate_and_convert_info(info)
 
   def on_exit(self) -> None:

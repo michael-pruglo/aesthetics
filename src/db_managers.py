@@ -4,7 +4,6 @@ import pandas as pd
 from typing import Callable
 
 from metadata import ManualMetadata, get_metadata, write_metadata
-import helpers as hlp
 from prioritizers import make_prioritizer, PrioritizerType
 
 
@@ -14,7 +13,7 @@ def stringify(iterable):
 def _db_row(fname):
   meta = get_metadata(fname)
   return {
-    'name': hlp.short_fname(fname),
+    'name': os.path.basename(fname),
     'tags': stringify(meta.tags),
     'stars': meta.stars,
     'awards': stringify(meta.awards),
@@ -162,7 +161,7 @@ class MetadataManager:
     # TODO: to improve performance,
     # accept updates in bulk - in dataframes (from apply_opinions and reset_meta)
     logging.debug("DB update():\n%s\n%s\nmatches_each=%d\n", fullname, upd_data, matches_each)
-    short_name = hlp.short_fname(fullname)
+    short_name = os.path.basename(fullname)
     row = self.df.loc[short_name].copy()
 
     if 'stars' in upd_data:

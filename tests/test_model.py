@@ -8,7 +8,6 @@ from ae_rater import Controller, FromHistoryController
 
 from ae_rater_types import DiagnosticInfo, MatchInfo, Outcome, ProfileInfo
 from ae_rater_model import RatingCompetition
-from helpers import short_fname
 from metadata import get_metadata, write_metadata
 import tests.helpers as hlp
 from tests.helpers import MEDIA_FOLDER, SKIPLONG
@@ -95,7 +94,7 @@ class TestLongTerm(unittest.TestCase):
 
     HIST_FNAME = 'test_history_short.csv'
     def p_names(ranks:list[int]):
-      return str([short_fname(test_files[i]) for i in ranks])
+      return str([os.path.basename(test_files[i]) for i in ranks])
 
     def create_short_history():
       now = time.time()

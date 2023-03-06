@@ -1,13 +1,13 @@
 import string
 import time
 from enum import Enum, auto
-from typing import Iterable
 from dataclasses import dataclass, field
 from functools import total_ordering
 from numpy import interp
 from pandas import Series
+from os.path import basename
 
-from helpers import truncate, short_fname
+from helpers import truncate
 from metadata import ManualMetadata
 
 
@@ -64,7 +64,7 @@ class ProfileInfo:
     COLOR_RESET = "\033[0;0m"
     return ''.join([
       BG_GRAY,
-      FG_WHITE,   f"{truncate(short_fname(self.fullname), 15):<15} ",
+      FG_WHITE,   f"{truncate(basename(self.fullname), 15):<15} ",
       FG_YELLOW,  f"{f'★{self.stars:.2f}':>5} ",
       FG_ELO,     f"{self.ratings} ",
       FG_MATCHES, f"{f'({self.nmatches})':<5} ",

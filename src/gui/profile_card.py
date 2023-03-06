@@ -1,12 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
+import os
 
 from ae_rater_types import ProfileInfo, Outcome
 from gui.animated_element import AnimElement
 from gui.meta_editor import MetaEditor
 from gui.media_frame import MediaFrame
 from gui.guicfg import *
-import helpers as hlp
 
 
 class ProfileCard(AnimElement, tk.Frame):
@@ -35,7 +35,7 @@ class ProfileCard(AnimElement, tk.Frame):
     self.master.bind(str(self.idx+1), self.meta_editor.open)
 
   def show_profile(self, profile:ProfileInfo) -> None:
-    self.name.configure(text=hlp.short_fname(profile.fullname))
+    self.name.configure(text=os.path.basename(profile.fullname))
     self._show_tags(profile.tags)
     self.meta_editor.set_curr_profile(profile)
     self._show_rating(profile)

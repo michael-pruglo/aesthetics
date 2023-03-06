@@ -5,7 +5,6 @@ import logging
 import argparse
 from tqdm import tqdm
 
-from helpers import short_fname
 from ae_rater_types import AppMode, Outcome, UserListener, MatchInfo
 from metadata import ManualMetadata
 from ae_rater_view import MatchGui, SearchGui
@@ -109,7 +108,7 @@ class InteractiveController(Controller, UserListener):
 
 def main(args):
   assert os.path.exists(args.media_dir), f"path {args.media_dir} doesn't exist, maybe not mounted?"
-  setup_logger(log_filename=f"./logs/matches_{short_fname(args.media_dir)}.log")
+  setup_logger(log_filename=f"./logs/matches_{os.path.basename(args.media_dir)}.log")
   if args.history_replay:
     FromHistoryController(
       args.media_dir,

@@ -1,6 +1,7 @@
 import tkinter as tk
 from dataclasses import dataclass
 import numpy as np
+import os
 
 from gui.guicfg import *
 from ae_rater_types import Outcome, ProfileInfo
@@ -91,7 +92,7 @@ class Leaderboard(tk.Text):
     nmatches_color = int(np.interp(prof.nmatches, [0,100], [0x70,255]))
     return [
       ('tag_idx', "#aaa", f"{idx+1:>4} "),
-      ('tag_name', "#ddd", f"{hlp.truncate(hlp.short_fname(prof.fullname), 15, '..'):<15} "),
+      ('tag_name', "#ddd", f"{hlp.truncate(os.path.basename(prof.fullname), 15, '..'):<15} "),
       ('tag_stars', BTFL_DARK_GRANOLA, str('*'*int(prof.stars)+'\''*(prof.stars%1>=.5)).ljust(6)),
     ] + [
       (f'tag_rating{sysname}', rat_color, f"{str(rat):>9} ")

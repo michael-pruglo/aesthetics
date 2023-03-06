@@ -2,13 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 import tkinter.font
 from typing import Callable
+import os
 
 from ae_rater_types import  ProfileInfo, UserListener
 from metadata import ManualMetadata
 from tags_vocab import VOCAB
 from gui.media_frame import MediaFrame
 from gui.guicfg import *
-import helpers as hlp
 
 
 class TagEditor(ttk.Frame):
@@ -224,7 +224,7 @@ class MetaEditor:
   def _create_window(self, suggested_tags):
     self.win = tk.Toplevel(self.master)
     self.win.protocol("WM_DELETE_WINDOW", self._cleanup)
-    self.win.title(f"edit meta {hlp.short_fname(self.curr_prof.fullname)}")
+    self.win.title(f"edit meta {os.path.basename(self.curr_prof.fullname)}")
     self.win.geometry(build_geometry((0.6, 0.8)))
 
     self._configure_style()
