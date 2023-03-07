@@ -73,7 +73,7 @@ class TestLongTerm(unittest.TestCase):
 
   def test_long_term(self):
     n = random.randint(2, 11)
-    losses = LongTermTester(Controller(MEDIA_FOLDER, refresh=False), n, verbosity=1).run()
+    losses = LongTermTester(Controller(MEDIA_FOLDER, refresh=False), n, verbosity=2).run()
     self.assertLess(losses[-1], 0.9, f"num_participants={n}")
     self.assertLess(losses[-1]/losses[0], 10, f"num_participants={n}")
 
