@@ -22,9 +22,7 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
     - maybe create an unrated folder with all the possible variations - to help ML - violates 'b'
     - maybe combine into groups, and rate/compare/meta the whole group - violates 'b'
       would be cool to have general meta shared by the group and some unique for each media
-- polish dataset
-  - add health checkers:
-    - corellation between rankings: stars/Glicko/ELO
+
 
 ### long-term
 
