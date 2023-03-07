@@ -28,12 +28,9 @@ def _default_init(row, default_values_getter):
     row['priority'] = 0.8 if row['tags'] else 1
   if row.isna()['awards']:
     row['awards'] = ""
-  if default_values_getter:
-    for column, value in default_values_getter(row['stars']).items():
-      if (column not in row) or pd.isnull(row[column]):
-        row[column] = value
-  else:
-    logging.warning("no default_values_getter was supplied. Ratings are not initialized.")
+  for column, value in default_values_getter(row['stars']).items():
+    if (column not in row) or pd.isnull(row[column]):
+      row[column] = value
   return row
 
 
@@ -81,6 +78,7 @@ class MetadataManager:
           if int(row['stars']) == int(row['stars_old']):
             row['stars'] = row['stars_old']
         return row
+      assert self.defaults_getter
       self.df = joined.apply(refresh_row, axis=1)[self.df.columns]
       self.df = self.df.apply(_default_init, axis=1, args=(self.defaults_getter,))
       self.df = self.df.astype(original_dtypes)
@@ -94,6 +92,7 @@ class MetadataManager:
     self.df = self.df.apply(self.prioritizer.calc, axis=1)
 
   def reset_meta_to_initial(self):
+    assert self.defaults_getter
     df = pd.read_csv(self.initial_metadata_fname)
     for _, row in df.iterrows():
       fullname = os.path.join(self.media_dir, row['name'])
@@ -187,6 +186,17 @@ class MetadataManager:
     if self.profile_updates_since_last_save > 20:
       self._commit()
       self.profile_updates_since_last_save = 0
+
+  def rename(self, old_shname:str, new_shname:str) -> None:
+    if new_shname == old_shname:
+      return
+    old_fullname = os.path.join(self.media_dir, old_shname)
+    new_fullname = os.path.join(self.media_dir, new_shname)
+    assert os.path.exists(old_fullname)
+    assert not os.path.exists(new_fullname)
+    os.rename(old_fullname, new_fullname)
+    self.df.rename(index={old_shname:new_shname}, inplace=True)
+    self._commit()
 
   def on_exit(self):
     self._commit()

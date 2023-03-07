@@ -204,8 +204,8 @@ class TestMetadataManager(unittest.TestCase):
   def tearDown(self) -> None:
     hlp.disk_cleanup()
 
-  def _create_mgr(self, *args, **kwargs) -> MetadataManager:
-    mm = MetadataManager(MEDIA_FOLDER, *args, **kwargs)
+  def _create_mgr(self, **kwargs) -> MetadataManager:
+    mm = MetadataManager(MEDIA_FOLDER, defaults_getter=defgettr, **kwargs)
     self.assertTrue(os.path.exists(METAFILE))
     self.assertTrue(os.path.exists(BACKUP_INITIAL_FILE))
     return mm
@@ -229,7 +229,7 @@ class TestMetadataManager(unittest.TestCase):
 
   def _test_external_change(self, update_existing=False, add_new=False,
                             refresh=False, remove_some=False, defgettr=None) -> None:
-    mm0 = self._create_mgr(defaults_getter=defgettr)
+    mm0 = self._create_mgr()
     db0 = mm0.get_db()
     rm_amount = 0
     if remove_some:
@@ -243,7 +243,7 @@ class TestMetadataManager(unittest.TestCase):
       tags_changed, stars_changed = hlp.immitate_external_metadata_change()
     if add_new:
       extra_amount = hlp.inject_extra_files()
-    db1 = self._create_mgr(refresh=refresh, defaults_getter=defgettr).get_db()
+    db1 = self._create_mgr(refresh=refresh).get_db()
 
     self.assertTrue(db1.notna().all(axis=None))
     if not refresh:
@@ -289,14 +289,14 @@ class TestMetadataManager(unittest.TestCase):
   def test_defgettr_updated_and_extra(self): self._test_external_change(True, True, True, False, defgettr)
 
   def test_get_info(self):
-    mm = self._create_mgr(defaults_getter=defgettr)
+    mm = self._create_mgr()
     with self.assertRaises(KeyError):
       mm.get_file_info("NONEXISTENT")
     for short_name in random.sample(self.initial_files, 4):
       self._check_row(short_name, mm.get_file_info(short_name))
 
   def test_update_stars(self):
-    mm = self._create_mgr(defaults_getter=defgettr)
+    mm = self._create_mgr()
     tst_updates = []
     for short_name in random.sample(self.initial_files, self.nfiles//3):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
@@ -325,13 +325,13 @@ class TestMetadataManager(unittest.TestCase):
       self.assertEqual(row_after['nmatches'], row_before['nmatches']+inc_match)
     mm.on_exit()
 
-    mm1 = self._create_mgr(defaults_getter=defgettr)
+    mm1 = self._create_mgr()
     for short_name, stars in tst_updates:
       row_next_run = mm1.get_file_info(short_name)
       self.assertEqual(row_next_run['stars'], stars)
 
   def test_update_rating(self):
-    mm = self._create_mgr(defaults_getter=defgettr)
+    mm = self._create_mgr()
     tst_updates = []
     for short_name in random.sample(self.initial_files, self.nfiles//3):
       fullname = os.path.join(MEDIA_FOLDER, short_name)
@@ -354,10 +354,34 @@ class TestMetadataManager(unittest.TestCase):
       tst_updates.append((short_name, row_after))
     mm.on_exit()
 
-    mm1 = self._create_mgr(defaults_getter=defgettr)
+    mm1 = self._create_mgr()
     for short_name, row_after in tst_updates:
       row_next_run = mm1.get_file_info(short_name)
       tm.assert_series_equal(row_next_run, row_after)
+
+  def test_rename(self):
+    mm = self._create_mgr()
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
+    assert len(all_files) > 9, "need more samples for this test"
+    test_files = random.sample(all_files, 10)
+    hlp.backup_files(test_files)
+    for fullname in test_files:
+      root, ext = os.path.splitext(fullname)
+      new_name = root + "_rnmtst" + ext
+      self.assertTrue(os.path.exists(fullname))
+      self.assertTrue(os.path.basename(fullname) in mm.df.index)
+      self.assertFalse(os.path.exists(new_name))
+      self.assertFalse(os.path.basename(new_name) in mm.df.index)
+      mm.rename(os.path.basename(fullname), os.path.basename(new_name))
+      self.assertFalse(os.path.exists(fullname))
+      self.assertFalse(os.path.basename(fullname) in mm.df.index)
+      self.assertTrue(os.path.exists(new_name))
+      self.assertTrue(os.path.basename(new_name) in mm.df.index)
+
+      # cleanup
+      os.rename(new_name, fullname)
+      self.assertTrue(os.path.exists(fullname))
+      self.assertFalse(os.path.exists(new_name))
 
 
 if __name__ == '__main__':
