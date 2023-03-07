@@ -71,16 +71,11 @@ class TestLongTerm(unittest.TestCase):
   def tearDown(self):
     hlp.disk_cleanup()
 
-  def _long_term(self, ctrl:Controller, n:int):
-    losses = LongTermTester(ctrl, n, verbosity=1).run()
+  def test_long_term(self):
+    n = random.randint(2, 11)
+    losses = LongTermTester(Controller(MEDIA_FOLDER, refresh=False), n, verbosity=1).run()
     self.assertLess(losses[-1], 0.9, f"num_participants={n}")
-    self.assertLess(losses[-1]/losses[0], 10)
-
-  def test_regular_2(self):
-    self._long_term(Controller(MEDIA_FOLDER, refresh=False), 2)
-
-  def test_regular_3plus(self):
-    self._long_term(Controller(MEDIA_FOLDER, refresh=False), random.randint(3,10))
+    self.assertLess(losses[-1]/losses[0], 10, f"num_participants={n}")
 
   def test_history_short(self):
     assert len(self.all_files) > 9, "need more samples for this test"
