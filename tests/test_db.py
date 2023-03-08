@@ -361,9 +361,8 @@ class TestMetadataManager(unittest.TestCase):
 
   def test_rename(self):
     mm = self._create_mgr()
-    all_files = [os.path.join(MEDIA_FOLDER, f) for f in hlp.get_initial_mediafiles()]
-    assert len(all_files) > 9, "need more samples for this test"
-    test_files = random.sample(all_files, 10)
+    all_files = [os.path.join(MEDIA_FOLDER, f) for f in self.initial_files]
+    test_files = random.sample(all_files, 3)
     hlp.backup_files(test_files)
     for fullname in test_files:
       root, ext = os.path.splitext(fullname)
@@ -382,6 +381,26 @@ class TestMetadataManager(unittest.TestCase):
       os.rename(new_name, fullname)
       self.assertTrue(os.path.exists(fullname))
       self.assertFalse(os.path.exists(new_name))
+
+  def test_rename_raises(self):
+    mm = self._create_mgr()
+    self.assertRaises(KeyError, mm.rename, "sks_nonexistant", "new")
+
+  def test_delete(self):
+    mm = self._create_mgr()
+    del_files = random.sample(self.initial_files, 3)
+    hlp.backup_files([os.path.join(MEDIA_FOLDER, f) for f in del_files])
+    for f in del_files:
+      fullname = os.path.join(MEDIA_FOLDER, f)
+      self.assertTrue(f in mm.df.index)
+      self.assertTrue(os.path.exists(fullname))
+      mm.delete(f)
+      self.assertFalse(f in mm.df.index)
+      self.assertTrue(os.path.exists(fullname))
+
+  def test_delete_raises(self):
+    mm = self._create_mgr()
+    self.assertRaises(KeyError, mm.delete, "sks_nonexistant")
 
 
 if __name__ == '__main__':

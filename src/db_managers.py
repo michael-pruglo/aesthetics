@@ -188,6 +188,8 @@ class MetadataManager:
       self.profile_updates_since_last_save = 0
 
   def rename(self, old_shname:str, new_shname:str) -> None:
+    if old_shname not in self.df.index:
+      raise KeyError(old_shname)
     if new_shname == old_shname:
       return
     old_fullname = os.path.join(self.media_dir, old_shname)
@@ -196,6 +198,10 @@ class MetadataManager:
     assert not os.path.exists(new_fullname)
     os.rename(old_fullname, new_fullname)
     self.df.rename(index={old_shname:new_shname}, inplace=True)
+    self._commit()
+
+  def delete(self, shname:str) -> None:
+    self.df.drop(shname, inplace=True)
     self._commit()
 
   def on_exit(self):
