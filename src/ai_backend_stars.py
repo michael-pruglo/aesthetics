@@ -22,12 +22,8 @@ class RandomForest(StarPredictorBackend):
   def __init__(self):
     super().__init__()
 
-    # TODO: try adding number of tags as a feature. Probably positively corellated with stars
-    # plus I feel 'looks_dope_small' should be positively correlated with stars
-    # TODO: find general corellations of every tag to rating + num of tags to rating
-    # find correlation between tags
     def prepare_datasets():
-      MEDIAPATH = os.path.abspath("/home/michael-p/Documents/storage/ero_aesthetic/")
+      MEDIAPATH = os.path.abspath("")
       mm = MetadataManager(MEDIAPATH)
       train_df = mm.get_db().reset_index().rename(columns={'index':'name'})
       train_df = train_df[['name', 'tags', 'stars']]
@@ -65,3 +61,7 @@ class RandomForest(StarPredictorBackend):
     pred = self.forest.predict(pd.DataFrame({t:[t in tags] for t in self.vocab}))
     assert len(pred) == 1
     return pred[0]
+
+
+if __name__ == "__main__":
+  rf = RandomForest()
