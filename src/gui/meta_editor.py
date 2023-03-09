@@ -3,6 +3,7 @@ from tkinter import ttk
 import tkinter.font
 from typing import Callable
 import os
+import logging
 
 from ae_rater_types import  ProfileInfo, UserListener
 from metadata import ManualMetadata
@@ -189,9 +190,16 @@ class TagEditor(ttk.Frame):
       stars=self.stars,
       awards=set(self.content_award_entry.get().split()),
     )
+    if (err := input_meta.get_errors()):
+      self.award_entry.configure(background=RED_ERR)
+      logging.error("errors in awards: %s", err)
+      return
+    if (warn := input_meta.get_warnings()):
+      logging.warning("warnings in awards: %s", warn)
     self.on_commit_cb(input_meta)
 
   def cleanup(self):
+    self.award_entry.configure(background=BTFL_DARK_BG)
     for i in range(7):
       self.unbind_all(str(i))
 

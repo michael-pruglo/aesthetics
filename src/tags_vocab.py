@@ -3,3 +3,9 @@ VOCAB = [
   "mood",
   "outfit",
 ]
+
+SPECIAL_AWARDS = [
+  "daily",
+  "duplicate",
+  "wallpaper",
+]

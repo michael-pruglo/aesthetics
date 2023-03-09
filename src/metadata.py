@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass, field
 from libxmp import XMPFiles, consts, XMPError
 
-from tags_vocab import VOCAB
+from tags_vocab import VOCAB, SPECIAL_AWARDS
 
 
 @dataclass
@@ -14,6 +14,30 @@ class ManualMetadata:
   @classmethod
   def from_str(cls, tagsstr:str, stars:int, awardsstr:str):
     return cls(set(tagsstr.split()), stars, set(awardsstr.split()))
+
+  def get_errors(self) -> list[str]:
+    err = []
+    if self.stars < 0:
+      err.append(f"negative stars: {self.stars}")
+    if not self.tags:
+      err.append("empty tags")
+    if (bad_tags := [t for t in self.tags if t not in VOCAB]):
+      err.append(f"tags not in vocab: {bad_tags}")
+    if (orphan_tags := [t for t in self.tags if '|' in t and t.rsplit('|',maxsplit=1)[0] not in self.tags]):
+      err.append(f"orphan tags: {orphan_tags}")
+    if (bad_awards := [a for a in self.awards
+                       if a.startswith("e_") and a[2:] not in VOCAB
+                       or a.startswith("wow_") and a[4:] not in VOCAB
+                       or a.isdigit()]):
+      err.append(f"bad exemplary awards: {bad_awards}")
+    return err
+
+  def get_warnings(self) -> list[str]:
+    warn = []
+    if (unk_awards := [a for a in self.awards
+                       if not a.startswith(("e_", "wow_")) and a not in SPECIAL_AWARDS]):
+      warn.append(f"unknown awards: {unk_awards}")
+    return warn
 
 
 def get_metadata(fullname:str) -> ManualMetadata:
