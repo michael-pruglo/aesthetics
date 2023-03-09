@@ -26,7 +26,8 @@ def backup_files(fullnames:Iterable[str]) -> None:
   if not os.path.exists(BACKUP_FOLDER):
     os.mkdir(BACKUP_FOLDER)
   for f in fullnames:
-    shutil.copy(f, BACKUP_FOLDER)
+    if not os.path.exists(os.path.join(BACKUP_FOLDER, os.path.basename(f))):
+      shutil.copy(f, BACKUP_FOLDER)
 
 def inject_extra_files() -> int:
   for f in os.listdir(EXTRA_FOLDER):

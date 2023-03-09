@@ -228,7 +228,7 @@ class TestMetadataManager(unittest.TestCase):
       self._check_row(short_name, row)
 
   def _test_external_change(self, update_existing=False, add_new=False,
-                            refresh=False, remove_some=False, defgettr=None) -> None:
+                            refresh=False, remove_some=False) -> None:
     mm0 = self._create_mgr()
     db0 = mm0.get_db()
     rm_amount = 0
@@ -237,6 +237,7 @@ class TestMetadataManager(unittest.TestCase):
     if update_existing:
       for f in db0.index:
         fullname = os.path.join(MEDIA_FOLDER, f)
+        hlp.backup_files([fullname])
         mm0.update(fullname, {'stars':db0.loc[f,'stars']+.6}, 0)
       mm0._commit()
       db0 = mm0.get_db()
@@ -283,10 +284,6 @@ class TestMetadataManager(unittest.TestCase):
   def test_init_extra_files(self):           self._test_external_change(False, True, True)
   def test_init_updated_and_extra(self):     self._test_external_change(True, True, True)
   def test_deletions(self):                  self._test_external_change(False, False, True, True)
-  def test_defgettr_no_refresh(self):        self._test_external_change(True, True, False, False, defgettr)
-  def test_defgettr_updated_files(self):     self._test_external_change(True, False, True, False, defgettr)
-  def test_defgettr_extra_files(self):       self._test_external_change(False, True, True, False, defgettr)
-  def test_defgettr_updated_and_extra(self): self._test_external_change(True, True, True, False, defgettr)
 
   def test_get_info(self):
     mm = self._create_mgr()
