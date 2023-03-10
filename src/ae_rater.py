@@ -4,6 +4,7 @@ import os
 import logging
 import argparse
 from tqdm import tqdm
+import psutil
 
 from ae_rater_types import AppMode, Outcome, UserListener, MatchInfo
 from metadata import ManualMetadata
@@ -24,6 +25,10 @@ def setup_logger(log_filename):
     level = logging.INFO
   )
   logging.info("Starting new session...")
+
+def show_mem_usage():
+  meminfo = psutil.Process(os.getpid()).memory_info()
+  logging.info("memory usage: rss=%.2fmb vms=%.2fmb", meminfo.rss/1024**2, meminfo.vms/1024**2)
 
 
 INITIAL_METADATA_FNAME = "backup_initial_metadata.csv"
@@ -76,6 +81,7 @@ class InteractiveController(Controller, UserListener):
       self.db.on_exit()
 
   def start_next_match(self):
+    show_mem_usage()
     self.participants = self.db.get_next_match(self.n)
     self.gui.display_leaderboard(self.db.get_leaderboard(), self.participants)
     self.gui.display_match(self.participants)
@@ -101,6 +107,7 @@ class InteractiveController(Controller, UserListener):
     return self.ai_assistant.suggest_tags(fullname)
 
   def search_for(self, query:str, page:int=1) -> None:
+    show_mem_usage()
     res = self.db.get_search_results(query, self.n, page)
     self.gui.display_leaderboard(self.db.get_leaderboard(), res)
     self.gui.display_match(res, self.n)
