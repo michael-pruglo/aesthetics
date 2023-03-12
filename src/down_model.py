@@ -148,8 +148,12 @@ class Usher:
           os.rename(fullname, new_fullname)
           return self.process_file(new_fullname)
 
+    if not can_write_metadata(fullname):
+      logging.error("Metadata not writable %s, sending to %s", fullname, self.cfg.uncateg_dir)
+      shutil.move(fullname, self.cfg.uncateg_dir)
+      return False
+
     if not has_metadata(fullname):
-      assert can_write_metadata(fullname), fullname
       self.gui.show_editor(fullname)
       was_interactive = True
     else:
