@@ -46,7 +46,7 @@ def get_metadata(fullname:str) -> ManualMetadata:
 
 def has_metadata(fullname:str) -> bool:
   meta = get_metadata(fullname)
-  return meta and meta != ManualMetadata()
+  return meta and meta.tags
 
 def can_write_metadata(fullname:str) -> bool:
   with MetadataIO(fullname, 'w') as mio:
