@@ -3,6 +3,7 @@
 # aesthetics exploration
 
 Provided a media library with metadata - explore, rate, tag, use DL.
+![screenshot of a match](screenshot.png)
 
 
 ## Note
