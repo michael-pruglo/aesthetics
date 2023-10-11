@@ -1,4 +1,6 @@
 import time
+import logging
+import os
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image, ImageOps
@@ -38,6 +40,7 @@ class MediaFrame(AnimElement, tk.Frame): # tk and not ttk, because the former su
     elif ext in ['mp4', 'mov', 'gif']:
       self.vid_reader = imageio.get_reader(fname)
       self.fps = self.vid_reader.get_meta_data().get('fps', 30)
+      self.last_update_time = None
       self._stream_vid_from_beginning()
     else:
       self.lbl.config(image="", text=f"cannot open {fname}: unsupported extension .{ext}",
@@ -59,8 +62,17 @@ class MediaFrame(AnimElement, tk.Frame): # tk and not ttk, because the former su
   def anim_update(self):
     if self.vid_reader is None or self.paused:
       return
-    ms_elapsed = (time.time_ns() - self.vid_stream_time) / 1e6
+    now = time.time_ns()
+    ms_elapsed = (now - self.vid_stream_time) / 1e6
     idx = round(self.fps * ms_elapsed / 1000)
+    if self.last_update_time:
+      delta_t = (now - self.last_update_time) / 1e6
+      TOO_MUCH_LAG = 520
+      if delta_t > TOO_MUCH_LAG:
+        logging.error("too much lag on video %s: %.2fms [idx=%d]", os.path.basename(self.media_fname), delta_t, idx)
+        self.anim_pause()
+        return
+    self.last_update_time = now
     try:
       img_array = self.vid_reader.get_data(idx)
       self._display_image(Image.fromarray(img_array))

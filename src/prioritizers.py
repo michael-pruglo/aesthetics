@@ -38,11 +38,12 @@ def make_prioritizer(type:PrioritizerType):
   if type == PrioritizerType.TOP:
     return Prioritizer([
       partial(star_coef, 4),
+      # lambda row: min((max(0, (row['stars']-4.82)/2)**3), 1),
     ])
 
   if type == PrioritizerType.KEYWORD:
     return Prioritizer([
-      partial(keyword_coef, "face"),
+      partial(keyword_coef, "color"),
     ])
 
   return Prioritizer([
