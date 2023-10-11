@@ -4,7 +4,6 @@ import os
 import logging
 import argparse
 from tqdm import tqdm
-import psutil
 
 from ae_rater_types import AppMode, Outcome, UserListener, MatchInfo
 from metadata import ManualMetadata
@@ -27,8 +26,12 @@ def setup_logger(log_filename):
   logging.info("Starting new session...")
 
 def show_mem_usage():
-  meminfo = psutil.Process(os.getpid()).memory_info()
-  logging.info("memory usage: rss=%.2fmb vms=%.2fmb", meminfo.rss/1024**2, meminfo.vms/1024**2)
+  try:
+    import psutil
+    meminfo = psutil.Process(os.getpid()).memory_info()
+    logging.info("memory usage: rss=%.2fmb vms=%.2fmb", meminfo.rss/1024**2, meminfo.vms/1024**2)
+  except ImportError:
+    pass
 
 
 INITIAL_METADATA_FNAME = "backup_initial_metadata.csv"
