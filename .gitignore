@@ -5,7 +5,6 @@ __pycache__/
 !src/folder_stats.ipynb
 .vscode/
 logs/
-sample_imgs/
 tests/test_media/
 src/tmp*
 models/
