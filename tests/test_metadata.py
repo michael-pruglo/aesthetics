@@ -14,11 +14,11 @@ class TestReadingMetadata(unittest.TestCase):
 
   def test_libxmp(self):
     self._test_metadata_read(
-      "006f129e1d4baaa9cd5e766d06256f58.jpg",
+      "fixed_metadata_test.jpeg",
       ManualMetadata(
-         tags={"hair", "hair|front_locks", "face", "eyes", "eyes|eyelines"},
+         tags={"composition", "composition|contrast", "lighting", "lighting|colors", "lighting|contrast", "mood", "sharpness"},
          stars=5,
-         awards={'investigation', 'Further'},
+         awards={"e_lighting", "e_lighting|contrast", "e_sharpness", "wow_lighting"},
       )
     )
     self._test_metadata_read("no_metadata.JPG", ManualMetadata())
@@ -40,8 +40,8 @@ class TestWritingMetadata(unittest.TestCase):
 
   def test_sweep(self):
     for st in range(6):
-      for tg in [set(), {"blah", "blah|hierarchical", "another"}, {"mood", "mood|smile", "color"}]:
-        for aw in [set(), {"e_awa", "e_22"}, {"perfect", "daily"}]:
+      for tg in [set(), {"blah", "blah|hierarchical", "another"}, {"mood", "mood|epic", "color"}]:
+        for aw in [set(), {"e_mood", "wow_color"}, {"wallpaper", "daily"}]:
           meta = ManualMetadata(tg, st, aw)
           write_metadata(self.fname, meta)
           self.assertEqual(get_metadata(self.fname), meta)

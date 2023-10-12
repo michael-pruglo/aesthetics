@@ -16,6 +16,8 @@ tried using nearest neighbors to predict rating from tags, got sqrt(mse)=600
 
 ### short-term
 
+- move vocabulary to the target media folder, or provide link to it in cfg file
+- read media folder from cfg file, make it not requred as a prog arg
 - group similar items, finding balance between two crucial points:
   a: avoid oversaturation of close things
   b: but simultaneously preserve the important differences/elements
