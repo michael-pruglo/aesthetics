@@ -149,7 +149,7 @@ if __name__ == "__main__":
                       help="run SEARCH instead of MATCH mode")
   parser.add_argument('media_dir', nargs='?', default="./sample_imgs/",
                       help="media folder to operate on")
-  parser.add_argument('num_participants', type=int, nargs='?', default=2,
-                      help="number of participants in MATCH mode")
+  parser.add_argument('num_participants', type=int, nargs='?', default=6,
+                      help="number of items per page")
 
   main(parser.parse_args())
