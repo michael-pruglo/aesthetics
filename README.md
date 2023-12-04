@@ -2,7 +2,7 @@
 
 # aesthetics exploration
 
-***Aesthetics*** is the theory of art and beauty, in particular the question of what makes something beautiful or interesting to regard.<br>
+***Aesthetics*** is the theory of art and beauty, in particular the question of what makes something beautiful or interesting to regard.<br><br>
 This project is an advanced media [img/video] organizer tool that automates the whole pipeline:
 
 - monitoring the configured folder for freshly downloaded files
@@ -14,11 +14,17 @@ This project is an advanced media [img/video] organizer tool that automates the 
 - attemps at different kinds of machine learning algorithms to predict tags and ratings [essentially, understanding your taste]
 - after success in the previous step - scrape web for new media and recommend the best candidates
 
-**Note: everything is done offline, no data is being collected**
+**Note: everything is done offline, no data is collected**
 
 ![screenshot of a match](screenshot.png)
 
 ## Quick start
+
+0) make sure you have python3 and don't forget to run
+
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 1) configure `src/downcfg.py`:
 
