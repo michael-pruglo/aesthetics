@@ -18,6 +18,19 @@ This project is an advanced media [img/video] organizer tool that automates the 
 
 ![screenshot of a match](screenshot.png)
 
+## Run a quick demo
+
+Execute `run_demo.sh` script.
+
+Welcome to the "match mode": the subset of the media library are the participants. Each of them has an identifying letter and their full info: rating, tags, notes etc.
+The leaderboard is on the right - highlighting every participant.
+
+Rank the files how you feel - and enter their letters ordered from best to worst, separated by space: e.g. `c a d f e b`.<br>
+The input field should turn green, indicating the outcome string is valid [unsurprisingly, red indicates errors].
+Press enter to confirm the result, update the ratings, leaderboards, and move to the next match.
+
+When you get enough of that - try clicking on tags of any media [right columns beside each file]. Alternativaly, use the keyboard shortcut 1-6. It will open up the edit window where you can manually update tags, rating, and notes.
+
 ## Quick start
 
 0) make sure you have python3 and don't forget to run
